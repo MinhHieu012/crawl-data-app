@@ -2,11 +2,11 @@
 
 import pytest
 
-from novel_crawler.core.base_crawler import BaseCrawler, BaseParser
-from novel_crawler.core.exceptions import ParseError, UnsupportedSiteError
-from novel_crawler.core.models import ChapterContent, ChapterListPage, ChapterRef, NovelInfo
-from novel_crawler.crawlers import CRAWLERS, crawler_class_for
-from novel_crawler.crawlers.truyenfull.crawler import TruyenFullCrawler
+from crawl_data_app.core.base_crawler import BaseCrawler, BaseParser
+from crawl_data_app.core.exceptions import ParseError, UnsupportedSiteError
+from crawl_data_app.core.models import ChapterContent, ChapterListPage, ChapterRef, NovelInfo
+from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
+from crawl_data_app.crawlers.truyenfull.crawler import TruyenFullCrawler
 
 
 @pytest.mark.parametrize("crawler", CRAWLERS, ids=lambda crawler: crawler.name)

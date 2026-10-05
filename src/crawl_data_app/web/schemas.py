@@ -5,8 +5,8 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel
 
-from novel_crawler.config.settings import CrawlerSettings, HttpSettings, LogSettings
-from novel_crawler.core.models import CrawlRequest
+from crawl_data_app.config.settings import CrawlerSettings, HttpSettings, LogSettings
+from crawl_data_app.core.models import CrawlRequest
 
 
 def _as_utc(value: datetime) -> datetime:

@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from novel_crawler.core.exceptions import CrawlerError, ParseError
-from novel_crawler.core.models import NovelStatus
-from novel_crawler.crawlers.truyenfull.parser import TruyenFullParser, novel_root
+from crawl_data_app.core.exceptions import CrawlerError, ParseError
+from crawl_data_app.core.models import NovelStatus
+from crawl_data_app.crawlers.truyenfull.parser import TruyenFullParser, novel_root
 
 NOVEL_URL = "https://truyenfull.live/truyen-mau/"
 parser = TruyenFullParser()

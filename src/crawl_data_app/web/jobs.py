@@ -8,13 +8,13 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from novel_crawler.config.settings import Settings
-from novel_crawler.core.http_client import HttpClient, Page
-from novel_crawler.core.models import CrawlRequest
-from novel_crawler.crawlers import crawler_class_for
-from novel_crawler.database.models import RunStatus, utcnow
-from novel_crawler.repository import NovelRepository
-from novel_crawler.service import CrawlService
+from crawl_data_app.config.settings import Settings
+from crawl_data_app.core.http_client import HttpClient, Page
+from crawl_data_app.core.models import CrawlRequest
+from crawl_data_app.crawlers import crawler_class_for
+from crawl_data_app.database.models import RunStatus, utcnow
+from crawl_data_app.repository import NovelRepository
+from crawl_data_app.service import CrawlService
 
 log = logging.getLogger(__name__)
 

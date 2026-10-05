@@ -67,7 +67,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
       })
     }
     throw new ApiError(
-      'Không kết nối được tới máy chủ. Kiểm tra backend (novel-crawler serve) có đang chạy không.',
+      'Không kết nối được tới máy chủ. Kiểm tra backend (crawl-data-app serve) có đang chạy không.',
       { kind: 'network' },
     )
   }
@@ -117,7 +117,7 @@ async function toApiError(response: Response): Promise<ApiError> {
 function fallbackMessage(status: number): string {
   if (status === 404) return 'Không tìm thấy dữ liệu được yêu cầu.'
   if (status === 502 || status === 503 || status === 504) {
-    return `Không liên lạc được với backend (HTTP ${status}). Kiểm tra novel-crawler serve có đang chạy không.`
+    return `Không liên lạc được với backend (HTTP ${status}). Kiểm tra crawl-data-app serve có đang chạy không.`
   }
   if (status >= 500) return `Máy chủ gặp lỗi (HTTP ${status}). Xem log của backend rồi thử lại.`
   return `Yêu cầu không thực hiện được (HTTP ${status}).`

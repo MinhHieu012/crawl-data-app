@@ -1,4 +1,4 @@
-// Hình dạng dữ liệu của API — phản chiếu src/novel_crawler/web/schemas.py ở backend.
+// Hình dạng dữ liệu của API — phản chiếu src/crawl_data_app/web/schemas.py ở backend.
 
 export type JobStatus = 'running' | 'completed' | 'partial' | 'failed' | 'interrupted' | 'cancelled'
 export type ChapterStatus = 'pending' | 'done' | 'failed'

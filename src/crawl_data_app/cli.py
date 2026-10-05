@@ -21,18 +21,18 @@ from rich.progress import (
 )
 from rich.table import Table
 
-from novel_crawler.config.logging import setup_logging
-from novel_crawler.config.settings import Settings, get_settings
-from novel_crawler.core.content import split_title, to_paragraphs
-from novel_crawler.core.exceptions import CrawlerError
-from novel_crawler.core.http_client import HttpClient
-from novel_crawler.core.models import CrawlRequest
-from novel_crawler.crawlers import CRAWLERS, crawler_class_for
-from novel_crawler.database.models import ChapterStatus, CrawlRun, RunStatus
-from novel_crawler.database.session import create_db_engine, init_db, make_session_factory
-from novel_crawler.export import WRITERS
-from novel_crawler.repository import NovelRepository
-from novel_crawler.service import CrawlResult, CrawlService
+from crawl_data_app.config.logging import setup_logging
+from crawl_data_app.config.settings import Settings, get_settings
+from crawl_data_app.core.content import split_title, to_paragraphs
+from crawl_data_app.core.exceptions import CrawlerError
+from crawl_data_app.core.http_client import HttpClient
+from crawl_data_app.core.models import CrawlRequest
+from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
+from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus
+from crawl_data_app.database.session import create_db_engine, init_db, make_session_factory
+from crawl_data_app.export import WRITERS
+from crawl_data_app.repository import NovelRepository
+from crawl_data_app.service import CrawlResult, CrawlService
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost")
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="novel-crawler",
+        prog="crawl-data-app",
         description="Crawl truyện chữ từ các website đọc truyện vào database.",
     )
     commands = parser.add_subparsers(dest="command", required=True, metavar="LỆNH")
@@ -166,7 +166,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             results = asyncio.run(_run(requests, settings, repo, force=force))
         except KeyboardInterrupt:
-            err.print("Đã dừng theo yêu cầu. Chạy `novel-crawler resume` để tải tiếp phần còn lại.")
+            err.print(
+                "Đã dừng theo yêu cầu. Chạy `crawl-data-app resume` để tải tiếp phần còn lại."
+            )
             return 130
         _print_results(results)
         done = len(results) == len(requests) and all(
@@ -384,7 +386,7 @@ def _serve(args: argparse.Namespace, repo: NovelRepository) -> int:
     # Nạp tại đây chứ không ở đầu file: các lệnh còn lại không phải chờ import web framework.
     import uvicorn
 
-    from novel_crawler.web.app import create_app
+    from crawl_data_app.web.app import create_app
 
     ui_dir = Path(args.ui_dir)
     if not (ui_dir / "index.html").is_file():

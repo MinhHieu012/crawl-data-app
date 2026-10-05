@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "novel-crawler"
+name = "crawl-data-app"
 dynamic = ["version"]
 description = "Crawler thu thập truyện chữ từ các website đọc truyện (TruyenFull, ...) vào SQLite/PostgreSQL"
 readme = "README.md"
@@ -27,13 +27,13 @@ dev = ["pytest>=8", "ruff>=0.5"]
 postgres = ["psycopg[binary]>=3.1"]
 
 [project.scripts]
-novel-crawler = "novel_crawler.cli:main"
+crawl-data-app = "crawl_data_app.cli:main"
 
 [tool.hatch.version]
-path = "src/novel_crawler/__init__.py"
+path = "src/crawl_data_app/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/novel_crawler"]
+packages = ["src/crawl_data_app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -43,7 +43,7 @@ addopts = "-ra"
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
-extend-exclude = ["src/novel_crawler/database/migrations/versions"]  # file do Alembic sinh ra
+extend-exclude = ["src/crawl_data_app/database/migrations/versions"]  # file do Alembic sinh ra
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]

@@ -217,7 +217,7 @@ function JobView({ job }: { job: Job }) {
         )}
         {running && !job.active && (
           <Alert color="yellow" mt="md">
-            Job này đang chạy ở một tiến trình khác (ví dụ lệnh novel-crawler crawl) nên không tạm
+            Job này đang chạy ở một tiến trình khác (ví dụ lệnh crawl-data-app crawl) nên không tạm
             dừng hay huỷ được từ đây.
           </Alert>
         )}

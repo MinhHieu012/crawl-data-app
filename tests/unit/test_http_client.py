@@ -5,7 +5,7 @@ import asyncio
 import httpx
 import pytest
 
-from novel_crawler.core.exceptions import (
+from crawl_data_app.core.exceptions import (
     BlockedError,
     FetchError,
     NotFoundError,
@@ -175,7 +175,7 @@ async def test_robots_wildcard_rules_are_understood(make_client):
 
 
 async def test_rules_for_our_user_agent_take_precedence(make_client):
-    robots = "User-agent: *\nAllow: /\n\nUser-agent: novel-crawler\nDisallow: /\n"
+    robots = "User-agent: *\nAllow: /\n\nUser-agent: crawl-data-app\nDisallow: /\n"
 
     with pytest.raises(RobotsDisallowedError):
         await make_client(Server(200, robots=robots)).get(URL)

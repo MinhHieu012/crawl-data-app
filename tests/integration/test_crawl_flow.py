@@ -8,9 +8,16 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import undefer
 
-from novel_crawler.core.models import ChapterRef, CrawlRequest, NovelInfo
-from novel_crawler.database.models import Chapter, ChapterStatus, CrawlRun, Novel, RunStatus, Source
-from novel_crawler.service import MAX_CONSECUTIVE_FAILURES, CrawlService
+from crawl_data_app.core.models import ChapterRef, CrawlRequest, NovelInfo
+from crawl_data_app.database.models import (
+    Chapter,
+    ChapterStatus,
+    CrawlRun,
+    Novel,
+    RunStatus,
+    Source,
+)
+from crawl_data_app.service import MAX_CONSECUTIVE_FAILURES, CrawlService
 
 pytestmark = pytest.mark.anyio
 

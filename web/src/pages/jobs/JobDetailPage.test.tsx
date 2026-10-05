@@ -9,7 +9,7 @@ import { JobDetailPage } from './JobDetailPage'
 const LOG = {
   time: '2026-10-05T10:00:00+07:00',
   level: 'WARNING',
-  logger: 'novel_crawler.service',
+  logger: 'crawl_data_app.service',
   message: 'Chương 3 lỗi: HTTP 500',
   run_id: 7,
   url: 'https://truyenfull.live/kiem-lai/chuong-3/',

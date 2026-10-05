@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
-from novel_crawler.database.models import Novel
+from crawl_data_app.database.models import Novel
 
 Chapters = Sequence[tuple[int, str, list[str]]]  # (số thứ tự, tiêu đề chương, các đoạn văn)
 

@@ -11,7 +11,7 @@ from dotenv import set_key
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from novel_crawler import __version__
+from crawl_data_app import __version__
 
 
 def _env(prefix: str) -> SettingsConfigDict:
@@ -27,7 +27,7 @@ class HttpSettings(BaseSettings):
 
     # Không nhận ký tự điều khiển (xuống dòng...): giá trị này đi vào header HTTP và file `.env`.
     user_agent: str = Field(
-        f"novel-crawler/{__version__}", min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$"
+        f"crawl-data-app/{__version__}", min_length=1, pattern=r"^[^\x00-\x1f\x7f]+$"
     )
     request_timeout: float = Field(20.0, gt=0)
     max_retries: int = Field(3, ge=0, le=10)

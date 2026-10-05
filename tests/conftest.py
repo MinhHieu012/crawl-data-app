@@ -8,11 +8,11 @@ import httpx
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
-from novel_crawler.config.settings import HttpSettings
-from novel_crawler.core import http_client
-from novel_crawler.core.http_client import HttpClient
-from novel_crawler.database.session import create_db_engine, init_db, make_session_factory
-from novel_crawler.repository import NovelRepository
+from crawl_data_app.config.settings import HttpSettings
+from crawl_data_app.core import http_client
+from crawl_data_app.core.http_client import HttpClient
+from crawl_data_app.database.session import create_db_engine, init_db, make_session_factory
+from crawl_data_app.repository import NovelRepository
 
 FIXTURES = Path(__file__).parent / "fixtures"
 BASE = "https://truyenfull.live"

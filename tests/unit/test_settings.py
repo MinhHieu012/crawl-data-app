@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from novel_crawler.config.settings import (
+from crawl_data_app.config.settings import (
     CrawlerSettings,
     DatabaseSettings,
     HttpSettings,
@@ -22,7 +22,7 @@ def test_defaults_are_polite(monkeypatch: pytest.MonkeyPatch):
 
     assert http.request_delay >= 1.0
     assert http.concurrency <= 2
-    assert http.user_agent.startswith("novel-crawler/")  # tự nhận là bot, không giả trình duyệt
+    assert http.user_agent.startswith("crawl-data-app/")  # tự nhận là bot, không giả trình duyệt
 
 
 @pytest.mark.parametrize(

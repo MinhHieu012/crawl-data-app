@@ -23,7 +23,7 @@ const CRUMB = { size: 'sm', lh: 'md', truncate: 'end', maw: 'min(60vw, 22rem)' }
 
 /** Đầu mỗi trang: breadcrumb (trang con), tiêu đề h1, và các nút hành động chính ở bên phải. */
 export function PageHeader({ title, description, crumbs = [], actions }: PageHeaderProps) {
-  useDocumentTitle(`${title} · Novel Crawler`)
+  useDocumentTitle(`${title} · Crawl Data App`)
   // Mục cuối trùng hẳn với tiêu đề ngay bên dưới (trang chi tiết truyện) thì bỏ: nói một lần là đủ.
   const trail: Crumb[] = [
     { label: 'Tổng quan', to: '/' },

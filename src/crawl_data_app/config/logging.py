@@ -10,7 +10,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.logging import RichHandler
 
-from novel_crawler.config.settings import LogSettings
+from crawl_data_app.config.settings import LogSettings
 
 LOG_FILE = "crawler.log"
 # Thuộc tính có sẵn của LogRecord; mọi thứ ngoài danh sách này là dữ liệu truyền qua `extra=`.

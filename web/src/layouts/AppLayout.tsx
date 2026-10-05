@@ -94,13 +94,13 @@ export function AppLayout() {
               component={Link}
               to="/"
               p={4}
-              aria-label="Novel Crawler, về trang Tổng quan"
+              aria-label="Crawl Data App, về trang Tổng quan"
             >
               <Group gap="sm" wrap="nowrap">
                 <IconBooks size={24} color="var(--mantine-primary-color-filled)" aria-hidden />
                 {/* Màn hình điện thoại chỉ đủ chỗ cho logo, nút menu và số job đang chạy. */}
                 <Text fw={700} size="lg" visibleFrom="xs" style={{ whiteSpace: 'nowrap' }}>
-                  Novel Crawler
+                  Crawl Data App
                 </Text>
               </Group>
             </UnstyledButton>

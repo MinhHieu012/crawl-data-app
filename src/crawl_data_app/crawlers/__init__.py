@@ -5,9 +5,9 @@ Thêm website mới: tạo thư mục `crawlers/<ten_site>/` với parser + craw
 
 from collections.abc import Collection
 
-from novel_crawler.core.base_crawler import BaseCrawler
-from novel_crawler.core.exceptions import SourceDisabledError, UnsupportedSiteError
-from novel_crawler.crawlers.truyenfull.crawler import TruyenFullCrawler
+from crawl_data_app.core.base_crawler import BaseCrawler
+from crawl_data_app.core.exceptions import SourceDisabledError, UnsupportedSiteError
+from crawl_data_app.crawlers.truyenfull.crawler import TruyenFullCrawler
 
 CRAWLERS: tuple[type[BaseCrawler], ...] = (TruyenFullCrawler,)
 

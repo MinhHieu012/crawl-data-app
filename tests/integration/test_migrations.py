@@ -6,8 +6,8 @@ from alembic.migration import MigrationContext
 from sqlalchemy import delete, func, inspect, select
 from sqlalchemy.exc import IntegrityError
 
-from novel_crawler.database.models import Base, Chapter, Novel, Source
-from novel_crawler.database.session import create_db_engine, init_db
+from crawl_data_app.database.models import Base, Chapter, Novel, Source
+from crawl_data_app.database.session import create_db_engine, init_db
 
 
 @pytest.fixture

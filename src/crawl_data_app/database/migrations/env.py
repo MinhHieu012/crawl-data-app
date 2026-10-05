@@ -3,9 +3,9 @@
 from alembic import context
 from sqlalchemy import Connection
 
-from novel_crawler.config.settings import get_settings
-from novel_crawler.database.models import Base
-from novel_crawler.database.session import create_db_engine
+from crawl_data_app.config.settings import get_settings
+from crawl_data_app.database.models import Base
+from crawl_data_app.database.session import create_db_engine
 
 
 def run_migrations(connection: Connection) -> None:

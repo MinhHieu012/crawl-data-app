@@ -20,8 +20,8 @@ from urllib.parse import urljoin, urlsplit
 import httpx
 from protego import Protego
 
-from novel_crawler.config.settings import HttpSettings
-from novel_crawler.core.exceptions import (
+from crawl_data_app.config.settings import HttpSettings
+from crawl_data_app.core.exceptions import (
     BlockedError,
     FetchError,
     NotFoundError,

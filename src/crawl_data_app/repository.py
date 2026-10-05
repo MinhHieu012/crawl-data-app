@@ -9,8 +9,8 @@ from datetime import UTC, datetime
 from sqlalchemy import ColumnElement, Row, and_, func, or_, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
-from novel_crawler.core.models import ChapterRef, CrawlRequest, NovelInfo
-from novel_crawler.database.models import (
+from crawl_data_app.core.models import ChapterRef, CrawlRequest, NovelInfo
+from crawl_data_app.database.models import (
     Chapter,
     ChapterStatus,
     CrawlRun,

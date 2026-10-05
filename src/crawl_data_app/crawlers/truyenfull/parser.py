@@ -16,10 +16,10 @@ from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
 
-from novel_crawler.core.base_crawler import BaseParser
-from novel_crawler.core.content import clean_text, extract_paragraphs
-from novel_crawler.core.exceptions import CrawlerError, ParseError
-from novel_crawler.core.models import (
+from crawl_data_app.core.base_crawler import BaseParser
+from crawl_data_app.core.content import clean_text, extract_paragraphs
+from crawl_data_app.core.exceptions import CrawlerError, ParseError
+from crawl_data_app.core.models import (
     ChapterContent,
     ChapterListPage,
     ChapterRef,

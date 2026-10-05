@@ -2,7 +2,7 @@
 
 from bs4 import BeautifulSoup
 
-from novel_crawler.core.content import content_hash, extract_paragraphs, render
+from crawl_data_app.core.content import content_hash, extract_paragraphs, render
 
 
 def paragraphs(html: str, drop: str = "") -> list[str]:

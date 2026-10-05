@@ -6,15 +6,15 @@ from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from time import monotonic
 
-from novel_crawler.config.logging import current_run
-from novel_crawler.core.base_crawler import BaseCrawler
-from novel_crawler.core.content import content_hash, render
-from novel_crawler.core.exceptions import BlockedError, CrawlerError, FetchError, ParseError
-from novel_crawler.core.http_client import HttpClient
-from novel_crawler.core.models import ChapterRef, CrawlRequest, NovelInfo
-from novel_crawler.crawlers import crawler_class_for
-from novel_crawler.database.models import RunStatus
-from novel_crawler.repository import NovelRepository
+from crawl_data_app.config.logging import current_run
+from crawl_data_app.core.base_crawler import BaseCrawler
+from crawl_data_app.core.content import content_hash, render
+from crawl_data_app.core.exceptions import BlockedError, CrawlerError, FetchError, ParseError
+from crawl_data_app.core.http_client import HttpClient
+from crawl_data_app.core.models import ChapterRef, CrawlRequest, NovelInfo
+from crawl_data_app.crawlers import crawler_class_for
+from crawl_data_app.database.models import RunStatus
+from crawl_data_app.repository import NovelRepository
 
 log = logging.getLogger(__name__)
 

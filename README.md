@@ -1,4 +1,4 @@
-# novel-crawler
+# crawl-data-app
 
 Crawl truyện chữ từ các website đọc truyện (hiện có **TruyenFull**) vào SQLite/PostgreSQL:
 thông tin truyện, mục lục và nội dung từng chương đã làm sạch. Thiết kế để chạy lâu dài một cách
@@ -20,16 +20,16 @@ python -m venv .venv
 pip install -e ".[dev]"           # thêm ",postgres" nếu dùng PostgreSQL
 copy .env.example .env            # tuỳ chọn — không có .env thì dùng giá trị mặc định
 
-novel-crawler init-db
-novel-crawler crawl --url "https://truyenfull.live/ten-truyen/" --from-chapter 1 --to-chapter 3
-novel-crawler status
+crawl-data-app init-db
+crawl-data-app crawl --url "https://truyenfull.live/ten-truyen/" --from-chapter 1 --to-chapter 3
+crawl-data-app status
 ```
 
-`novel-crawler ...` và `python -m novel_crawler ...` là một. Chạy lệnh từ thư mục gốc của project
+`crawl-data-app ...` và `python -m crawl_data_app ...` là một. Chạy lệnh từ thư mục gốc của project
 (đường dẫn mặc định `data/`, `logs/`, `.env`, `web/dist` tính theo thư mục hiện tại).
 
 Muốn thao tác bằng giao diện thay cho dòng lệnh: `cd web && npm install && npm run build`, rồi
-`novel-crawler serve` và mở <http://127.0.0.1:8000> — chi tiết ở mục [Web UI](#web-ui).
+`crawl-data-app serve` và mở <http://127.0.0.1:8000> — chi tiết ở mục [Web UI](#web-ui).
 
 ## Các lệnh
 
@@ -56,7 +56,7 @@ Mã thoát: `0` mọi thứ hoàn tất · `1` có truyện/chương lỗi · `2
 - **Chạy lại luôn an toàn.** `crawl` và `resume` chỉ tải chương chưa xong (`pending`/`failed`). Chạy
   lại cùng lệnh sau một tuần sẽ chỉ tải các chương website mới ra thêm.
 - **Bị gián đoạn** (Ctrl+C, mất mạng, tắt máy): mỗi chương được commit riêng nên không mất gì;
-  `novel-crawler resume` tải tiếp đúng phần còn thiếu.
+  `crawl-data-app resume` tải tiếp đúng phần còn thiếu.
 - **Không trùng lặp.** Truyện được định danh theo `(nguồn, slug)`, chương theo `(truyện, slug)` — không
   theo URL — nên website đổi tên miền (TruyenFull đổi thường xuyên) cũng không sinh bản ghi trùng.
 - **URL nào của truyện cũng được**: URL chương hay trang mục lục đều được quy về trang gốc của truyện.
@@ -87,7 +87,7 @@ npm run build          # type-check rồi build ra web/dist
 cd ..
 
 # 2. Chạy backend: phục vụ cả API lẫn giao diện vừa build
-novel-crawler serve
+crawl-data-app serve
 ```
 
 | Địa chỉ | Nội dung |
@@ -140,7 +140,7 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
   thúc, danh sách truyện, thống kê, log tự được làm mới.
 - **Cài đặt** được ghi vào file `.env` (dòng lệnh dùng chung file này) và áp dụng cho job bắt đầu sau
   khi mọi job đang chạy đã kết thúc. Biến môi trường của hệ điều hành, nếu có, vẫn được ưu tiên hơn `.env`.
-- **Đừng chạy `novel-crawler crawl` / `resume` trong lúc server đang có job chạy** (và ngược lại): lúc
+- **Đừng chạy `crawl-data-app crawl` / `resume` trong lúc server đang có job chạy** (và ngược lại): lúc
   khởi động, mỗi bên coi mọi lần crawl còn ghi `running` là của tiến trình đã chết và đánh dấu
   `interrupted`. Dữ liệu không mất, nhưng trạng thái hiển thị sẽ sai cho tới khi job kia chạy xong.
 
@@ -181,7 +181,7 @@ giao diện tự đổi sang giờ máy. Lỗi luôn có dạng `{"code": "...",
 Chạy hai tiến trình: backend và dev server của Vite (tự nạp lại khi sửa code).
 
 ```bash
-novel-crawler serve          # terminal 1 — API ở cổng 8000
+crawl-data-app serve          # terminal 1 — API ở cổng 8000
 cd web && npm run dev        # terminal 2 — giao diện ở http://localhost:5173
 ```
 
@@ -216,7 +216,7 @@ web/src/
 ├── theme.ts           theme Mantine: màu chữ đủ tương phản, mặc định của Badge / Switch / ô số
 ├── api/
 │   ├── client.ts      một cửa gọi backend: ghép URL, timeout, đổi mọi lỗi thành ApiError đọc được
-│   ├── types.ts       kiểu dữ liệu, phản chiếu src/novel_crawler/web/schemas.py
+│   ├── types.ts       kiểu dữ liệu, phản chiếu src/crawl_data_app/web/schemas.py
 │   └── queries.ts     mỗi endpoint một hook: cache, hỏi lại định kỳ, làm mới dữ liệu liên quan
 ├── layouts/           AppLayout: thanh trên, menu trái, nút sáng/tối, số job đang chạy
 ├── pages/<màn hình>/  dashboard · crawl · jobs · novels · sources · logs · settings
@@ -257,7 +257,7 @@ Không có logic crawl nào ở frontend: nhận diện website, chuẩn hoá UR
 ### Thêm một màn hình mới
 
 1. **Backend (nếu thiếu dữ liệu):** thêm truy vấn vào `NovelRepository`, kiểu trả về vào
-   `src/novel_crawler/web/schemas.py`, endpoint vào `src/novel_crawler/web/app.py`, và test trong
+   `src/crawl_data_app/web/schemas.py`, endpoint vào `src/crawl_data_app/web/app.py`, và test trong
    `tests/integration/test_web_api.py`.
 2. **Kiểu và hook:** khai báo kiểu ở `web/src/api/types.ts`, thêm hook `useXxx` ở
    `web/src/api/queries.ts` (thao tác ghi thì nhớ `invalidateQueries` những gì bị ảnh hưởng).
@@ -275,7 +275,7 @@ Mọi cấu hình đọc từ biến môi trường hoặc file `.env`; xem [.en
 | Nhóm | Biến | Mặc định | Ghi chú |
 |---|---|---|---|
 | Database | `DATABASE_URL` | `sqlite:///data/novels.db` | PostgreSQL: `postgresql+psycopg://user:pass@host/db` |
-| HTTP | `HTTP_USER_AGENT` | `novel-crawler/<version>` | Tự nhận là bot; nên thêm thông tin liên hệ |
+| HTTP | `HTTP_USER_AGENT` | `crawl-data-app/<version>` | Tự nhận là bot; nên thêm thông tin liên hệ |
 | HTTP | `HTTP_REQUEST_TIMEOUT` | `20` | giây |
 | HTTP | `HTTP_MAX_RETRIES` | `3` | backoff 1s → 2s → 4s (có jitter), tôn trọng `Retry-After` |
 | HTTP | `HTTP_CONCURRENCY` | `2` | 1–8 request đồng thời |
@@ -319,7 +319,7 @@ Khi sửa `database/models.py`:
 
 ```bash
 alembic revision --autogenerate -m "mo ta thay doi"   # sinh file trong database/migrations/versions/
-novel-crawler init-db                                  # hoặc: alembic upgrade head
+crawl-data-app init-db                                  # hoặc: alembic upgrade head
 ```
 
 Test `test_migrations_produce_exactly_the_orm_schema` sẽ đỏ nếu sửa model mà quên tạo migration.
@@ -373,7 +373,7 @@ Những chỗ đơn giản hoá có chủ đích được đánh dấu `# ponyta
 
 1. **Khảo sát trước:** đọc `robots.txt` và điều khoản của website; xem trang truyện, cách phân trang
    mục lục, trang chương. Chỉ dùng những đường dẫn được phép.
-2. **Parser** — `src/novel_crawler/crawlers/<site>/parser.py`, kế thừa `BaseParser`, ba hàm thuần:
+2. **Parser** — `src/crawl_data_app/crawlers/<site>/parser.py`, kế thừa `BaseParser`, ba hàm thuần:
 
    ```python
    class MySiteParser(BaseParser):
@@ -428,7 +428,7 @@ npm run lint && npm run typecheck && npm run format:check
   dừng, huỷ có xác nhận, thử lại), danh sách truyện (tìm kiếm, lọc, phân trang, trống, lỗi).
 
 Debug: đặt `LOG_LEVEL=DEBUG` để thấy từng request. `logs/crawler.log` là JSON Lines (mỗi dòng một sự
-kiện, có trường `url` ở các dòng lỗi) nên lọc được bằng `jq`/`findstr`. `novel-crawler status --errors`
+kiện, có trường `url` ở các dòng lỗi) nên lọc được bằng `jq`/`findstr`. `crawl-data-app status --errors`
 liệt kê chương lỗi kèm URL.
 
 | Thông báo | Nguyên nhân và cách xử lý |
@@ -438,9 +438,9 @@ liệt kê chương lỗi kèm URL.
 | `Không tìm thấy tên truyện (h3.title)` / `... (#chapter-c)` | URL không phải trang truyện, hoặc website đã đổi giao diện → cập nhật selector trong parser và fixture. |
 | `Thất bại sau N lần thử (ConnectError/ReadTimeout...)` | Mạng hoặc website chập chờn. Chạy `resume`; có thể tăng `HTTP_MAX_RETRIES`, `HTTP_REQUEST_TIMEOUT`. |
 | `Nội dung chương rỗng (có thể là chương ảnh)` | Chương chỉ có ảnh — crawler chỉ lưu text. |
-| `Chưa hỗ trợ website của URL` | Chưa có crawler cho tên miền đó (`novel-crawler sources`). |
+| `Chưa hỗ trợ website của URL` | Chưa có crawler cho tên miền đó (`crawl-data-app sources`). |
 | `Nguồn ... đang bị tắt` | Nguồn đã bị tắt ở trang Nguồn của web UI (biến `CRAWLER_DISABLED_SOURCES`). Bật lại ở đó hoặc xoá tên nguồn khỏi biến. |
-| Web UI báo `Không kết nối được tới máy chủ` | Backend chưa chạy hoặc đã tắt: chạy `novel-crawler serve`. Khi dùng `npm run dev`, kiểm tra `VITE_DEV_PROXY_TARGET`. |
+| Web UI báo `Không kết nối được tới máy chủ` | Backend chưa chạy hoặc đã tắt: chạy `crawl-data-app serve`. Khi dùng `npm run dev`, kiểm tra `VITE_DEV_PROXY_TARGET`. |
 | `serve` báo `Chưa có bản build giao diện` | Chưa chạy `npm run build` trong `web/`, hoặc đang chạy `serve` từ thư mục khác (dùng `--ui-dir`). |
 | `UnicodeDecodeError` khi chạy `alembic` | `alembic.ini` có ký tự ngoài ASCII. |
 
@@ -452,7 +452,7 @@ liệt kê chương lỗi kèm URL.
   `Crawl-delay`. Không đọc được `robots.txt` (trừ 404) thì không crawl.
 - Một nhịp request chung (mặc định 2 giây/request), tối đa 8 kết nối; thử lại có backoff và tôn trọng
   `Retry-After`; dừng khi bị từ chối hoặc lỗi liên tiếp.
-- User-Agent mặc định tự nhận là bot (`novel-crawler/<version>`), không giả trình duyệt.
+- User-Agent mặc định tự nhận là bot (`crawl-data-app/<version>`), không giả trình duyệt.
 - Không giải CAPTCHA, không đăng nhập, không gọi API/AJAX nội bộ, không lưu cookie hay dữ liệu cá nhân.
 
 **Khảo sát TruyenFull (ngày 05/10/2026, từ một mạng tại Việt Nam)**

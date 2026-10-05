@@ -10,10 +10,10 @@ import httpx
 import pytest
 from rich.console import Console
 
-from novel_crawler.config.logging import setup_logging
-from novel_crawler.config.settings import LogSettings
-from novel_crawler.core.models import ChapterRef, NovelInfo, NovelStatus
-from novel_crawler.web.app import create_app
+from crawl_data_app.config.logging import setup_logging
+from crawl_data_app.config.settings import LogSettings
+from crawl_data_app.core.models import ChapterRef, NovelInfo, NovelStatus
+from crawl_data_app.web.app import create_app
 
 pytestmark = pytest.mark.anyio
 
@@ -229,7 +229,7 @@ async def test_cancelled_job_is_not_picked_up_by_resume(api, site, gate, repo):
     cancelled = await api.post(f"/api/crawl/jobs/{job['id']}/cancel")
 
     assert (cancelled.json()["status"], cancelled.json()["active"]) == ("cancelled", False)
-    assert repo.unfinished_requests() == []  # `novel-crawler resume` không tự chạy lại job đã huỷ
+    assert repo.unfinished_requests() == []  # `crawl-data-app resume` không tự chạy lại job đã huỷ
     again = await api.post(f"/api/crawl/jobs/{job['id']}/cancel")
     assert (again.status_code, again.json()["code"]) == (409, "job_not_running")
 
@@ -460,7 +460,7 @@ async def test_built_ui_is_served_with_spa_fallback_but_unknown_api_stays_404(
 ):
     ui_dir = tmp_path / "dist"
     (ui_dir / "assets").mkdir(parents=True)
-    (ui_dir / "index.html").write_text("<!doctype html><title>novel-crawler</title>", "utf-8")
+    (ui_dir / "index.html").write_text("<!doctype html><title>crawl-data-app</title>", "utf-8")
     (ui_dir / "assets" / "app.js").write_text("console.log('ui')", "utf-8")
     app = create_app(repo, env_file=env_file, ui_dir=ui_dir)
 
@@ -469,7 +469,7 @@ async def test_built_ui_is_served_with_spa_fallback_but_unknown_api_stays_404(
     ) as client:
         for path in ("/", "/novels/3", "/jobs"):
             page = await client.get(path)
-            assert (page.status_code, "novel-crawler" in page.text) == (200, True)
+            assert (page.status_code, "crawl-data-app" in page.text) == (200, True)
         assert (await client.get("/assets/app.js")).text == "console.log('ui')"
         missing = await client.get("/api/khong-co")
         assert (missing.status_code, missing.json()["code"]) == (404, "not_found")

@@ -85,7 +85,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
           <Stack gap="md">
             <TextInput
               label="User-Agent"
-              description="Nên tự nhận là bot và để lại cách liên hệ, ví dụ: novel-crawler/0.1 (+mailto:ban@example.com)"
+              description="Nên tự nhận là bot và để lại cách liên hệ, ví dụ: crawl-data-app/0.1 (+mailto:ban@example.com)"
               {...form.getInputProps('http.user_agent')}
             />
             {/* Hai cột từ `md`: hẹp hơn thì nhãn dài xuống dòng, đẩy lệch ô nhập bên cạnh. */}

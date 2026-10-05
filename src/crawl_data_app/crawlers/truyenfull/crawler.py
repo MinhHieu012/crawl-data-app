@@ -3,8 +3,8 @@
 import re
 from urllib.parse import urlsplit
 
-from novel_crawler.core.base_crawler import BaseCrawler
-from novel_crawler.crawlers.truyenfull.parser import TruyenFullParser, novel_root
+from crawl_data_app.core.base_crawler import BaseCrawler
+from crawl_data_app.crawlers.truyenfull.parser import TruyenFullParser, novel_root
 
 
 class TruyenFullCrawler(BaseCrawler):

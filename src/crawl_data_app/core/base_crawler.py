@@ -11,9 +11,9 @@ from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 
-from novel_crawler.core.exceptions import ParseError
-from novel_crawler.core.http_client import HttpClient, Page
-from novel_crawler.core.models import ChapterContent, ChapterListPage, ChapterRef, NovelInfo
+from crawl_data_app.core.exceptions import ParseError
+from crawl_data_app.core.http_client import HttpClient, Page
+from crawl_data_app.core.models import ChapterContent, ChapterListPage, ChapterRef, NovelInfo
 
 
 class BaseParser(ABC):

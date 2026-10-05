@@ -13,9 +13,9 @@ from xml.etree import ElementTree
 import httpx
 import pytest
 
-from novel_crawler import cli
-from novel_crawler.config.settings import get_settings
-from novel_crawler.core.http_client import HttpClient
+from crawl_data_app import cli
+from crawl_data_app.config.settings import get_settings
+from crawl_data_app.core.http_client import HttpClient
 
 
 @pytest.fixture
@@ -362,7 +362,7 @@ def test_serve_starts_the_web_app_on_localhost_only_by_default(run, monkeypatch)
 
 def test_module_entry_point_runs_in_a_real_process(tmp_path):
     done = subprocess.run(
-        [sys.executable, "-m", "novel_crawler", "sources"],
+        [sys.executable, "-m", "crawl_data_app", "sources"],
         cwd=tmp_path,
         capture_output=True,
         timeout=120,

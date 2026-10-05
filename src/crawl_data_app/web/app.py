@@ -20,18 +20,18 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Row, make_url
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from novel_crawler import __version__
-from novel_crawler.config.logging import read_logs
-from novel_crawler.config.settings import HttpSettings, env_values, load_settings, save_env
-from novel_crawler.core.base_crawler import BaseCrawler
-from novel_crawler.core.content import split_title, to_paragraphs
-from novel_crawler.core.exceptions import CrawlerError, SourceDisabledError, UnsupportedSiteError
-from novel_crawler.core.models import CrawlRequest
-from novel_crawler.crawlers import CRAWLERS, crawler_class_for
-from novel_crawler.database.models import ChapterStatus, CrawlRun, RunStatus
-from novel_crawler.repository import NovelRepository
-from novel_crawler.web.jobs import DuplicateJobError, JobManager
-from novel_crawler.web.schemas import (
+from crawl_data_app import __version__
+from crawl_data_app.config.logging import read_logs
+from crawl_data_app.config.settings import HttpSettings, env_values, load_settings, save_env
+from crawl_data_app.core.base_crawler import BaseCrawler
+from crawl_data_app.core.content import split_title, to_paragraphs
+from crawl_data_app.core.exceptions import CrawlerError, SourceDisabledError, UnsupportedSiteError
+from crawl_data_app.core.models import CrawlRequest
+from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
+from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus
+from crawl_data_app.repository import NovelRepository
+from crawl_data_app.web.jobs import DuplicateJobError, JobManager
+from crawl_data_app.web.schemas import (
     ChapterContent,
     ChapterOut,
     ConnectionTest,
@@ -137,7 +137,7 @@ def create_app(
                 403, "cross_origin", "Yêu cầu được gửi từ một trang web khác nên bị từ chối"
             )
 
-    app = FastAPI(title="novel-crawler", version=__version__, lifespan=lifespan)
+    app = FastAPI(title="crawl-data-app", version=__version__, lifespan=lifespan)
     if allowed_hosts:
         # Chống DNS rebinding: tên miền lạ trỏ về 127.0.0.1 vẫn mang header Host của chính nó.
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(allowed_hosts))
