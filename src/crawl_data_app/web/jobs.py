@@ -11,7 +11,6 @@ import httpx
 from crawl_data_app import aviation
 from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.settings import Settings
-from crawl_data_app.core.exceptions import CrawlerError, ParseError
 from crawl_data_app.core.http_client import HttpClient, Page
 from crawl_data_app.core.models import CrawlRequest
 from crawl_data_app.crawlers import crawler_class_for
@@ -130,54 +129,9 @@ class JobManager:
         self._reject_duplicate(
             key, "Nguồn này đang được đồng bộ"
         )  # không `await` từ đây, như `start`
-        run_id = self._repo.start_run(
-            CrawlRequest(url=aviation.HOMES[source]),
-            crawler=aviation.crawler_name(source),
-            total=aviation.FILES_PER_SYNC,
-        )
-        return self._register(run_id, key, self._sync_aviation(source, run_id, client))
-
-    async def _sync_aviation(self, source: str, run_id: int, client: HttpClient) -> None:
-        """Tải ba file của nguồn (ghi tiến độ sau mỗi file) rồi lưu tất cả trong một transaction:
-        dừng hay lỗi giữa chừng thì dữ liệu đã có không bị đụng tới.
-        """
-        extra = {"run_id": run_id}
-        done = 0
-
-        async def fetch(url: str) -> Page:
-            nonlocal done
-            page = await client.get(url)
-            done += 1
-            self._repo.update_run(run_id, chapters_ok=done)
-            log.info("Đã tải %s", url, extra=extra | {"url": url})
-            return page
-
-        try:
-            records = await aviation.SOURCES[source](fetch)
-            counts = self._aviation.save(source, records)
-        except asyncio.CancelledError:
-            # Tạm dừng, huỷ hoặc tắt server; `stop()` sẽ ghi lại trạng thái chính xác nếu là huỷ.
-            self._repo.update_run(run_id, status=RunStatus.INTERRUPTED, finished_at=utcnow())
-            raise
-        except CrawlerError as exc:
-            kind = "parse" if isinstance(exc, ParseError) else "request"
-            log.error("Dừng đồng bộ hàng không (%s): %s", source, exc, extra=extra | {"kind": kind})
-            self._repo.update_run(
-                run_id, status=RunStatus.FAILED, error=str(exc), finished_at=utcnow()
-            )
-        except Exception as exc:
-            self._repo.update_run(
-                run_id,
-                status=RunStatus.FAILED,
-                error=f"Lỗi ngoài dự kiến: {type(exc).__name__}: {exc}",
-                finished_at=utcnow(),
-            )
-            raise
-        else:
-            self._repo.update_run(
-                run_id, status=RunStatus.COMPLETED, result=counts, finished_at=utcnow()
-            )
-            log.info("Đồng bộ hàng không (%s) xong: %s", source, counts, extra=extra)
+        run_id = aviation.start_sync_run(self._repo, source)
+        work = aviation.sync(source, client.get, self._repo, self._aviation, run_id=run_id)
+        return self._register(run_id, key, work)
 
     def _finished(self, run_id: int, task: asyncio.Task[object]) -> None:
         del self._jobs[run_id]

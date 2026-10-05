@@ -13,7 +13,7 @@ from xml.etree import ElementTree
 import httpx
 import pytest
 
-from crawl_data_app import cli
+from crawl_data_app import aviation, cli
 from crawl_data_app.config.settings import get_settings
 from crawl_data_app.core.http_client import HttpClient
 
@@ -371,3 +371,88 @@ def test_module_entry_point_runs_in_a_real_process(tmp_path):
 
     assert done.returncode == 0, done.stderr.decode("utf-8", "replace")
     assert "truyenfull" in done.stdout.decode("utf-8")
+
+
+# --- Hàng không ------------------------------------------------------------------------------------
+
+
+def aviation_runs(tmp_path) -> list[tuple]:
+    with closing(sqlite3.connect(tmp_path / "data" / "novels.db")) as connection:
+        return connection.execute(
+            "SELECT crawler, status, chapters_ok, result, error FROM crawl_runs ORDER BY id"
+        ).fetchall()
+
+
+def test_aviation_syncs_every_source_by_default(run, sources, tmp_path):
+    code, out = run("aviation")
+
+    assert code == 0
+    assert "Kết quả đồng bộ hàng không" in out
+    # Mỗi nguồn một dòng: tên, job, kết quả, số sân bay / hãng bay / thành phố / quốc gia.
+    assert [line.split()[1:-1] for line in out.splitlines() if "completed" in line] == [
+        ["world", "│", "#1", "│", "completed", "│", "5", "│", "2", "│", "3", "│", "3", "│"],
+        ["vna", "│", "#2", "│", "completed", "│", "4", "│", "2", "│", "3", "│", "2", "│"],
+    ]
+    runs = aviation_runs(tmp_path)
+    assert [row[:3] for row in runs] == [
+        ("aviation:world", "completed", 3),
+        ("aviation:vna", "completed", 3),
+    ]
+    assert json.loads(runs[1][3]) == {"country": 2, "city": 3, "airport": 4, "airline": 2}
+    with closing(sqlite3.connect(tmp_path / "data" / "novels.db")) as connection:
+        stored = connection.execute(
+            "SELECT source, count(*) FROM aviation_records GROUP BY source ORDER BY source"
+        ).fetchall()
+    assert stored == [("vna", 11), ("world", 13)]
+
+
+def test_aviation_source_option_limits_the_sync(run, sources, tmp_path):
+    code, out = run("aviation", "--source", "vna", "--source", "vna")
+
+    assert code == 0
+    assert "world" not in out
+    assert [row[0] for row in aviation_runs(tmp_path)] == [
+        "aviation:vna"
+    ]  # lặp tên cũng chỉ chạy một lần
+    assert sources.requests_to("vietnamairlines.com") == 4  # robots.txt + ba file
+    assert sources.requests_to("ourairports") == 0
+
+
+def test_aviation_failure_is_reported_recorded_and_keeps_old_data(run, sources, tmp_path):
+    run("aviation", "--source", "world")
+    sources.pages[aviation.WORLD_AIRPORTS_URL] = lambda _request: httpx.Response(
+        200, text="id,ten\n1,Noi Bai\n"
+    )
+
+    code, out = run("aviation")
+
+    assert code == 1  # một nguồn hỏng → mã thoát khác 0, nguồn còn lại vẫn chạy
+    assert "failed" in out and "không còn khớp cấu trúc" in out
+    runs = aviation_runs(tmp_path)
+    assert [row[:2] for row in runs] == [
+        ("aviation:world", "completed"),
+        ("aviation:world", "failed"),
+        ("aviation:vna", "completed"),
+    ]
+    with closing(sqlite3.connect(tmp_path / "data" / "novels.db")) as connection:
+        world = connection.execute(
+            "SELECT count(*) FROM aviation_records WHERE source = 'world'"
+        ).fetchone()
+    assert world == (13,)  # dữ liệu của lần đồng bộ trước còn nguyên
+
+
+def test_aviation_rejects_unknown_source(run):
+    with pytest.raises(SystemExit) as exit_info:
+        run("aviation", "--source", "mars")
+
+    assert exit_info.value.code == 2
+
+
+def test_aviation_jobs_do_not_confuse_novel_commands(run, sources):
+    run("aviation", "--source", "vna")
+
+    code, out = run("resume")
+    assert (code, "Không có lần crawl nào dang dở." in out) == (0, True)
+    code, out = run("status")
+    assert code == 0
+    assert "vietnamairlines" not in out  # bảng lịch sử của `status` chỉ nói về truyện

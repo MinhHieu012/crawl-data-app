@@ -8,9 +8,11 @@
 Mỗi nguồn đồng bộ riêng và chỉ tốn ba request; bản ghi của hai nguồn không trộn vào nhau.
 """
 
+import asyncio
 import csv
 import io
 import json
+import logging
 import re
 import unicodedata
 from collections import Counter
@@ -20,9 +22,13 @@ from typing import NamedTuple
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from crawl_data_app.core.exceptions import ParseError
+from crawl_data_app.core.exceptions import CrawlerError, ParseError
 from crawl_data_app.core.http_client import Page
-from crawl_data_app.database.models import AviationRecord, utcnow
+from crawl_data_app.core.models import CrawlRequest
+from crawl_data_app.database.models import AviationRecord, RunStatus, utcnow
+from crawl_data_app.repository import NovelRepository
+
+log = logging.getLogger(__name__)
 
 KINDS = ("airport", "airline", "city", "country")
 
@@ -232,6 +238,71 @@ FILES_PER_SYNC = 3  # mỗi hàm tải ở trên gọi `fetch` đúng ba lần �
 def crawler_name(source: str) -> str:
     """Tên crawler trong lịch sử crawl (`crawl_runs.crawler`) của một nguồn hàng không."""
     return f"aviation:{source}"
+
+
+class SyncResult(NamedTuple):
+    source: str
+    run_id: int
+    status: RunStatus
+    counts: dict[str, int]  # số bản ghi theo loại; rỗng nếu không hoàn tất
+    error: str | None
+
+
+def start_sync_run(runs: NovelRepository, source: str) -> int:
+    """Ghi nhận một lần đồng bộ sắp chạy vào lịch sử crawl và trả về ID của nó."""
+    return runs.start_run(
+        CrawlRequest(url=HOMES[source]), crawler=crawler_name(source), total=FILES_PER_SYNC
+    )
+
+
+async def sync(
+    source: str,
+    get: Fetch,
+    runs: NovelRepository,
+    store: "AviationRepository",
+    *,
+    run_id: int | None = None,
+) -> SyncResult:
+    """Đồng bộ một nguồn: tải ba file (ghi tiến độ sau mỗi file) rồi lưu tất cả trong một
+    transaction — dừng hay lỗi giữa chừng thì dữ liệu đã có không bị đụng tới. Kết quả được ghi vào
+    lịch sử crawl; lỗi "có chủ đích" (mạng, robots.txt, nguồn đổi cấu trúc) trả về trong kết quả chứ
+    không ném ra.
+
+    `get`: hàm tải của HTTP client (tuân thủ robots.txt và nhịp giãn cách). `run_id`: lần chạy đã
+    tạo sẵn bằng `start_sync_run` — web UI cần ID trước khi việc tải bắt đầu.
+    """
+    if run_id is None:
+        run_id = start_sync_run(runs, source)
+    extra = {"run_id": run_id}
+    done = 0
+
+    async def fetch(url: str) -> Page:
+        nonlocal done
+        page = await get(url)
+        done += 1
+        runs.update_run(run_id, chapters_ok=done)
+        log.info("Đã tải %s", url, extra=extra | {"url": url})
+        return page
+
+    def finish(status: RunStatus, **values: object) -> None:
+        runs.update_run(run_id, status=status, finished_at=utcnow(), **values)
+
+    try:
+        counts = store.save(source, await SOURCES[source](fetch))
+    except asyncio.CancelledError:
+        finish(RunStatus.INTERRUPTED)  # Ctrl+C, tạm dừng/huỷ trên web UI, hoặc tắt server
+        raise
+    except CrawlerError as exc:
+        kind = "parse" if isinstance(exc, ParseError) else "request"
+        log.error("Dừng đồng bộ hàng không (%s): %s", source, exc, extra=extra | {"kind": kind})
+        finish(RunStatus.FAILED, error=str(exc))
+        return SyncResult(source, run_id, RunStatus.FAILED, {}, str(exc))
+    except Exception as exc:
+        finish(RunStatus.FAILED, error=f"Lỗi ngoài dự kiến: {type(exc).__name__}: {exc}")
+        raise
+    finish(RunStatus.COMPLETED, result=counts)
+    log.info("Đồng bộ hàng không (%s) xong: %s", source, counts, extra=extra)
+    return SyncResult(source, run_id, RunStatus.COMPLETED, counts, None)
 
 
 # --- Lưu trữ ---------------------------------------------------------------------------------------

@@ -45,11 +45,17 @@ Muốn thao tác bằng giao diện thay cho dòng lệnh: `cd web && npm instal
 | `status` | Truyện đã lưu, số chương đã tải/lỗi, 10 lần crawl gần nhất. |
 | `status --errors` | Thêm danh sách chương đang lỗi kèm URL và nguyên nhân. |
 | `export` | Xuất các chương đã tải ra `exports/<slug>.txt`, mỗi truyện một file (UTF-8). `--format epub` để xuất EPUB 3 có mục lục, `--format json` để xuất thông tin truyện kèm từng chương dạng danh sách đoạn văn, `--novel-id ID` để chọn truyện (ID xem ở `status`), `--out DIR` để đổi thư mục. |
-| `sources` | Các website được hỗ trợ. |
+| `aviation` | Đồng bộ danh mục hàng không (sân bay, hãng bay, thành phố, quốc gia) của mọi nguồn, lần lượt từng nguồn; in bảng số bản ghi theo loại. Mỗi nguồn là một job trong lịch sử, xem lại được ở trang Job của web UI. |
+| `aviation --source world` / `--source vna` | Chỉ một nguồn: `world` là dữ liệu mở toàn thế giới, `vna` là vietnamairlines.com (chỉ dùng cá nhân, phi thương mại). Lặp lại `--source` để chọn nhiều nguồn. |
+| `sources` | Các website truyện được hỗ trợ. |
 | `init-db` | Tạo database / nâng schema lên bản mới nhất. |
 | `serve` | Chạy [web UI](#web-ui) và API tại `http://127.0.0.1:8000`. `--port N` đổi cổng, `--ui-dir DIR` trỏ tới bản build giao diện ở chỗ khác, `--host` đổi địa chỉ lắng nghe (đọc phần bảo mật trước). |
 
-Mã thoát: `0` mọi thứ hoàn tất · `1` có truyện/chương lỗi · `2` sai tham số hoặc cấu hình · `130` bị ngắt (Ctrl+C).
+Mã thoát: `0` mọi thứ hoàn tất · `1` có truyện/chương lỗi hoặc có nguồn hàng không đồng bộ không xong · `2` sai tham số hoặc cấu hình · `130` bị ngắt (Ctrl+C).
+
+`resume` và `status` chỉ nói về truyện: job đồng bộ hàng không không nằm trong hai lệnh này. Đồng bộ
+hàng không bị lỗi hay bị ngắt thì chỉ cần chạy lại `aviation` — dữ liệu đã có không bị thay đổi cho
+tới khi một lần đồng bộ tải và đọc xong cả ba file.
 
 ### Hành vi cần biết
 

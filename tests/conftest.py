@@ -8,6 +8,7 @@ import httpx
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
+from crawl_data_app import aviation
 from crawl_data_app.config.settings import HttpSettings
 from crawl_data_app.core import http_client
 from crawl_data_app.core.http_client import HttpClient
@@ -145,6 +146,24 @@ class FakeSite:
 @pytest.fixture
 def site() -> FakeSite:
     return FakeSite()
+
+
+@pytest.fixture
+def sources(site: FakeSite, load_fixture: Callable[[str], str]) -> FakeSite:
+    """Website giả trả thêm file dữ liệu của cả hai nguồn hàng không (fixture tự viết)."""
+    files = {
+        aviation.VNA_ROUTES_URL.format(lang="en"): "vna-routes.en.json",
+        aviation.VNA_ROUTES_URL.format(lang="vi"): "vna-routes.vi.json",
+        aviation.VNA_AIRLINES_URL: "vna-airlines.json",
+        aviation.WORLD_COUNTRIES_URL: "world-countries.csv",
+        aviation.WORLD_AIRPORTS_URL: "world-airports.csv",
+        aviation.WORLD_AIRLINES_URL: "world-airlines.dat",
+    }
+    for url, name in files.items():
+        text = load_fixture(f"aviation/{name}")
+        site.pages[url] = lambda _request, text=text: httpx.Response(200, text=text)
+    site.robots = "User-agent: *\nDisallow:\n"
+    return site
 
 
 @pytest.fixture

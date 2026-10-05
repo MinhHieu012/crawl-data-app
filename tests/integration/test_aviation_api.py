@@ -14,24 +14,6 @@ WORLD = "/api/aviation/world"
 EMPTY = {"airport": 0, "airline": 0, "city": 0, "country": 0}
 
 
-@pytest.fixture
-def sources(site, load_fixture):
-    """Website giả trả file dữ liệu của cả hai nguồn."""
-    files = {
-        aviation.VNA_ROUTES_URL.format(lang="en"): "vna-routes.en.json",
-        aviation.VNA_ROUTES_URL.format(lang="vi"): "vna-routes.vi.json",
-        aviation.VNA_AIRLINES_URL: "vna-airlines.json",
-        aviation.WORLD_COUNTRIES_URL: "world-countries.csv",
-        aviation.WORLD_AIRPORTS_URL: "world-airports.csv",
-        aviation.WORLD_AIRLINES_URL: "world-airlines.dat",
-    }
-    for url, name in files.items():
-        text = load_fixture(f"aviation/{name}")
-        site.pages[url] = lambda _request, text=text: httpx.Response(200, text=text)
-    site.robots = "User-agent: *\nDisallow:\n"
-    return site
-
-
 async def wait_for(api, job_id: int, reached) -> dict:
     """Hỏi lại job (mỗi lần hỏi nhường event loop cho job chạy) tới khi `reached(job)`."""
     for _ in range(500):

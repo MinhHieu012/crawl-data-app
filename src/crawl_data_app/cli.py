@@ -1,4 +1,4 @@
-"""Giao diện dòng lệnh: crawl, resume, status, export, sources, init-db, serve (web UI)."""
+"""Giao diện dòng lệnh: crawl, resume, status, export, aviation, sources, init-db, serve (web UI)."""
 
 import argparse
 import asyncio
@@ -21,6 +21,8 @@ from rich.progress import (
 )
 from rich.table import Table
 
+from crawl_data_app import aviation
+from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.logging import setup_logging
 from crawl_data_app.config.settings import Settings, get_settings
 from crawl_data_app.core.content import split_title, to_paragraphs
@@ -47,7 +49,8 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="crawl-data-app",
-        description="Crawl truyện chữ từ các website đọc truyện vào database.",
+        description="Crawl dữ liệu vào database: truyện chữ từ các website đọc truyện, và danh mục "
+        "hàng không.",
     )
     commands = parser.add_subparsers(dest="command", required=True, metavar="LỆNH")
 
@@ -110,6 +113,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=sorted(WRITERS), default="txt", help="định dạng file (mặc định: txt)"
     )
 
+    aviation_sync = commands.add_parser(
+        "aviation",
+        help="đồng bộ danh mục hàng không (sân bay, hãng bay, thành phố, quốc gia)",
+    )
+    aviation_sync.add_argument(
+        "--source",
+        action="append",
+        choices=sorted(aviation.SOURCES),
+        default=[],
+        help="nguồn cần đồng bộ: world (dữ liệu mở toàn thế giới) hoặc vna (vietnamairlines.com, "
+        "chỉ dùng cá nhân, phi thương mại); lặp lại được; bỏ trống = mọi nguồn",
+    )
+
     commands.add_parser("sources", help="liệt kê các website được hỗ trợ")
     commands.add_parser("init-db", help="tạo database / nâng schema lên phiên bản mới nhất")
 
@@ -156,6 +172,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         repo.close_stale_runs()
         if args.command == "serve":
             return _serve(args, repo)
+        if args.command == "aviation":
+            sources = list(dict.fromkeys(args.source)) or list(aviation.SOURCES)
+            return _sync_aviation(sources, settings, repo)
         if args.command == "crawl":
             requests, force = _crawl_requests(args, parser), args.force
         else:
@@ -275,6 +294,58 @@ async def _run(
     finally:
         await client.aclose()
     return results
+
+
+def _sync_aviation(sources: Sequence[str], settings: Settings, repo: NovelRepository) -> int:
+    """Đồng bộ lần lượt từng nguồn hàng không — mỗi nguồn một dòng trong lịch sử crawl, như khi bấm
+    Đồng bộ trên web UI. Trả về 0 nếu mọi nguồn đều xong.
+    """
+    store = AviationRepository(repo.session_factory)
+
+    async def run() -> list[aviation.SyncResult]:
+        client = HttpClient(settings.http)
+        try:
+            with err.status("") as status:
+                results = []
+                for source in sources:
+                    status.update(f"Đang đồng bộ nguồn {source}…")
+                    results.append(await aviation.sync(source, client.get, repo, store))
+                return results
+        finally:
+            await client.aclose()
+
+    try:
+        results = asyncio.run(run())
+    except KeyboardInterrupt:
+        err.print(
+            "Đã dừng theo yêu cầu. Dữ liệu đã có không bị thay đổi; chạy lại lệnh để đồng bộ."
+        )
+        return 130
+    kinds = {
+        "airport": "Sân bay",
+        "airline": "Hãng bay",
+        "city": "Thành phố",
+        "country": "Quốc gia",
+    }
+    table = _table(
+        "Kết quả đồng bộ hàng không",
+        "Nguồn",
+        "Job",
+        "Kết quả",
+        *kinds.values(),
+        "Ghi chú",
+        wide=("Ghi chú",),
+    )
+    for result in results:
+        table.add_row(
+            result.source,
+            f"#{result.run_id}",
+            result.status.value,
+            *(str(result.counts.get(kind, "—")) for kind in kinds),
+            result.error or "",
+        )
+    out.print(table)
+    return 0 if all(result.status == RunStatus.COMPLETED for result in results) else 1
 
 
 def _table(title: str, *columns: str, wide: Sequence[str]) -> Table:
