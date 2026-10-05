@@ -37,6 +37,13 @@ export const theme = createTheme({
     // dù mô tả của chúng dài ngắn khác nhau hay một ô không có mô tả.
     InputWrapper: Input.Wrapper.extend({
       defaultProps: { inputWrapperOrder: ['label', 'input', 'error', 'description'] },
+      // Mặc định của Mantine để nhãn dính sát ô nhập (0px) và mô tả cách ô 5px: nới ra cho dễ đọc.
+      // Lề trên của mô tả/lỗi gộp với lề dưới 5px của ô nhập (margin collapse) nên 8 là khoảng cách thật.
+      styles: {
+        label: { marginBottom: 6 },
+        description: { marginTop: 8 },
+        error: { marginTop: 8 },
+      },
     }),
   },
 })
