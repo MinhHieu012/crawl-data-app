@@ -52,7 +52,7 @@ class DatabaseSettings(BaseSettings):
 
     model_config = _env("DATABASE_")
 
-    url: str = "sqlite:///data/novels.db"
+    url: str = "sqlite:///data/crawl-data-app.db"
 
 
 class LogSettings(BaseSettings):

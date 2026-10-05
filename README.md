@@ -364,7 +364,7 @@ Mọi cấu hình đọc từ biến môi trường hoặc file `.env`; xem [.en
 
 | Nhóm | Biến | Mặc định | Ghi chú |
 |---|---|---|---|
-| Database | `DATABASE_URL` | `sqlite:///data/novels.db` | PostgreSQL: `postgresql+psycopg://user:pass@host/db` |
+| Database | `DATABASE_URL` | `sqlite:///data/crawl-data-app.db` | PostgreSQL: `postgresql+psycopg://user:pass@host/db` |
 | HTTP | `HTTP_USER_AGENT` | `crawl-data-app/<version>` | Tự nhận là bot; nên thêm thông tin liên hệ |
 | HTTP | `HTTP_REQUEST_TIMEOUT` | `20` | giây |
 | HTTP | `HTTP_MAX_RETRIES` | `3` | backoff 1s → 2s → 4s (có jitter), tôn trọng `Retry-After` |

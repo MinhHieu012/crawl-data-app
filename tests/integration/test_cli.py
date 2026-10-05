@@ -63,8 +63,8 @@ def test_init_db_creates_the_schema_at_the_default_location(run, tmp_path):
     code, out = run("init-db")
 
     assert code == 0
-    assert "sqlite:///data/novels.db" in out
-    with closing(sqlite3.connect(tmp_path / "data" / "novels.db")) as connection:
+    assert "sqlite:///data/crawl-data-app.db" in out
+    with closing(sqlite3.connect(tmp_path / "data" / "crawl-data-app.db")) as connection:
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master")}
     assert {"sources", "novels", "chapters", "crawl_runs", "alembic_version"} <= tables
 
@@ -377,7 +377,7 @@ def test_module_entry_point_runs_in_a_real_process(tmp_path):
 
 
 def aviation_runs(tmp_path) -> list[tuple]:
-    with closing(sqlite3.connect(tmp_path / "data" / "novels.db")) as connection:
+    with closing(sqlite3.connect(tmp_path / "data" / "crawl-data-app.db")) as connection:
         return connection.execute(
             "SELECT crawler, status, chapters_ok, result, error FROM crawl_runs ORDER BY id"
         ).fetchall()
@@ -399,7 +399,7 @@ def test_aviation_syncs_every_source_by_default(run, sources, tmp_path):
         ("aviation:vna", "completed", 3),
     ]
     assert json.loads(runs[1][3]) == {"country": 2, "city": 3, "airport": 4, "airline": 2}
-    with closing(sqlite3.connect(tmp_path / "data" / "novels.db")) as connection:
+    with closing(sqlite3.connect(tmp_path / "data" / "crawl-data-app.db")) as connection:
         stored = connection.execute(
             "SELECT source, count(*) FROM aviation_records GROUP BY source ORDER BY source"
         ).fetchall()
@@ -434,7 +434,7 @@ def test_aviation_failure_is_reported_recorded_and_keeps_old_data(run, sources, 
         ("aviation:world", "failed"),
         ("aviation:vna", "completed"),
     ]
-    with closing(sqlite3.connect(tmp_path / "data" / "novels.db")) as connection:
+    with closing(sqlite3.connect(tmp_path / "data" / "crawl-data-app.db")) as connection:
         world = connection.execute(
             "SELECT count(*) FROM aviation_records WHERE source = 'world'"
         ).fetchone()
@@ -456,3 +456,55 @@ def test_aviation_jobs_do_not_confuse_novel_commands(run, sources):
     code, out = run("status")
     assert code == 0
     assert "vietnamairlines" not in out  # bảng lịch sử của `status` chỉ nói về truyện
+
+
+# --- Đổi tên file database mặc định ----------------------------------------------------------------
+
+
+def test_database_from_before_the_rename_is_adopted_not_replaced_by_an_empty_one(run, tmp_path):
+    old, new = tmp_path / "data" / "novels.db", tmp_path / "data" / "crawl-data-app.db"
+    old.parent.mkdir()
+    with closing(sqlite3.connect(old)) as connection:
+        connection.execute("CREATE TABLE du_lieu_cu (id INTEGER)")
+
+    code, _ = run("init-db")
+
+    assert code == 0
+    assert (old.exists(), new.exists()) == (False, True)
+    with closing(sqlite3.connect(new)) as connection:
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master")}
+    assert {"du_lieu_cu", "crawl_runs"} <= tables  # dữ liệu cũ còn đó, schema được nâng lên
+
+
+def test_existing_new_database_and_custom_url_leave_the_old_file_alone(run, tmp_path, monkeypatch):
+    old, new = tmp_path / "data" / "novels.db", tmp_path / "data" / "crawl-data-app.db"
+    run("init-db")  # database tên mới đã có dữ liệu thật (schema)
+    old.write_bytes(b"file cu")
+    in_use = new.read_bytes()
+
+    run("init-db")
+    assert old.exists()  # đã có database tên mới: không ghi đè lên nó
+    assert new.read_bytes() == in_use
+
+    new.unlink()
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///data/rieng.db")
+    get_settings.cache_clear()
+    run("init-db")
+    assert old.exists()  # tự đặt DATABASE_URL: không đụng tới file nào khác
+    assert not new.exists()
+
+
+def test_an_empty_file_with_the_new_name_does_not_hide_the_old_database(run, tmp_path):
+    """Một công cụ SQLite mở thử file tên mới sẽ để lại file 0 byte — đó chưa phải database."""
+    old, new = tmp_path / "data" / "novels.db", tmp_path / "data" / "crawl-data-app.db"
+    old.parent.mkdir()
+    with closing(sqlite3.connect(old)) as connection:
+        connection.execute("CREATE TABLE du_lieu_cu (id INTEGER)")
+    new.write_bytes(b"")
+
+    run("init-db")
+
+    assert not old.exists()
+    with closing(sqlite3.connect(new)) as connection:
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master")}
+    assert "du_lieu_cu" in tables

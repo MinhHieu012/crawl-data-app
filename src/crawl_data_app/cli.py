@@ -20,11 +20,12 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 from rich.table import Table
+from sqlalchemy import make_url
 
 from crawl_data_app import aviation
 from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.logging import setup_logging
-from crawl_data_app.config.settings import Settings, get_settings
+from crawl_data_app.config.settings import DatabaseSettings, Settings, get_settings
 from crawl_data_app.core.content import split_title, to_paragraphs
 from crawl_data_app.core.exceptions import CrawlerError
 from crawl_data_app.core.http_client import HttpClient
@@ -44,6 +45,28 @@ out = Console(markup=False)  # kết quả → stdout
 err = Console(markup=False, stderr=True)
 
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
+# Tên file database mặc định trước khi project mở rộng ra ngoài truyện chữ.
+LEGACY_DATABASE = Path("data/novels.db")
+
+
+def _adopt_legacy_database(url: str) -> None:
+    """Đang dùng database mặc định mà chỉ có file tên cũ → đổi tên file, để dữ liệu đã crawl không
+    "biến mất" sau khi nâng cấp. Ai tự đặt `DATABASE_URL` thì không bị đụng tới.
+    """
+    current = Path(make_url(url).database or "")
+    if url != DatabaseSettings.model_fields["url"].default or not LEGACY_DATABASE.is_file():
+        return
+    # File tên mới rỗng 0 byte (một công cụ SQLite vừa mở thử nó) chưa phải database: vẫn nhận file cũ.
+    if current.exists() and current.stat().st_size > 0:
+        return
+    try:
+        LEGACY_DATABASE.replace(current)
+    except OSError as exc:
+        raise SystemExit(
+            f"Không đổi tên được {LEGACY_DATABASE} thành {current} ({exc}). Hãy tắt chương trình "
+            "đang mở file đó rồi chạy lại, hoặc tự đổi tên file."
+        ) from exc
+    err.print(f"Đã đổi tên database {LEGACY_DATABASE} thành {current}.")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -158,6 +181,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ValidationError as exc:
         parser.error(f"cấu hình (.env / biến môi trường) không hợp lệ:\n{exc}")
     setup_logging(settings.log, err)
+    _adopt_legacy_database(settings.database.url)
     engine = create_db_engine(settings.database.url)
     try:
         init_db(engine)
