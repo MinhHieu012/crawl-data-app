@@ -56,13 +56,18 @@ export function CrawlersPage() {
               to={modulePath(crawler.id)}
               ready={crawler.categories.some((category) => category.sections)}
             >
-              {crawler.categories.length > 1 && (
-                <Text size="sm">
-                  {crawler.categories.map((category) => category.name).join(' · ')}
-                </Text>
-              )}
-              {crawler.categories.map(
-                (category) => category.Summary && <category.Summary key={category.id} />,
+              {/* Nhiều loại dữ liệu: mỗi loại một dòng "tên + số liệu" để biết số nào của loại nào. */}
+              {crawler.categories.map((category) =>
+                crawler.categories.length > 1 ? (
+                  <div key={category.id}>
+                    <Text size="sm" fw={600}>
+                      {category.name}
+                    </Text>
+                    {category.Summary && <category.Summary />}
+                  </div>
+                ) : (
+                  category.Summary && <category.Summary key={category.id} />
+                ),
               )}
             </CrawlerCard>
           ))}

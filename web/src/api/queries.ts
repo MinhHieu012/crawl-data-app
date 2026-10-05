@@ -29,6 +29,11 @@ import type {
   SettingsUpdate,
   Source,
   Stats,
+  AviationKind,
+  AviationRecord,
+  AviationSource,
+  AviationSummary,
+  AviationSync,
 } from './types'
 
 /** Chu kỳ hỏi lại khi có job đang chạy. Không có job nào chạy thì không hỏi định kỳ. */
@@ -76,6 +81,13 @@ export interface LogParams {
   job_id?: number
   search?: string
   limit?: number
+}
+
+export interface AviationRecordParams {
+  kind: AviationKind
+  search?: string
+  page?: number
+  page_size?: number
 }
 
 const isRunning = (job: Job | undefined) => job?.status === 'running'
@@ -154,6 +166,32 @@ export function useLogs(params: LogParams, live: boolean) {
   })
 }
 
+export function useAviationSummary(source: AviationSource) {
+  return useQuery({
+    queryKey: ['aviation', source, 'summary'],
+    queryFn: () => api<AviationSummary>(`/aviation/${source}/summary`),
+  })
+}
+
+export function useAviationRecords(source: AviationSource, params: AviationRecordParams) {
+  return useQuery({
+    queryKey: ['aviation', source, 'records', params],
+    queryFn: () => api<Page<AviationRecord>>(`/aviation/${source}/records`, { params }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAviationSyncs(
+  source: AviationSource,
+  params: { page?: number; page_size?: number },
+) {
+  return useQuery({
+    queryKey: ['aviation', source, 'syncs', params],
+    queryFn: () => api<Page<AviationSync>>(`/aviation/${source}/syncs`, { params }),
+    placeholderData: keepPreviousData,
+  })
+}
+
 export function useSettings() {
   return useQuery({ queryKey: ['settings'], queryFn: () => api<Settings>('/settings') })
 }
@@ -223,6 +261,19 @@ export function useTestSource() {
     // Backend tự thử lại khi mạng chập chờn (có backoff) nên có thể mất cả phút mới trả lời.
     mutationFn: (name: string) =>
       api<ConnectionTest>(`/sources/${name}/test`, { method: 'POST', timeoutMs: 180_000 }),
+  })
+}
+
+/** Tải lại toàn bộ danh mục của một nguồn; backend chỉ trả lời khi đã ghi xong vào database. */
+export function useSyncAviation(source: AviationSource) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api<AviationSync>(`/aviation/${source}/sync`, { method: 'POST', timeoutMs: 300_000 }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['aviation', source] })
+      void queryClient.invalidateQueries({ queryKey: ['logs'] })
+    },
   })
 }
 

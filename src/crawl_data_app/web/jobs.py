@@ -132,14 +132,23 @@ class JobManager:
         log.info("%s job #%d theo yêu cầu", action, run_id, extra={"run_id": run_id})
         return True
 
-    async def fetch(self, url: str) -> Page:
-        """Tải một trang qua client dùng chung (cùng nhịp giãn cách và robots.txt với các job)."""
+    async def with_fetch[T](
+        self, work: Callable[[Callable[[str], Awaitable[Page]]], Awaitable[T]]
+    ) -> T:
+        """Chạy `work(fetch)` trên client dùng chung (cùng nhịp giãn cách và robots.txt với các job).
+
+        Client được giữ suốt lúc `work` chạy, nên tải nhiều trang liên tiếp chỉ đọc robots.txt một lần.
+        """
         client = await self._shared_client()
         self._fetches += 1
         try:
-            return await client.get(url)
+            return await work(client.get)
         finally:
             self._fetches -= 1
+
+    async def fetch(self, url: str) -> Page:
+        """Tải một trang qua client dùng chung."""
+        return await self.with_fetch(lambda fetch: fetch(url))
 
     async def shutdown(self) -> None:
         """Dừng mọi job (service ghi `interrupted` → lần sau chạy tiếp được) và đóng kết nối."""

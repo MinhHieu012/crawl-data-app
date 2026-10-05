@@ -1,7 +1,7 @@
 // Một cửa duy nhất để gọi backend: ghép URL, đặt timeout và đổi mọi kiểu thất bại
 // (mất mạng, quá hạn, 4xx, 5xx) thành `ApiError` có câu thông báo đọc được cho người dùng.
 
-const BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
+export const BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
 const DEFAULT_TIMEOUT_MS = 15_000
 
 interface ApiErrorInit {

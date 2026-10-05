@@ -134,8 +134,25 @@ Các tab của crawler **Truyện chữ** (`/crawlers/novel/stories/…`):
 | Nguồn | `sources` | Bật / tắt từng website nguồn, kiểm tra kết nối, xem thông tin crawler và cấu hình HTTP đang áp dụng. |
 | Log | `logs` | Cùng nội dung với trang Log chung. |
 
-Crawler **Vietnam Airlines** (sân bay, hãng bay, thành phố, quốc gia) mới chỉ có chỗ trên giao diện:
-backend chưa có crawler nên bốn loại dữ liệu này hiện "Chưa triển khai", không có số liệu nào.
+Crawler **Hàng không** (`/crawlers/aviation`) có hai nguồn dữ liệu độc lập, mỗi nguồn là một mục
+trên menu:
+
+| Nguồn | Đường dẫn | Dữ liệu |
+|---|---|---|
+| Toàn thế giới | `/crawlers/aviation/world/…` | Dữ liệu mở: sân bay còn hoạt động có mã IATA và quốc gia từ OurAirports, hãng bay đang hoạt động có mã IATA từ OpenFlights; thành phố suy ra từ sân bay. |
+| Vietnam Airlines | `/crawlers/aviation/vietnam-airlines/…` | Điểm đến và hãng bay đối tác công bố trên vietnamairlines.com, có tên tiếng Việt. Chỉ dùng cho mục đích cá nhân, phi thương mại. |
+
+Mỗi nguồn có cùng năm tab:
+
+| Tab | Đường dẫn | Nội dung |
+|---|---|---|
+| Sân bay · Hãng bay · Thành phố · Quốc gia | `airport` · `airline` · `city` · `country` | Bảng bản ghi (mã, tên, thành phố, quốc gia, vùng hoặc châu lục), tìm theo mã hoặc tên (gõ không dấu cũng được), phân trang; nút **Đồng bộ** và **Xuất JSON** (tải mọi bản ghi của loại đó, không theo ô tìm kiếm). |
+| Lịch sử | `history` | Các lần đồng bộ của nguồn: trạng thái, số bản ghi theo loại hoặc lý do thất bại, thời gian chạy. |
+
+Một lần đồng bộ tải lại cả bốn loại của nguồn đó (ba request); lần thất bại không làm mất dữ liệu đã
+có, và hai nguồn không ghi đè lên nhau. Đồng bộ chạy ngay trong request (khoảng 10 giây) nên không
+tạo job và không hiện ở trang Job; lỗi được ghi vào Log. Phạm vi và giấy phép của từng nguồn: xem
+"Tuân thủ và giới hạn".
 
 Trang nào cũng có trạng thái đang tải (skeleton), lỗi (kèm nút thử lại) và trống; thao tác phá huỷ (huỷ
 job, tắt nguồn, tải đè một chương) đều hỏi lại; kết quả thao tác báo bằng thông báo góc màn hình. Có
@@ -182,6 +199,11 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `POST /api/crawl/jobs/{id}/pause` | Tạm dừng job đang chạy. |
 | `POST /api/crawl/jobs/{id}/cancel` | Huỷ job đang chạy hoặc đang tạm dừng. |
 | `POST /api/crawl/jobs/{id}/resume` · `/retry` | Chạy lại đúng phạm vi cũ thành một job mới (hai tên, một việc). |
+| `GET /api/aviation/{source}/summary` | Danh mục hàng không của một nguồn (`source` là `world` hoặc `vna`): số bản ghi theo loại và lần đồng bộ gần nhất. |
+| `GET /api/aviation/{source}/records` | Bản ghi của một loại: `kind` (`airport` / `airline` / `city` / `country`), `search`, `page`, `page_size`. |
+| `GET /api/aviation/{source}/export` | Toàn bộ bản ghi của một loại (`kind`) thành file JSON tải về (`aviation-<source>-<kind>.json`), cùng các trường với `/records`. |
+| `GET /api/aviation/{source}/syncs` | Lịch sử đồng bộ của nguồn: `page`, `page_size`. |
+| `POST /api/aviation/{source}/sync` | Tải lại toàn bộ danh mục của nguồn rồi mới trả lời. Thất bại vẫn là HTTP 200 với `status: "failed"` và `error`; đang có lần đồng bộ khác thì 409. |
 | `GET /api/logs` | Các dòng log mới nhất: `level`, `kind`, `job_id`, `search`, `limit`. |
 | `GET /api/settings` · `PUT /api/settings` | Đọc / lưu cấu hình. |
 
@@ -243,7 +265,7 @@ web/src/
 │   └── paths.ts       đường dẫn của khu vực Crawler, dùng chung cho registry và các trang
 ├── layouts/           AppLayout: thanh trên, menu trái, nút sáng/tối, số job đang chạy ·
 │                      CategoryLayout: tiêu đề, breadcrumb và các tab của một loại dữ liệu
-├── pages/<màn hình>/  dashboard · crawlers · crawl · jobs · novels · sources · logs · settings
+├── pages/<màn hình>/  dashboard · crawlers · crawl · jobs · novels · sources · aviation · logs · settings
 ├── components/        QueryState (đang tải / lỗi / trống) · PageHeader (breadcrumb) · JobsTable ·
 │                      JobProgress · NovelProgress · LogList · StatusBadge · ListControls · Cover ·
 │                      StatCard · RecentJobs
@@ -399,6 +421,9 @@ service.py                  CrawlService: điều phối một lần crawl, đ�
   │                         (Pydantic) · content (làm sạch HTML) · exceptions
   └─ repository.py          NovelRepository: transaction ngắn, chống trùng, lịch sử crawl, truy vấn
        └─ database/         có lọc/phân trang · ORM SQLAlchemy 2 · session · migrations (Alembic)
+aviation.py                 danh mục hàng không theo nguồn (world, vna): parser JSON/CSV (hàm thuần) ·
+                            SOURCES (mỗi nguồn một hàm tải, 3 request qua HttpClient dùng chung) ·
+                            AviationRepository (ghi đè theo nguồn + mã, lịch sử đồng bộ)
 config/                     settings (pydantic-settings, đọc/ghi .env) · logging (JSON Lines, đọc lại log)
 
 web/ (thư mục gốc)          frontend React — xem "Kiến trúc frontend"; chỉ nói chuyện với backend qua /api
@@ -514,7 +539,9 @@ liệt kê chương lỗi kèm URL.
 - Một nhịp request chung (mặc định 2 giây/request), tối đa 8 kết nối; thử lại có backoff và tôn trọng
   `Retry-After`; dừng khi bị từ chối hoặc lỗi liên tiếp.
 - User-Agent mặc định tự nhận là bot (`crawl-data-app/<version>`), không giả trình duyệt.
-- Không giải CAPTCHA, không đăng nhập, không gọi API/AJAX nội bộ, không lưu cookie hay dữ liệu cá nhân.
+- Không giải CAPTCHA, không đăng nhập, không lưu cookie hay dữ liệu cá nhân. Crawler truyện không gọi
+  API/AJAX nội bộ; crawler Vietnam Airlines thì đọc đúng các file JSON công khai mà trang của hãng tự
+  tải (xem khảo sát bên dưới).
 
 **Khảo sát TruyenFull (ngày 05/10/2026, từ một mạng tại Việt Nam)**
 
@@ -532,6 +559,45 @@ liệt kê chương lỗi kèm URL.
   quảng cáo cho website — việc này có phù hợp với mục đích của bạn hay không là quyết định của bạn.
 - Website không có trang điều khoản sử dụng riêng (footer ghi giấy phép CC BY 4.0 cho website); điều
   đó không thay đổi bản quyền của từng tác phẩm.
+
+**Khảo sát Vietnam Airlines (ngày 05/10/2026)**
+
+- `robots.txt` của `www.vietnamairlines.com` không cấm đường dẫn nào (`Disallow:` rỗng).
+- **Điều khoản sử dụng website chỉ cho phép dùng vào mục đích cá nhân, phi thương mại**, và cấm dùng
+  công cụ tự động trích xuất dữ liệu cho mục đích thương mại. Crawler này chỉ được dùng trong phạm vi
+  đó; muốn dùng dữ liệu cho sản phẩm có thu tiền thì phải xin phép hãng hoặc đổi sang nguồn dữ liệu mở.
+- Dữ liệu không nằm trong HTML mà trong các file JSON trang của hãng tự tải, không cần đăng nhập:
+  `/bin/vna/sky/route/flight-route.<ngôn ngữ>-vn.json` (vùng → quốc gia → thành phố → sân bay, dùng cho
+  ô chọn điểm đi/đến; bản tiếng Anh và tiếng Việt) và `/graphql/execute.json/vna/freqflyerprogramList`
+  (hãng bay có chương trình khách hàng thường xuyên liên kết). Đây là endpoint nội bộ của website,
+  không phải API được công bố: hãng có thể đổi hoặc gỡ bất cứ lúc nào, khi đó lần đồng bộ báo lỗi
+  parser và dữ liệu cũ được giữ nguyên.
+- Một lần đồng bộ là 4 request (`robots.txt` + 3 file, mỗi file bản điểm đi/đến khoảng 4 MB), theo
+  nhịp giãn cách chung; lần chạy thử mất 8 giây và cho 469 sân bay, 464 thành phố, 64 quốc gia, 18
+  hãng bay. Danh mục hiếm khi đổi — không cần đồng bộ thường xuyên.
+- "Hãng bay" chỉ là danh sách hãng trong ô chọn chương trình khách hàng thường xuyên, không phải toàn
+  bộ hãng bay. Tên sân bay là tên hiển thị của hãng (ví dụ "Tokyo Narita"), không phải tên chính thức;
+  nguồn không có toạ độ, múi giờ hay mã ICAO.
+- Mã `PNH` có trong phần điểm đến của file nhưng không kèm tên, thành phố hay quốc gia nên không được
+  lưu. Chỉ bản dành cho thị trường Việt Nam (`-vn`) được đọc; bản của thị trường khác chưa được so.
+
+**Nguồn hàng không toàn thế giới (khảo sát ngày 05/10/2026)**
+
+- **OurAirports** (`davidmegginson.github.io/ourairports-data`): `countries.csv` và `airports.csv`,
+  dữ liệu thuộc phạm vi công cộng. Host không có `robots.txt` (404, tức không hạn chế). File sân bay
+  khoảng 13 MB với hơn 86.000 dòng; crawler chỉ giữ sân bay **còn hoạt động có mã IATA** (9.051), bỏ
+  bãi đáp nhỏ, sân bay trực thăng không mã và sân bay đã đóng.
+- **OpenFlights** (`raw.githubusercontent.com/jpatokal/openflights`): `airlines.dat`, giấy phép
+  **ODbL — dùng lại hay phân phối lại phải ghi nguồn và giữ nguyên giấy phép**. Crawler giữ hãng đang
+  hoạt động có mã IATA (983); mã trùng thì lấy dòng đầu. Dự án này ít được cập nhật trong vài năm
+  gần đây, nên có thể thiếu hãng mới và còn hãng đã ngừng bay.
+- **Thành phố là dữ liệu suy ra**, không phải danh mục chuẩn: lấy từ cột "municipality" của từng sân
+  bay, gộp theo (quốc gia, tên) và tự đặt mã dạng `VN-ho-chi-minh-city` vì dữ liệu mở không có mã
+  thành phố. Cột này do cộng đồng nhập nên có chỗ lộn xộn (ví dụ "Hanoi (Soc Son)" hay tên viết sai),
+  và cùng một thành phố có thể thành nhiều dòng nếu các sân bay ghi tên khác nhau.
+- Một lần đồng bộ là 3 request (cộng `robots.txt` của mỗi host); lần chạy thử mất 11 giây và cho
+  9.051 sân bay, 8.161 thành phố, 249 quốc gia, 983 hãng bay. Không có tên tiếng Việt.
+- Tìm kiếm và phân trang đang lọc trong bộ nhớ; với nguồn này một lần tìm mất khoảng 0,3 giây.
 
 **Giới hạn hiện tại**
 

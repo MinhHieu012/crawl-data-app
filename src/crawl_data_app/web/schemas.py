@@ -28,6 +28,33 @@ class Stats(BaseModel):
     jobs: dict[str, int]  # theo trạng thái lần crawl: running / completed / partial / ...
 
 
+class AviationRecordOut(BaseModel):
+    kind: str  # airport | airline | city | country
+    code: str
+    name: str
+    name_vi: str | None
+    city_code: str | None  # chỉ sân bay
+    city_name: str | None
+    country_code: str | None  # sân bay và thành phố
+    country_name: str | None
+    region: str | None
+    crawled_at: UtcDatetime
+
+
+class AviationSyncOut(BaseModel):
+    id: int
+    status: str  # completed | failed
+    counts: dict[str, int]  # số bản ghi theo loại; rỗng nếu thất bại
+    error: str | None
+    started_at: UtcDatetime
+    finished_at: UtcDatetime
+
+
+class AviationSummary(BaseModel):
+    counts: dict[str, int]  # số bản ghi đang có trong database, theo loại
+    last_sync: AviationSyncOut | None
+
+
 class SourceOut(BaseModel):
     name: str
     domains: list[str]

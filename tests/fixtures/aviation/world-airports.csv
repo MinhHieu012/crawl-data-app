@@ -1,0 +1,8 @@
+"id","ident","type","name","latitude_deg","longitude_deg","elevation_ft","continent","iso_country","iso_region","municipality","scheduled_service","icao_code","iata_code","gps_code","local_code","home_link","wikipedia_link","keywords"
+1,"VVNB","large_airport","Noi Bai International Airport",21.22,105.80,39,"AS","VN","VN-RRD","Hanoi","yes","VVNB","HAN","VVNB",,,,"Sân bay Nội Bài, ""Noibai"""
+2,"VVDN","large_airport","Da Nang International Airport",16.04,108.19,33,"AS","VN","VN-SCC","Đà Nẵng","yes","VVDN","DAD","VVDN",,,,
+3,"RJAA","large_airport","Narita International Airport",35.76,140.38,141,"AS","JP","JP-12","Tokyo","yes","RJAA","NRT","RJAA",,,,
+4,"RJTT","large_airport","Tokyo Haneda International Airport",35.55,139.77,35,"AS","JP","JP-13","Tokyo","yes","RJTT","HND","RJTT",,,,
+5,"VN-0001","heliport","Bãi đáp không có mã IATA",10.0,106.0,,"AS","VN","VN-SE","Vung Tau","no",,,,,,,
+6,"LFXX","closed","Sân bay đã đóng cửa",48.0,2.0,,"EU","FR","FR-IDF","Paris","no",,"XXX",,,,,
+7,"LFYY","small_airport","Airfield Without City",47.0,3.0,,"EU","FR","FR-BFC","","no","LFYY","YYY",,,,,

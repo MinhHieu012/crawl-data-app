@@ -1,0 +1,61 @@
+{
+  "departures": [
+    {
+      "title": "VIETNAM",
+      "tagName": "VIETNAM",
+      "countries": [
+        {
+          "title": "Vietnam",
+          "tagName": "VN",
+          "defaultAirport": "HAN",
+          "cities": [
+            {
+              "title": "Hanoi",
+              "tagName": "HAN",
+              "airports": [{ "title": "Hanoi (HAN)", "tagName": "HAN" }]
+            },
+            {
+              "title": "Da Nang",
+              "tagName": "DAD",
+              "airports": [{ "title": "Da Nang (DAD)", "tagName": "DAD" }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "NORTH EAST ASIA",
+      "tagName": "NORTH-EAST-ASIA",
+      "countries": [
+        {
+          "title": "Japan",
+          "tagName": "JP",
+          "defaultAirport": "NRT",
+          "cities": [
+            {
+              "title": "Tokyo",
+              "tagName": "TYO",
+              "airports": [
+                { "title": "Tokyo Narita (NRT)", "tagName": "NRT" },
+                { "title": "Tokyo Haneda (HND)", "tagName": "HND" }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Japan",
+          "tagName": "JP",
+          "defaultAirport": "NRT",
+          "cities": [
+            {
+              "title": "Tokyo",
+              "tagName": "TYO",
+              "airports": [{ "title": "Tokyo Narita (NRT)", "tagName": "NRT" }]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "destinations": {}
+}

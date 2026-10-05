@@ -1,5 +1,6 @@
 import { Button, Card, NativeSelect } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import { useJobs } from '../../api/queries'
@@ -14,7 +15,12 @@ import { useUrlState } from '../../hooks/useUrlState'
 
 const PAGE_SIZE = 20
 
-export function JobsPage() {
+interface JobsPageProps {
+  /** Nút ở đầu trang. Mặc định là "Crawl truyện" (tab Job của crawler truyện); trang Job chung truyền menu chọn crawler. */
+  actions?: ReactNode
+}
+
+export function JobsPage({ actions }: JobsPageProps) {
   const [filters, setFilters] = useUrlState({ status: '', page: '1' })
   const page = Number(filters.page) || 1
   const jobs = useJobs({ status: filters.status as JobStatus | '', page, page_size: PAGE_SIZE })
@@ -25,9 +31,11 @@ export function JobsPage() {
         title="Job crawl"
         description="Mỗi lần crawl một truyện là một job. Lịch sử được giữ lại, kể cả những lần thất bại."
         actions={
-          <Button component={Link} to={novelPaths.crawl} leftSection={<IconPlus size={16} />}>
-            Crawl truyện
-          </Button>
+          actions ?? (
+            <Button component={Link} to={novelPaths.crawl} leftSection={<IconPlus size={16} />}>
+              Crawl truyện
+            </Button>
+          )
         }
       />
       <Card withBorder>

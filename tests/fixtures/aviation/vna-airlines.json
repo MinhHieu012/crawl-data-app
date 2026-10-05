@@ -1,0 +1,10 @@
+{
+  "data": {
+    "freqflyerprogramList": {
+      "items": [
+        { "code": "AF", "name": "Air France" },
+        { "code": "KE", "name": "Korean Air" }
+      ]
+    }
+  }
+}

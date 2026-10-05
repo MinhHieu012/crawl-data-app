@@ -4,6 +4,7 @@ Không có logic crawl nào ở đây — mỗi endpoint chỉ đổi dữ liệ
 """
 
 import asyncio
+import json
 import logging
 import sys
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
@@ -15,23 +16,33 @@ from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, Query, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Row, make_url
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from crawl_data_app import __version__
+from crawl_data_app.aviation import SOURCES as AVIATION_SOURCES
+from crawl_data_app.aviation import AviationRepository, RecordOut
 from crawl_data_app.config.logging import read_logs
 from crawl_data_app.config.settings import HttpSettings, env_values, load_settings, save_env
 from crawl_data_app.core.base_crawler import BaseCrawler
 from crawl_data_app.core.content import split_title, to_paragraphs
-from crawl_data_app.core.exceptions import CrawlerError, SourceDisabledError, UnsupportedSiteError
+from crawl_data_app.core.exceptions import (
+    CrawlerError,
+    ParseError,
+    SourceDisabledError,
+    UnsupportedSiteError,
+)
 from crawl_data_app.core.models import CrawlRequest
 from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
-from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus
+from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus, utcnow
 from crawl_data_app.repository import NovelRepository
 from crawl_data_app.web.jobs import DuplicateJobError, JobManager
 from crawl_data_app.web.schemas import (
+    AviationRecordOut,
+    AviationSummary,
+    AviationSyncOut,
     ChapterContent,
     ChapterOut,
     ConnectionTest,
@@ -47,8 +58,12 @@ from crawl_data_app.web.schemas import (
     Stats,
 )
 
+log = logging.getLogger(__name__)
+
 PageNumber = Annotated[int, Query(ge=1)]
 PageSize = Annotated[int, Query(ge=1, le=200)]
+AviationSource = Literal["world", "vna"]
+AviationKind = Literal["airport", "airline", "city", "country"]
 
 
 class ApiError(Exception):
@@ -382,6 +397,86 @@ def create_app(
         request = repo.run_request(job_id)
         assert request is not None  # find_job vừa xác nhận job tồn tại
         return await launch(request)
+
+    # --- Hàng không ---------------------------------------------------------------------------
+
+    aviation = AviationRepository(repo.session_factory)
+    aviation_lock = asyncio.Lock()
+
+    def aviation_record_out(row: RecordOut) -> AviationRecordOut:
+        record = row.record
+        return AviationRecordOut(
+            kind=record.kind,
+            code=record.code,
+            name=record.name,
+            name_vi=record.name_vi,
+            city_code=record.city_code,
+            city_name=row.city_name,
+            country_code=record.country_code,
+            country_name=row.country_name,
+            region=record.region,
+            crawled_at=record.crawled_at,
+        )
+
+    @api.get("/aviation/{source}/summary")
+    async def aviation_summary(source: AviationSource) -> AviationSummary:
+        syncs, _ = aviation.syncs_page(source, limit=1)
+        last = AviationSyncOut.model_validate(syncs[0], from_attributes=True) if syncs else None
+        return AviationSummary(counts=aviation.counts(source), last_sync=last)
+
+    @api.get("/aviation/{source}/records")
+    async def list_aviation_records(
+        source: AviationSource,
+        kind: AviationKind,
+        search: str = "",
+        page: PageNumber = 1,
+        page_size: PageSize = 50,
+    ) -> Page[AviationRecordOut]:
+        rows, total = aviation.records_page(
+            source, kind, search=search.strip(), **_window(page, page_size)
+        )
+        return Page(items=[aviation_record_out(row) for row in rows], total=total)
+
+    @api.get("/aviation/{source}/export")
+    async def export_aviation_records(source: AviationSource, kind: AviationKind) -> Response:
+        """Toàn bộ bản ghi của một loại thành file JSON tải về (cùng các trường với `/records`)."""
+        rows, _ = aviation.records_page(source, kind, limit=sys.maxsize)
+        items = [aviation_record_out(row).model_dump(mode="json") for row in rows]
+        filename = f"aviation-{source}-{kind}.json"
+        return Response(
+            json.dumps(items, ensure_ascii=False, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    @api.get("/aviation/{source}/syncs")
+    async def list_aviation_syncs(
+        source: AviationSource, page: PageNumber = 1, page_size: PageSize = 20
+    ) -> Page[AviationSyncOut]:
+        syncs, total = aviation.syncs_page(source, **_window(page, page_size))
+        items = [AviationSyncOut.model_validate(sync, from_attributes=True) for sync in syncs]
+        return Page(items=items, total=total)
+
+    @api.post("/aviation/{source}/sync")
+    async def sync_aviation(source: AviationSource) -> AviationSyncOut:
+        """Tải lại toàn bộ danh mục của một nguồn (ba request, theo robots.txt và nhịp giãn cách chung)
+        rồi ghi vào database. Thất bại vẫn trả HTTP 200 với `status: "failed"`: lần đồng bộ đó đã vào
+        lịch sử.
+        """
+        if aviation_lock.locked():
+            raise ApiError(409, "sync_running", "Đang đồng bộ, đợi lần này xong rồi thử lại")
+        async with aviation_lock:
+            started_at = utcnow()
+            try:
+                records = await jobs.with_fetch(AVIATION_SOURCES[source])
+            except CrawlerError as exc:
+                kind = "parse" if isinstance(exc, ParseError) else "request"
+                log.error("Đồng bộ hàng không (%s) thất bại: %s", source, exc, extra={"kind": kind})
+                sync = aviation.record_sync(source, started_at, error=str(exc))
+            else:
+                sync = aviation.record_sync(source, started_at, records=records)
+                log.info("Đồng bộ hàng không (%s) xong: %s", source, sync.counts)
+        return AviationSyncOut.model_validate(sync, from_attributes=True)
 
     # --- Log và cấu hình ----------------------------------------------------------------------
 

@@ -6,6 +6,7 @@ import { CRAWLERS_PATH } from './crawlers/paths'
 import { CRAWLER_MODULES } from './crawlers/registry'
 import { AppLayout } from './layouts/AppLayout'
 import { CategoryLayout } from './layouts/CategoryLayout'
+import { CrawlMenu } from './pages/crawlers/CrawlMenu'
 import { CrawlersPage } from './pages/crawlers/CrawlersPage'
 import { ModulePage } from './pages/crawlers/ModulePage'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
@@ -62,7 +63,7 @@ export function App() {
             )),
           )}
         </Route>
-        <Route path="jobs" element={<JobsPage />} />
+        <Route path="jobs" element={<JobsPage actions={<CrawlMenu />} />} />
         <Route path="jobs/:id" element={<JobDetailPage />} />
         <Route path="logs" element={<LogsPage />} />
         <Route path="settings" element={<SettingsPage />} />

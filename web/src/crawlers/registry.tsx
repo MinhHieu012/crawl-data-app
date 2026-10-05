@@ -1,17 +1,15 @@
 // Danh mục crawler của giao diện. Menu, trang "Tất cả crawler", trang tổng quan của module và các
 // route đều sinh ra từ đây: thêm crawler mới = thêm một module (hoặc một category) vào CRAWLER_MODULES.
 
-import {
-  IconBook2,
-  IconBuildingAirport,
-  IconBuildingSkyscraper,
-  IconFlag,
-  IconPlane,
-  IconPlaneDeparture,
-  type Icon,
-} from '@tabler/icons-react'
+import { IconBook2, IconPlane, IconPlaneDeparture, IconWorld, type Icon } from '@tabler/icons-react'
 import type { ComponentType, ReactNode } from 'react'
 
+import type { AviationKind, AviationSource } from '../api/types'
+import {
+  AviationDataPage,
+  AviationHistoryPage,
+  AviationSummaryLine,
+} from '../pages/aviation/AviationPages'
 import { CrawlPage } from '../pages/crawl/CrawlPage'
 import { JobsPage } from '../pages/jobs/JobsPage'
 import { LogsPage } from '../pages/logs/LogsPage'
@@ -40,6 +38,8 @@ export interface CrawlerCategory {
    * "chưa triển khai" chứ không dựng màn hình với số liệu giả.
    */
   sections?: CrawlerSection[]
+  /** `path` của tab nơi bắt đầu một lần crawl (menu "Crawl" dẫn tới đó); mặc định là tab đầu tiên. */
+  crawlPath?: string
   /** Trang con nằm ngoài các tab (chi tiết một bản ghi…), tự dựng tiêu đề và breadcrumb. */
   pages?: { path: string; element: ReactNode }[]
   /** Một dòng số liệu thật (lấy từ API) hiện trên thẻ của category. */
@@ -55,6 +55,35 @@ export interface CrawlerModule {
   categories: CrawlerCategory[]
 }
 
+/** Một nguồn dữ liệu hàng không: bốn tab dữ liệu dùng chung trang (chỉ khác `kind`) và tab lịch sử. */
+function aviationCategory(
+  id: string,
+  source: AviationSource,
+  name: string,
+  description: string,
+  icon: Icon,
+): CrawlerCategory {
+  const data = (kind: AviationKind, label: string): CrawlerSection => ({
+    path: kind,
+    label,
+    element: <AviationDataPage source={source} kind={kind} />,
+  })
+  return {
+    id,
+    name,
+    description,
+    icon,
+    Summary: () => <AviationSummaryLine source={source} />,
+    sections: [
+      data('airport', 'Sân bay'),
+      data('airline', 'Hãng bay'),
+      data('city', 'Thành phố'),
+      data('country', 'Quốc gia'),
+      { path: 'history', label: 'Lịch sử', element: <AviationHistoryPage source={source} /> },
+    ],
+  }
+}
+
 export const CRAWLER_MODULES: CrawlerModule[] = [
   {
     id: NOVEL.moduleId,
@@ -68,6 +97,7 @@ export const CRAWLER_MODULES: CrawlerModule[] = [
         description: 'Thông tin truyện, mục lục và nội dung từng chương.',
         icon: IconBook2,
         Summary: NovelSummary,
+        crawlPath: 'crawl',
         sections: [
           { path: 'overview', label: 'Tổng quan', element: <NovelOverview /> },
           { path: 'crawl', label: 'Crawl', element: <CrawlPage /> },
@@ -84,25 +114,25 @@ export const CRAWLER_MODULES: CrawlerModule[] = [
     ],
   },
   {
-    id: 'vietnam-airlines',
-    name: 'Vietnam Airlines',
-    description: 'Dữ liệu danh mục của Vietnam Airlines.',
-    icon: IconPlaneDeparture,
+    id: 'aviation',
+    name: 'Hàng không',
+    description: 'Danh mục sân bay, hãng bay, thành phố và quốc gia, theo từng nguồn dữ liệu.',
+    icon: IconPlane,
     categories: [
-      {
-        id: 'airport',
-        name: 'Sân bay',
-        description: 'Danh mục sân bay.',
-        icon: IconBuildingAirport,
-      },
-      { id: 'airline', name: 'Hãng bay', description: 'Danh mục hãng bay.', icon: IconPlane },
-      {
-        id: 'city',
-        name: 'Thành phố',
-        description: 'Danh mục thành phố.',
-        icon: IconBuildingSkyscraper,
-      },
-      { id: 'country', name: 'Quốc gia', description: 'Danh mục quốc gia.', icon: IconFlag },
+      aviationCategory(
+        'world',
+        'world',
+        'Toàn thế giới',
+        'Dữ liệu mở toàn cầu từ OurAirports và OpenFlights.',
+        IconWorld,
+      ),
+      aviationCategory(
+        'vietnam-airlines',
+        'vna',
+        'Vietnam Airlines',
+        'Điểm đến và hãng bay đối tác công bố trên vietnamairlines.com.',
+        IconPlaneDeparture,
+      ),
     ],
   },
 ]

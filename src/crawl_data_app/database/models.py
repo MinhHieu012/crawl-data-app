@@ -1,4 +1,4 @@
-"""Schema lưu trữ: nguồn → truyện → chương, kèm lịch sử các lần crawl.
+"""Schema lưu trữ: nguồn → truyện → chương, kèm lịch sử các lần crawl; và danh mục hàng không.
 
 Mọi cột thời gian lưu giờ UTC dạng naive (không kèm tzinfo) để SQLite và PostgreSQL cho kết quả như nhau.
 """
@@ -121,3 +121,40 @@ class CrawlRun(Base):
     error: Mapped[str | None] = mapped_column(Text)
     started_at: Mapped[datetime] = mapped_column(default=utcnow)
     finished_at: Mapped[datetime | None]
+
+
+class AviationRecord(Base):
+    """Một dòng danh mục hàng không: sân bay, hãng bay, thành phố hoặc quốc gia, theo từng nguồn."""
+
+    # ponytail: bốn loại chung một bảng (phân biệt bằng `kind`) vì cùng dạng mã + tên; tách bảng khi
+    # một loại cần cột riêng (toạ độ sân bay, liên minh của hãng bay...).
+    __tablename__ = "aviation_records"
+    __table_args__ = (
+        UniqueConstraint("source", "kind", "code", name="uq_aviation_records_source_kind_code"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(20))  # world | vna
+    kind: Mapped[str] = mapped_column(String(20))  # airport | airline | city | country
+    # Mã IATA (sân bay, hãng bay), ISO (quốc gia); thành phố: mã IATA (vna) hoặc mã tự đặt (world).
+    code: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str] = mapped_column(String(255))  # tên tiếng Anh theo nguồn
+    name_vi: Mapped[str | None] = mapped_column(String(255))
+    city_code: Mapped[str | None] = mapped_column(String(64))  # chỉ sân bay
+    country_code: Mapped[str | None] = mapped_column(String(10))  # sân bay và thành phố
+    region: Mapped[str | None] = mapped_column(String(100))
+    crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn
+
+
+class AviationSync(Base):
+    """Lịch sử đồng bộ danh mục hàng không: mỗi lần đồng bộ một nguồn là một dòng, kể cả khi thất bại."""
+
+    __tablename__ = "aviation_syncs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(20))
+    status: Mapped[str] = mapped_column(String(20))  # completed | failed
+    counts: Mapped[dict[str, int]] = mapped_column(JSON, default=dict)  # số bản ghi theo loại
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime]
+    finished_at: Mapped[datetime]

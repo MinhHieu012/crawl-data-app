@@ -64,6 +64,9 @@ class NovelRepository:
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
+        self.session_factory = (
+            session_factory  # cho repository của crawler khác dùng chung database
+        )
 
     # --- Truyện và chương ---------------------------------------------------------------------
 

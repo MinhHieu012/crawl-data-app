@@ -1,0 +1,6 @@
+-1,"Unknown",\N,"-","N/A",\N,\N,"Y"
+137,"Air France",\N,"AF","AFR","AIRFRANS","France","Y"
+5309,"Vietnam Airlines",\N,"VN","HVN","VIET NAM AIRLINES","Vietnam","Y"
+9001,"Hãng trùng mã","","VN","XYZ","","Vietnam","Y"
+9002,"Hãng đã ngừng bay",\N,"ZZ","ZZZ","","Nowhere","N"
+9003,"Hãng không có mã IATA",\N,"","NOI","","Vietnam","Y"

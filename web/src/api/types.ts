@@ -27,6 +27,42 @@ export interface Source {
   chapters_done: number
 }
 
+/** Nguồn của danh mục hàng không: dữ liệu mở toàn thế giới, hoặc website Vietnam Airlines. */
+export type AviationSource = 'world' | 'vna'
+export type AviationKind = 'airport' | 'airline' | 'city' | 'country'
+
+export interface AviationRecord {
+  kind: AviationKind
+  code: string
+  /** Tên tiếng Anh theo nguồn. */
+  name: string
+  name_vi: string | null
+  /** Chỉ sân bay. */
+  city_code: string | null
+  city_name: string | null
+  /** Sân bay và thành phố. */
+  country_code: string | null
+  country_name: string | null
+  region: string | null
+  /** Lần cuối còn thấy bản ghi này ở nguồn. */
+  crawled_at: string
+}
+
+export interface AviationSync {
+  id: number
+  status: 'completed' | 'failed'
+  /** Số bản ghi theo loại; rỗng nếu thất bại. */
+  counts: Partial<Record<AviationKind, number>>
+  error: string | null
+  started_at: string
+  finished_at: string
+}
+
+export interface AviationSummary {
+  counts: Record<AviationKind, number>
+  last_sync: AviationSync | null
+}
+
 export interface ConnectionTest {
   ok: boolean
   message: string
