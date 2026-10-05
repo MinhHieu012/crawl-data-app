@@ -1,0 +1,75 @@
+import { Button, Card, NativeSelect } from '@mantine/core'
+import { IconPlus } from '@tabler/icons-react'
+import { Link } from 'react-router'
+
+import { useJobs } from '../../api/queries'
+import type { JobStatus } from '../../api/types'
+import { JobsTable } from '../../components/JobsTable'
+import { Pager } from '../../components/ListControls'
+import { PageHeader } from '../../components/PageHeader'
+import { EmptyState, QueryState } from '../../components/QueryState'
+import { JOB_STATUS, statusOptions } from '../../components/StatusBadge'
+import { useUrlState } from '../../hooks/useUrlState'
+
+const PAGE_SIZE = 20
+
+export function JobsPage() {
+  const [filters, setFilters] = useUrlState({ status: '', page: '1' })
+  const page = Number(filters.page) || 1
+  const jobs = useJobs({ status: filters.status as JobStatus | '', page, page_size: PAGE_SIZE })
+
+  return (
+    <>
+      <PageHeader
+        title="Job crawl"
+        description="Mỗi lần crawl một truyện là một job. Lịch sử được giữ lại, kể cả những lần thất bại."
+        actions={
+          <Button component={Link} to="/crawl" leftSection={<IconPlus size={16} />}>
+            Crawl truyện
+          </Button>
+        }
+      />
+      <Card withBorder>
+        <NativeSelect
+          aria-label="Lọc theo trạng thái"
+          data={statusOptions(JOB_STATUS, 'Mọi trạng thái')}
+          value={filters.status}
+          onChange={(event) => setFilters({ status: event.currentTarget.value })}
+          maw={240}
+          mb="md"
+        />
+        <QueryState
+          query={jobs}
+          isEmpty={(data) => data.total === 0}
+          empty={
+            filters.status ? (
+              <EmptyState title="Không có job nào ở trạng thái này" />
+            ) : (
+              <EmptyState
+                title="Chưa có job nào"
+                description="Dán URL của một truyện để bắt đầu crawl."
+                action={
+                  <Button component={Link} to="/crawl" variant="light">
+                    Crawl truyện đầu tiên
+                  </Button>
+                }
+              />
+            )
+          }
+        >
+          {(data) => (
+            <>
+              <JobsTable jobs={data.items} />
+              <Pager
+                total={data.total}
+                page={page}
+                pageSize={PAGE_SIZE}
+                onChange={(next) => setFilters({ page: String(next) })}
+              />
+            </>
+          )}
+        </QueryState>
+      </Card>
+    </>
+  )
+}

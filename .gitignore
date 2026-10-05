@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Frontend (web/): thư viện cài bằng npm; bản build web/dist đã khớp mẫu dist/ ở trên
+node_modules/
+*.local
+
+# Cấu hình cục bộ và dữ liệu sinh ra khi chạy
+.env
+data/
+logs/
+exports/
