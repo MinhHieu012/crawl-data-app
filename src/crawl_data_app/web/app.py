@@ -499,7 +499,8 @@ def create_app(
             crawler=settings.crawler,
             log=settings.log,
             database_url=make_url(settings.database.url).render_as_string(hide_password=True),
-            env_file=str(env_path.resolve()),
+            # Chỉ tên file: đường dẫn đầy đủ sẽ lộ cấu trúc thư mục của máy chủ ra giao diện.
+            env_file=env_path.name,
         )
 
     @api.get("/settings")

@@ -150,4 +150,4 @@ class SettingsUpdate(BaseModel):
 
 class SettingsOut(SettingsUpdate):
     database_url: str  # mật khẩu (nếu có) đã được che
-    env_file: str  # file `.env` mà cấu hình được ghi vào
+    env_file: str  # tên file mà cấu hình được ghi vào (không kèm đường dẫn)

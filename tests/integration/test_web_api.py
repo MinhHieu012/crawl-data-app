@@ -344,6 +344,9 @@ async def test_settings_hide_secrets_are_validated_and_saved_to_env(api, env_fil
     assert shown["http"]["request_delay"] == 0.5  # đọc từ file .env của test
     assert "bi-mat" not in str(shown)
     assert "bob:***@db.test" in shown["database_url"]
+    # Chỉ tên file cấu hình, không lộ đường dẫn thư mục của máy chủ.
+    assert shown["env_file"] == ".env"
+    assert str(env_file.parent) not in str(shown)
 
     def with_http(**changes: object) -> dict:
         return shown | {"http": shown["http"] | changes}

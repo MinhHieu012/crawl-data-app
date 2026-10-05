@@ -77,8 +77,8 @@ function SettingsForm({ settings }: { settings: Settings }) {
       <Stack gap="lg" maw={860}>
         <Alert color="blue" icon={<IconInfoCircle size={18} />}>
           Cấu hình được ghi vào file <b style={{ overflowWrap: 'anywhere' }}>{settings.env_file}</b>{' '}
-          và áp dụng cho các job bắt đầu sau khi mọi job đang chạy đã kết thúc. Biến môi trường của
-          hệ điều hành (nếu có) vẫn được ưu tiên hơn file này.
+          trong thư mục chạy server và áp dụng cho các job bắt đầu sau khi mọi job đang chạy đã kết
+          thúc. Biến môi trường của hệ điều hành (nếu có) vẫn được ưu tiên hơn file này.
         </Alert>
 
         <Fieldset legend="HTTP client" disabled={update.isPending}>

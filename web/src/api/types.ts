@@ -170,5 +170,6 @@ export interface Settings {
   log: { level: LogLevel; dir: string }
   /** Mật khẩu (nếu có) đã được backend che. */
   database_url: string
+  /** Tên file cấu hình, không kèm đường dẫn. */
   env_file: string
 }
