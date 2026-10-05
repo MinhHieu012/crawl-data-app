@@ -48,19 +48,13 @@ export interface AviationRecord {
   crawled_at: string
 }
 
-export interface AviationSync {
-  id: number
-  status: 'completed' | 'failed'
-  /** Số bản ghi theo loại; rỗng nếu thất bại. */
-  counts: Partial<Record<AviationKind, number>>
-  error: string | null
-  started_at: string
-  finished_at: string
-}
+/** Số bản ghi theo loại. */
+export type AviationCounts = Partial<Record<AviationKind, number>>
 
 export interface AviationSummary {
   counts: Record<AviationKind, number>
-  last_sync: AviationSync | null
+  /** Job đồng bộ gần nhất của nguồn, kể cả job đang chạy. */
+  last_job: Job | null
 }
 
 export interface ConnectionTest {
@@ -106,6 +100,8 @@ export interface ChapterContent extends Chapter {
 
 export interface Job {
   id: number
+  /** Crawler tạo ra job: "novel", hoặc "aviation:<nguồn>" (đồng bộ danh mục hàng không). */
+  crawler: string
   url: string
   novel_id: number | null
   novel_title: string | null
@@ -113,7 +109,12 @@ export interface Job {
   from_chapter: number | null
   to_chapter: number | null
   status: JobStatus
-  /** Số chương lần này phải tải (0 khi chưa lấy xong mục lục). */
+  /** Job hàng không đã xong: số bản ghi theo loại. */
+  result: AviationCounts | null
+  /**
+   * Bộ đếm tiến độ. Job truyện: số chương lần này phải tải (0 khi chưa lấy xong mục lục). Job hàng
+   * không: số file phải tải.
+   */
   chapters_total: number
   chapters_ok: number
   chapters_failed: number

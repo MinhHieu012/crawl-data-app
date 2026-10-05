@@ -101,12 +101,20 @@ class Chapter(Base):
 
 
 class CrawlRun(Base):
-    """Lịch sử crawl: mỗi lần crawl một truyện là một dòng, kể cả khi thất bại."""
+    """Lịch sử crawl: mỗi lần chạy (crawl một truyện, đồng bộ một nguồn hàng không) là một dòng, kể
+    cả khi thất bại.
+    """
 
+    # ponytail: các cột `chapters_*` là bộ đếm tiến độ chung — với crawler không phải truyện chúng
+    # đếm đơn vị của crawler đó (hàng không: số file đã tải). Đổi tên cột khi có crawler thứ ba.
     __tablename__ = "crawl_runs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    url: Mapped[str] = mapped_column(String(1000))  # URL người dùng yêu cầu
+    # Crawler tạo ra lần chạy này: "novel", hoặc "aviation:<nguồn>" (world, vna).
+    crawler: Mapped[str] = mapped_column(String(50), default="novel")
+    url: Mapped[str] = mapped_column(
+        String(1000)
+    )  # URL người dùng yêu cầu (hoặc trang gốc của nguồn)
     novel_id: Mapped[int | None] = mapped_column(ForeignKey("novels.id", ondelete="SET NULL"))
     with_chapters: Mapped[bool] = mapped_column(default=False)
     from_chapter: Mapped[int | None]
@@ -118,6 +126,8 @@ class CrawlRun(Base):
     chapters_ok: Mapped[int] = mapped_column(default=0)
     chapters_failed: Mapped[int] = mapped_column(default=0)
     chapters_skipped: Mapped[int] = mapped_column(default=0)  # đã có sẵn nên không tải lại
+    # Tóm tắt kết quả khi chạy xong; hàng không: số bản ghi theo loại, ví dụ {"airport": 469}.
+    result: Mapped[dict[str, int] | None] = mapped_column(JSON)
     error: Mapped[str | None] = mapped_column(Text)
     started_at: Mapped[datetime] = mapped_column(default=utcnow)
     finished_at: Mapped[datetime | None]
@@ -144,17 +154,3 @@ class AviationRecord(Base):
     country_code: Mapped[str | None] = mapped_column(String(10))  # sân bay và thành phố
     region: Mapped[str | None] = mapped_column(String(100))
     crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn
-
-
-class AviationSync(Base):
-    """Lịch sử đồng bộ danh mục hàng không: mỗi lần đồng bộ một nguồn là một dòng, kể cả khi thất bại."""
-
-    __tablename__ = "aviation_syncs"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    source: Mapped[str] = mapped_column(String(20))
-    status: Mapped[str] = mapped_column(String(20))  # completed | failed
-    counts: Mapped[dict[str, int]] = mapped_column(JSON, default=dict)  # số bản ghi theo loại
-    error: Mapped[str | None] = mapped_column(Text)
-    started_at: Mapped[datetime]
-    finished_at: Mapped[datetime]

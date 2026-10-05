@@ -2,7 +2,7 @@ import { Anchor, Box, Group, Stack, Table, Text, useMatches } from '@mantine/cor
 import { Link } from 'react-router'
 
 import type { Job } from '../api/types'
-import { formatDateTime, jobScope } from '../utils/format'
+import { aviationCounts, formatDateTime, jobScope, jobTitle } from '../utils/format'
 import { JobProgress } from './JobProgress'
 import { JobStatusBadge } from './StatusBadge'
 
@@ -19,7 +19,7 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
       <Table.Thead>
         <Table.Tr>
           <Table.Th w={64}>Job</Table.Th>
-          <Table.Th>Truyện</Table.Th>
+          <Table.Th>Nội dung</Table.Th>
           {wide && (
             <>
               <Table.Th w={140}>Phạm vi</Table.Th>
@@ -32,7 +32,7 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
       </Table.Thead>
       <Table.Tbody>
         {jobs.map((job) => {
-          const title = job.novel_title ?? job.url
+          const title = jobTitle(job)
           const started = formatDateTime(job.started_at)
           return (
             <Table.Tr key={job.id}>
@@ -53,6 +53,11 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
                 >
                   {title}
                 </Anchor>
+                {job.result && (
+                  <Text size="xs" c="dimmed" lineClamp={wide ? 1 : 2}>
+                    {aviationCounts(job.result)}
+                  </Text>
+                )}
                 {job.error && (
                   <Text size="xs" c="red" lineClamp={wide ? 1 : 2} title={job.error}>
                     {job.error}

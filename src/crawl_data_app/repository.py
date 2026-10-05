@@ -199,9 +199,12 @@ class NovelRepository:
 
     # --- Lịch sử crawl ------------------------------------------------------------------------
 
-    def start_run(self, request: CrawlRequest) -> int:
+    def start_run(self, request: CrawlRequest, *, crawler: str = "novel", total: int = 0) -> int:
+        """Ghi nhận một lần chạy mới. `total`: số đơn vị phải xử lý, nếu crawler biết trước."""
         with self._session_factory.begin() as session:
             run = CrawlRun(
+                crawler=crawler,
+                chapters_total=total,
                 url=request.url,
                 with_chapters=request.with_chapters,
                 from_chapter=request.from_chapter,
@@ -255,9 +258,11 @@ class NovelRepository:
 
     def _runs_newest_first(self, session: Session) -> Sequence[Row[RunRow]]:
         # ponytail: đọc cả bảng rồi gom nhóm bằng Python; dùng window function khi crawl_runs phình to.
+        # Chỉ lần crawl truyện: kết quả dùng để dựng lại CrawlRequest cho lệnh `resume`/`update`.
         stmt = (
             select(CrawlRun, Novel.url)
             .outerjoin(Novel, CrawlRun.novel_id == Novel.id)
+            .where(CrawlRun.crawler == "novel")
             .order_by(CrawlRun.id.desc())
         )
         return session.execute(stmt).all()
@@ -314,8 +319,16 @@ class NovelRepository:
             return [(novel, source, counts[novel.id]) for novel, source in novels]
 
     def recent_runs(self, limit: int = 10) -> list[CrawlRun]:
+        """Các lần crawl truyện gần nhất (lệnh `status` của CLI chỉ nói về truyện)."""
         with self._session_factory() as session:
-            return list(session.scalars(select(CrawlRun).order_by(CrawlRun.id.desc()).limit(limit)))
+            return list(
+                session.scalars(
+                    select(CrawlRun)
+                    .where(CrawlRun.crawler == "novel")
+                    .order_by(CrawlRun.id.desc())
+                    .limit(limit)
+                )
+            )
 
     def done_chapters(self, novel_id: int) -> Sequence[Row]:
         """Các chương đã tải của một truyện, theo thứ tự: (number, title, content, content_format)."""
@@ -442,11 +455,14 @@ class NovelRepository:
         run_id: int | None = None,
         status: str = "",
         novel_id: int | None = None,
+        crawler: str = "",
         limit: int = 20,
         offset: int = 0,
     ) -> tuple[Sequence[Row], int]:
         """Một trang lịch sử crawl, mới nhất trước — (CrawlRun, tên truyện nếu đã xác định) — và tổng số dòng khớp."""
         conditions: list[ColumnElement[bool]] = []
+        if crawler:
+            conditions.append(CrawlRun.crawler == crawler)
         if run_id is not None:
             conditions.append(CrawlRun.id == run_id)
         if status:

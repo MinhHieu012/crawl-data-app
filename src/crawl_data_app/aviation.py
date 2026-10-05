@@ -14,8 +14,7 @@ import json
 import re
 import unicodedata
 from collections import Counter
-from collections.abc import Awaitable, Callable, Iterable, Sequence
-from datetime import datetime
+from collections.abc import Awaitable, Callable, Iterable
 from typing import NamedTuple
 
 from sqlalchemy import func, select
@@ -23,7 +22,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from crawl_data_app.core.exceptions import ParseError
 from crawl_data_app.core.http_client import Page
-from crawl_data_app.database.models import AviationRecord, AviationSync, utcnow
+from crawl_data_app.database.models import AviationRecord, utcnow
 
 KINDS = ("airport", "airline", "city", "country")
 
@@ -225,6 +224,14 @@ async def fetch_world(fetch: Fetch) -> Fetched:
 # Tên nguồn (dùng trong API và database) → hàm tải toàn bộ danh mục của nguồn đó qua HTTP client dùng
 # chung, tức vẫn tuân thủ robots.txt và nhịp giãn cách request.
 SOURCES: dict[str, Callable[[Fetch], Awaitable[Fetched]]] = {"world": fetch_world, "vna": fetch_vna}
+# Trang gốc của từng nguồn: ghi vào lịch sử crawl làm URL của job đồng bộ.
+HOMES = {"world": OURAIRPORTS, "vna": VNA}
+FILES_PER_SYNC = 3  # mỗi hàm tải ở trên gọi `fetch` đúng ba lần — dùng làm mốc tiến độ của job
+
+
+def crawler_name(source: str) -> str:
+    """Tên crawler trong lịch sử crawl (`crawl_runs.crawler`) của một nguồn hàng không."""
+    return f"aviation:{source}"
 
 
 # --- Lưu trữ ---------------------------------------------------------------------------------------
@@ -234,15 +241,8 @@ class AviationRepository:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
 
-    def record_sync(
-        self,
-        source: str,
-        started_at: datetime,
-        *,
-        records: Fetched | tuple[()] = (),
-        error: str | None = None,
-    ) -> AviationSync:
-        """Ghi kết quả một lần đồng bộ vào lịch sử; thành công thì thêm/cập nhật các bản ghi.
+    def save(self, source: str, records: Fetched) -> dict[str, int]:
+        """Thêm/cập nhật các bản ghi của một nguồn trong một transaction; trả về số bản ghi theo loại.
 
         Bản ghi không còn trong nguồn được giữ lại (cột `crawled_at` cho biết lần cuối còn thấy).
         """
@@ -258,18 +258,7 @@ class AviationRepository:
                 row.name, row.name_vi = record.name, name_vi
                 row.city_code, row.country_code = record.city_code, record.country_code
                 row.region, row.crawled_at = record.region, now
-            sync = AviationSync(
-                source=source,
-                status="failed" if error else "completed",
-                counts=dict(Counter(record.kind for record, _ in records)),
-                error=error,
-                started_at=started_at,
-                finished_at=now,
-            )
-            session.add(sync)
-            session.flush()
-            session.expunge(sync)
-            return sync
+        return dict(Counter(record.kind for record, _ in records))
 
     def counts(self, source: str) -> dict[str, int]:
         with self._session_factory() as session:
@@ -320,19 +309,3 @@ class AviationRepository:
                 )
             ]
         return matched[offset : offset + limit], len(matched)
-
-    def syncs_page(
-        self, source: str, *, limit: int, offset: int = 0
-    ) -> tuple[Sequence[AviationSync], int]:
-        """Lịch sử đồng bộ của một nguồn, mới nhất trước."""
-        with self._session_factory() as session:
-            mine = AviationSync.source == source
-            page = (
-                select(AviationSync)
-                .where(mine)
-                .order_by(AviationSync.id.desc())
-                .limit(limit)
-                .offset(offset)
-            )
-            total = session.scalar(select(func.count()).select_from(AviationSync).where(mine)) or 0
-            return session.scalars(page).all(), total

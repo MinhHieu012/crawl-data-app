@@ -102,7 +102,7 @@ export const CRAWLER_MODULES: CrawlerModule[] = [
           { path: 'overview', label: 'Tổng quan', element: <NovelOverview /> },
           { path: 'crawl', label: 'Crawl', element: <CrawlPage /> },
           { path: 'novels', label: 'Truyện', element: <NovelsPage /> },
-          { path: 'jobs', label: 'Job', element: <JobsPage /> },
+          { path: 'jobs', label: 'Job', element: <JobsPage crawler="novel" /> },
           { path: 'sources', label: 'Nguồn', element: <SourcesPage /> },
           { path: 'logs', label: 'Log', element: <LogsPage /> },
         ],

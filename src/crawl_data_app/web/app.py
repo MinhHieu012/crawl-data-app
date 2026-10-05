@@ -23,26 +23,24 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from crawl_data_app import __version__
 from crawl_data_app.aviation import SOURCES as AVIATION_SOURCES
-from crawl_data_app.aviation import AviationRepository, RecordOut
+from crawl_data_app.aviation import AviationRepository, RecordOut, crawler_name
 from crawl_data_app.config.logging import read_logs
 from crawl_data_app.config.settings import HttpSettings, env_values, load_settings, save_env
 from crawl_data_app.core.base_crawler import BaseCrawler
 from crawl_data_app.core.content import split_title, to_paragraphs
 from crawl_data_app.core.exceptions import (
     CrawlerError,
-    ParseError,
     SourceDisabledError,
     UnsupportedSiteError,
 )
 from crawl_data_app.core.models import CrawlRequest
 from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
-from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus, utcnow
+from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus
 from crawl_data_app.repository import NovelRepository
 from crawl_data_app.web.jobs import DuplicateJobError, JobManager
 from crawl_data_app.web.schemas import (
     AviationRecordOut,
     AviationSummary,
-    AviationSyncOut,
     ChapterContent,
     ChapterOut,
     ConnectionTest,
@@ -62,6 +60,9 @@ log = logging.getLogger(__name__)
 
 PageNumber = Annotated[int, Query(ge=1)]
 PageSize = Annotated[int, Query(ge=1, le=200)]
+AVIATION_PREFIX = crawler_name(
+    ""
+)  # "aviation:" — phần đầu của `crawl_runs.crawler` với job hàng không
 AviationSource = Literal["world", "vna"]
 AviationKind = Literal["airport", "airline", "city", "country"]
 
@@ -290,6 +291,8 @@ def create_app(
             last_chapter = chapter.title if chapter else None
         return JobOut(
             id=run.id,
+            crawler=run.crawler,
+            result=run.result,
             url=run.url,
             novel_id=run.novel_id,
             novel_title=novel_title,
@@ -332,6 +335,15 @@ def create_app(
             raise _url_error(exc) from exc
         return find_job(run_id, detail=True)
 
+    async def launch_aviation(source: str) -> JobOut:
+        if source not in AVIATION_SOURCES:
+            raise ApiError(400, "unsupported_source", f"Không có nguồn hàng không nào tên {source}")
+        try:
+            run_id = await jobs.start_aviation(source)
+        except DuplicateJobError as exc:
+            raise ApiError(409, "duplicate_job", str(exc), job_id=exc.run_id) from exc
+        return find_job(run_id, detail=True)
+
     @api.post("/crawl/jobs", status_code=201)
     async def create_job(body: JobCreate) -> JobOut:
         url = body.url.strip()
@@ -354,10 +366,13 @@ def create_app(
     async def list_jobs(
         status: str = "",
         novel_id: int | None = None,
+        crawler: str = "",
         page: PageNumber = 1,
         page_size: PageSize = 20,
     ) -> Page[JobOut]:
-        rows, total = repo.runs_page(status=status, novel_id=novel_id, **_window(page, page_size))
+        rows, total = repo.runs_page(
+            status=status, novel_id=novel_id, crawler=crawler, **_window(page, page_size)
+        )
         return Page(items=[job_out(run, title) for run, title in rows], total=total)
 
     @api.get("/crawl/jobs/{job_id}")
@@ -392,8 +407,11 @@ def create_app(
         "Tiếp tục" và "thử lại chương lỗi" là một việc: chương đã xong được bỏ qua, chương chưa tải
         hoặc đang lỗi thì được tải — đúng quy ước của lệnh `resume`.
         """
-        if find_job(job_id).status == RunStatus.RUNNING:
+        job = find_job(job_id)
+        if job.status == RunStatus.RUNNING:
             raise ApiError(409, "job_running", "Job vẫn đang chạy")
+        if job.crawler.startswith(AVIATION_PREFIX):  # đồng bộ hàng không luôn tải lại cả nguồn
+            return await launch_aviation(job.crawler.removeprefix(AVIATION_PREFIX))
         request = repo.run_request(job_id)
         assert request is not None  # find_job vừa xác nhận job tồn tại
         return await launch(request)
@@ -401,7 +419,6 @@ def create_app(
     # --- Hàng không ---------------------------------------------------------------------------
 
     aviation = AviationRepository(repo.session_factory)
-    aviation_lock = asyncio.Lock()
 
     def aviation_record_out(row: RecordOut) -> AviationRecordOut:
         record = row.record
@@ -420,9 +437,10 @@ def create_app(
 
     @api.get("/aviation/{source}/summary")
     async def aviation_summary(source: AviationSource) -> AviationSummary:
-        syncs, _ = aviation.syncs_page(source, limit=1)
-        last = AviationSyncOut.model_validate(syncs[0], from_attributes=True) if syncs else None
-        return AviationSummary(counts=aviation.counts(source), last_sync=last)
+        rows, _ = repo.runs_page(crawler=crawler_name(source), limit=1)
+        return AviationSummary(
+            counts=aviation.counts(source), last_job=job_out(*rows[0]) if rows else None
+        )
 
     @api.get("/aviation/{source}/records")
     async def list_aviation_records(
@@ -449,34 +467,12 @@ def create_app(
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
-    @api.get("/aviation/{source}/syncs")
-    async def list_aviation_syncs(
-        source: AviationSource, page: PageNumber = 1, page_size: PageSize = 20
-    ) -> Page[AviationSyncOut]:
-        syncs, total = aviation.syncs_page(source, **_window(page, page_size))
-        items = [AviationSyncOut.model_validate(sync, from_attributes=True) for sync in syncs]
-        return Page(items=items, total=total)
-
-    @api.post("/aviation/{source}/sync")
-    async def sync_aviation(source: AviationSource) -> AviationSyncOut:
-        """Tải lại toàn bộ danh mục của một nguồn (ba request, theo robots.txt và nhịp giãn cách chung)
-        rồi ghi vào database. Thất bại vẫn trả HTTP 200 với `status: "failed"`: lần đồng bộ đó đã vào
-        lịch sử.
+    @api.post("/aviation/{source}/sync", status_code=201)
+    async def sync_aviation(source: AviationSource) -> JobOut:
+        """Tạo job đồng bộ lại toàn bộ danh mục của một nguồn (ba request, theo robots.txt và nhịp
+        giãn cách chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
         """
-        if aviation_lock.locked():
-            raise ApiError(409, "sync_running", "Đang đồng bộ, đợi lần này xong rồi thử lại")
-        async with aviation_lock:
-            started_at = utcnow()
-            try:
-                records = await jobs.with_fetch(AVIATION_SOURCES[source])
-            except CrawlerError as exc:
-                kind = "parse" if isinstance(exc, ParseError) else "request"
-                log.error("Đồng bộ hàng không (%s) thất bại: %s", source, exc, extra={"kind": kind})
-                sync = aviation.record_sync(source, started_at, error=str(exc))
-            else:
-                sync = aviation.record_sync(source, started_at, records=records)
-                log.info("Đồng bộ hàng không (%s) xong: %s", source, sync.counts)
-        return AviationSyncOut.model_validate(sync, from_attributes=True)
+        return await launch_aviation(source)
 
     # --- Log và cấu hình ----------------------------------------------------------------------
 

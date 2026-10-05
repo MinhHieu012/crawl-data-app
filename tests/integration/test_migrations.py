@@ -8,8 +8,13 @@ from alembic.migration import MigrationContext
 from sqlalchemy import delete, func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 
-from crawl_data_app.database.models import Base, Chapter, Novel, Source
-from crawl_data_app.database.session import MIGRATIONS_DIR, create_db_engine, init_db
+from crawl_data_app.database.models import Base, Chapter, CrawlRun, Novel, Source
+from crawl_data_app.database.session import (
+    MIGRATIONS_DIR,
+    create_db_engine,
+    init_db,
+    make_session_factory,
+)
 
 
 @pytest.fixture
@@ -48,8 +53,12 @@ def test_init_db_is_idempotent(engine):
     assert {"sources", "novels", "chapters", "crawl_runs", "alembic_version"} <= tables
 
 
+def db_session(engine):
+    return make_session_factory(engine)()
+
+
 def test_upgrade_carries_synced_vietnam_airlines_rows_into_the_aviation_tables(engine):
-    """Database đang ở 0003 (đã đồng bộ Vietnam Airlines) lên 0004 không mất bản ghi nào."""
+    """Database đang ở 0003 (đã đồng bộ Vietnam Airlines) lên bản mới nhất không mất gì."""
     config = Config()
     config.set_main_option("script_location", str(MIGRATIONS_DIR).replace("%", "%%"))
     with engine.begin() as connection:
@@ -66,20 +75,37 @@ def test_upgrade_carries_synced_vietnam_airlines_rows_into_the_aviation_tables(e
             text(
                 "INSERT INTO vna_syncs (id, status, counts, error, started_at, finished_at)"
                 " VALUES (7, 'completed', '{\"airport\": 1}', NULL, '2026-10-05 15:13:26',"
-                " '2026-10-05 15:13:33')"
+                " '2026-10-05 15:13:33'), (8, 'failed', '{}', 'HTTP 503', '2026-10-05 16:00:00',"
+                " '2026-10-05 16:00:02')"
+            )
+        )
+        # Một lần crawl truyện có sẵn: sau migration phải mang crawler "novel".
+        connection.execute(
+            text(
+                "INSERT INTO crawl_runs (url, with_chapters, status, chapters_total, chapters_ok,"
+                " chapters_failed, chapters_skipped, started_at) VALUES ('https://x.test/a/', 1,"
+                " 'completed', 5, 5, 0, 0, '2026-10-05 10:00:00')"
             )
         )
 
     init_db(engine)
 
-    with engine.connect() as connection:
-        records = connection.execute(
+    with db_session(engine) as session:
+        records = session.execute(
             text("SELECT source, kind, code, name_vi, country_code FROM aviation_records")
         ).all()
-        syncs = connection.execute(text("SELECT id, source, status FROM aviation_syncs")).all()
+        runs = session.scalars(select(CrawlRun).order_by(CrawlRun.id)).all()
     assert records == [("vna", "airport", "HAN", "Hà Nội", "VN")]
-    assert syncs == [(7, "vna", "completed")]
-    assert "vna_records" not in inspect(engine).get_table_names()
+    # Lịch sử đồng bộ thành job: lần thành công mang số bản ghi, lần thất bại mang lý do.
+    assert [(run.crawler, run.status, run.chapters_ok, run.result, run.error) for run in runs] == [
+        ("novel", "completed", 5, None, None),
+        ("aviation:vna", "completed", 3, {"airport": 1}, None),
+        ("aviation:vna", "failed", 0, None, "HTTP 503"),
+    ]
+    assert runs[1].url == "https://www.vietnamairlines.com"
+    assert {"vna_records", "vna_syncs", "aviation_syncs"}.isdisjoint(
+        inspect(engine).get_table_names()
+    )
 
 
 def test_duplicate_novel_is_rejected_by_the_database(db):

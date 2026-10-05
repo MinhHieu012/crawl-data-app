@@ -82,6 +82,8 @@ export function renderPage(page: ReactNode, { route = '/', path = '/' }: RenderO
 export function makeJob(overrides: Partial<Job> = {}): Job {
   return {
     id: 7,
+    crawler: 'novel',
+    result: null,
     url: 'https://truyenfull.live/kiem-lai/',
     novel_id: 3,
     novel_title: 'Kiếm Lai',

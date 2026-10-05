@@ -1,4 +1,4 @@
-import type { Job } from '../api/types'
+import type { AviationCounts, AviationKind, Job } from '../api/types'
 
 const DATE_TIME = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 const LOG_TIME = new Intl.DateTimeFormat('vi-VN', {
@@ -33,7 +33,45 @@ export function formatDuration(start: string, end: string | null): string {
     : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`
 }
 
-export function jobScope(job: Pick<Job, 'with_chapters' | 'from_chapter' | 'to_chapter'>): string {
+const AVIATION_KINDS: AviationKind[] = ['airport', 'city', 'country', 'airline']
+const AVIATION_KIND_LABEL: Record<AviationKind, string> = {
+  airport: 'sân bay',
+  airline: 'hãng bay',
+  city: 'thành phố',
+  country: 'quốc gia',
+}
+
+/** "469 sân bay · 464 thành phố · …" — chỉ kể những loại có trong `counts`. */
+export function aviationCounts(counts: AviationCounts): string {
+  return AVIATION_KINDS.filter((kind) => counts[kind] !== undefined)
+    .map((kind) => `${formatNumber(counts[kind] ?? 0)} ${AVIATION_KIND_LABEL[kind]}`)
+    .join(' · ')
+}
+
+// Tên hiển thị của job không phải crawl truyện. Trùng tên với registry.tsx nhưng để ở đây vì bảng job
+// là component dùng chung, không import registry được (registry import các trang, trang import bảng).
+const JOB_TITLE: Record<string, string> = {
+  'aviation:world': 'Hàng không · Toàn thế giới',
+  'aviation:vna': 'Hàng không · Vietnam Airlines',
+}
+
+/** Mọi giá trị của `job.crawler` kèm tên hiển thị — cho ô lọc theo crawler ở trang Job. */
+export const JOB_CRAWLERS = [
+  { value: 'novel', label: 'Truyện chữ' },
+  ...Object.entries(JOB_TITLE).map(([value, label]) => ({ value, label })),
+]
+
+export const isNovelJob = (job: Pick<Job, 'crawler'>) => job.crawler === 'novel'
+
+/** Job đang làm gì: tên truyện (chưa biết thì URL), hoặc tên nguồn đang đồng bộ. */
+export function jobTitle(job: Pick<Job, 'crawler' | 'novel_title' | 'url'>): string {
+  return JOB_TITLE[job.crawler] ?? job.novel_title ?? job.url
+}
+
+export function jobScope(
+  job: Pick<Job, 'crawler' | 'with_chapters' | 'from_chapter' | 'to_chapter'>,
+): string {
+  if (!isNovelJob(job)) return 'Toàn bộ danh mục'
   if (!job.with_chapters) return 'Chỉ thông tin truyện'
   if (job.from_chapter === null && job.to_chapter === null) return 'Mọi chương'
   return `Chương ${job.from_chapter ?? 1}–${job.to_chapter ?? 'cuối'}`

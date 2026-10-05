@@ -41,20 +41,6 @@ class AviationRecordOut(BaseModel):
     crawled_at: UtcDatetime
 
 
-class AviationSyncOut(BaseModel):
-    id: int
-    status: str  # completed | failed
-    counts: dict[str, int]  # số bản ghi theo loại; rỗng nếu thất bại
-    error: str | None
-    started_at: UtcDatetime
-    finished_at: UtcDatetime
-
-
-class AviationSummary(BaseModel):
-    counts: dict[str, int]  # số bản ghi đang có trong database, theo loại
-    last_sync: AviationSyncOut | None
-
-
 class SourceOut(BaseModel):
     name: str
     domains: list[str]
@@ -118,6 +104,7 @@ class JobCreate(CrawlRequest):
 
 class JobOut(BaseModel):
     id: int
+    crawler: str  # "novel" hoặc "aviation:<nguồn>"
     url: str
     novel_id: int | None
     novel_title: str | None
@@ -125,16 +112,23 @@ class JobOut(BaseModel):
     from_chapter: int | None
     to_chapter: int | None
     status: str
-    chapters_total: int  # số chương lần này phải tải
+    # Bộ đếm tiến độ: số chương với job truyện, số file với job đồng bộ hàng không.
+    chapters_total: int
     chapters_ok: int
     chapters_failed: int
     chapters_skipped: int
+    result: dict[str, int] | None  # hàng không: số bản ghi theo loại khi chạy xong
     error: str | None
     started_at: UtcDatetime
     finished_at: UtcDatetime | None
     active: bool  # đang chạy trong tiến trình web này → tạm dừng / huỷ được
     # Chương vừa tải xong gần nhất — chỉ có ở trang chi tiết, khi job đang chạy.
     last_chapter: str | None = None
+
+
+class AviationSummary(BaseModel):
+    counts: dict[str, int]  # số bản ghi đang có trong database, theo loại
+    last_job: JobOut | None  # job đồng bộ gần nhất của nguồn, kể cả job đang chạy
 
 
 class LogEntry(BaseModel):

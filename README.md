@@ -118,7 +118,7 @@ thì vào thẳng khu vực quản lý. Job, log và cài đặt là trang chung
 | Tất cả crawler | `/crawlers` | Mỗi crawler một thẻ: loại dữ liệu, số liệu thật, trạng thái "Sẵn sàng" / "Chưa triển khai"; tìm theo tên (gõ không dấu cũng được). |
 | Một crawler | `/crawlers/:crawler` | Mỗi loại dữ liệu một thẻ. Crawler chỉ có một loại thì chuyển thẳng vào loại đó. |
 | Một loại dữ liệu | `/crawlers/:crawler/:loại/:tab` | Khu vực quản lý, mỗi tab một đường dẫn. Loại chưa có crawler ở backend chỉ hiện thông báo "chưa triển khai". |
-| Job | `/jobs`, `/jobs/:id` | Danh sách có lọc theo trạng thái và phân trang. Chi tiết: tiến độ, số chương thành công / lỗi / còn lại, chương vừa tải, nút tạm dừng / huỷ / tiếp tục / thử lại, log của riêng job đó. |
+| Job | `/jobs`, `/jobs/:id` | Job của mọi crawler (crawl truyện, đồng bộ hàng không); nút **Crawl** xổ danh sách crawler để tạo job mới. Danh sách có lọc theo trạng thái và phân trang. Chi tiết: tiến độ, số chương thành công / lỗi / còn lại, chương vừa tải, nút tạm dừng / huỷ / tiếp tục / thử lại, log của riêng job đó. |
 | Log | `/logs` | Lọc theo mức (INFO / WARNING / ERROR), loại lỗi (request / parser), job, từ khoá; có chế độ tự làm mới. |
 | Cài đặt | `/settings` | Timeout, số lần thử lại, khoảng nghỉ, số request đồng thời, User-Agent, định dạng nội dung, mức log. Database và thư mục log chỉ xem (mật khẩu trong URL database được che). |
 
@@ -130,7 +130,7 @@ Các tab của crawler **Truyện chữ** (`/crawlers/novel/stories/…`):
 | Crawl | `crawl` | Tạo job: URL truyện, nguồn, phạm vi (toàn bộ / khoảng chương / chỉ thông tin), bỏ qua chương đã tải, thử lại chương lỗi. Tạo xong chuyển thẳng sang trang theo dõi job. |
 | Truyện | `novels`, `novels/:id` | Tìm theo tên hoặc tác giả (gõ không dấu cũng ra tên truyện), lọc theo nguồn và tình trạng, sắp xếp, phân trang. Chi tiết: thông tin truyện, danh sách chương theo trạng thái, tải chương còn thiếu / theo khoảng / tải lại một chương, lịch sử crawl. |
 | Đọc chương | `novels/:id/chapters/:n` | Nội dung chương, chuyển chương trước / sau; chương chưa có thì tải ngay từ đây. |
-| Job | `jobs` | Cùng danh sách với trang Job chung (hiện chỉ crawler truyện tạo job). |
+| Job | `jobs` | Cùng danh sách với trang Job chung (job của mọi crawler). |
 | Nguồn | `sources` | Bật / tắt từng website nguồn, kiểm tra kết nối, xem thông tin crawler và cấu hình HTTP đang áp dụng. |
 | Log | `logs` | Cùng nội dung với trang Log chung. |
 
@@ -147,12 +147,14 @@ Mỗi nguồn có cùng năm tab:
 | Tab | Đường dẫn | Nội dung |
 |---|---|---|
 | Sân bay · Hãng bay · Thành phố · Quốc gia | `airport` · `airline` · `city` · `country` | Bảng bản ghi (mã, tên, thành phố, quốc gia, vùng hoặc châu lục), tìm theo mã hoặc tên (gõ không dấu cũng được), phân trang; nút **Đồng bộ** và **Xuất JSON** (tải mọi bản ghi của loại đó, không theo ô tìm kiếm). |
-| Lịch sử | `history` | Các lần đồng bộ của nguồn: trạng thái, số bản ghi theo loại hoặc lý do thất bại, thời gian chạy. |
+| Lịch sử | `history` | Các job đồng bộ của nguồn: trạng thái, tiến độ, số bản ghi theo loại hoặc lý do thất bại; bấm vào là tới trang chi tiết job. |
 
-Một lần đồng bộ tải lại cả bốn loại của nguồn đó (ba request); lần thất bại không làm mất dữ liệu đã
-có, và hai nguồn không ghi đè lên nhau. Đồng bộ chạy ngay trong request (khoảng 10 giây) nên không
-tạo job và không hiện ở trang Job; lỗi được ghi vào Log. Phạm vi và giấy phép của từng nguồn: xem
-"Tuân thủ và giới hạn".
+**Mỗi lần đồng bộ là một job** như job crawl truyện: chạy nền, hiện ở trang Job và huy hiệu "job đang
+chạy", có tiến độ theo số file đã tải (3 file mỗi nguồn), log riêng, tạm dừng / huỷ / chạy lại được,
+và một nguồn không chạy hai job cùng lúc. Một job tải lại cả bốn loại của nguồn đó; dữ liệu chỉ được
+ghi khi đã tải và đọc xong cả ba file, nên job thất bại hay bị dừng giữa chừng không làm mất dữ liệu
+đã có. Hai nguồn không ghi đè lên nhau. Phạm vi và giấy phép của từng nguồn: xem "Tuân thủ và giới
+hạn".
 
 Trang nào cũng có trạng thái đang tải (skeleton), lỗi (kèm nút thử lại) và trống; thao tác phá huỷ (huỷ
 job, tắt nguồn, tải đè một chương) đều hỏi lại; kết quả thao tác báo bằng thông báo góc màn hình. Có
@@ -194,7 +196,7 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `GET /api/novels/{id}/chapters` | Mục lục đã lưu: `status`, `page`, `page_size`. |
 | `GET /api/novels/{id}/chapters/{number}` | Nội dung một chương, dạng danh sách đoạn văn. |
 | `POST /api/crawl/jobs` | Tạo job: `url`, `source`, `with_chapters`, `from_chapter`, `to_chapter`, `force`, `retry_failed`. |
-| `GET /api/crawl/jobs` | Danh sách job: `status`, `novel_id`, `page`, `page_size`. |
+| `GET /api/crawl/jobs` | Danh sách job của mọi crawler: `status`, `novel_id`, `crawler` (`novel`, `aviation:world`, `aviation:vna`), `page`, `page_size`. Mỗi job có `crawler`, và `result` (số bản ghi theo loại) với job hàng không đã xong; các trường `chapters_*` đếm chương với job truyện và file với job hàng không. |
 | `GET /api/crawl/jobs/{id}` | Một job kèm tiến độ và chương vừa tải. |
 | `POST /api/crawl/jobs/{id}/pause` | Tạm dừng job đang chạy. |
 | `POST /api/crawl/jobs/{id}/cancel` | Huỷ job đang chạy hoặc đang tạm dừng. |
@@ -202,8 +204,7 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `GET /api/aviation/{source}/summary` | Danh mục hàng không của một nguồn (`source` là `world` hoặc `vna`): số bản ghi theo loại và lần đồng bộ gần nhất. |
 | `GET /api/aviation/{source}/records` | Bản ghi của một loại: `kind` (`airport` / `airline` / `city` / `country`), `search`, `page`, `page_size`. |
 | `GET /api/aviation/{source}/export` | Toàn bộ bản ghi của một loại (`kind`) thành file JSON tải về (`aviation-<source>-<kind>.json`), cùng các trường với `/records`. |
-| `GET /api/aviation/{source}/syncs` | Lịch sử đồng bộ của nguồn: `page`, `page_size`. |
-| `POST /api/aviation/{source}/sync` | Tải lại toàn bộ danh mục của nguồn rồi mới trả lời. Thất bại vẫn là HTTP 200 với `status: "failed"` và `error`; đang có lần đồng bộ khác thì 409. |
+| `POST /api/aviation/{source}/sync` | Tạo job đồng bộ lại toàn bộ danh mục của nguồn và trả về job ngay (201); nguồn đang được đồng bộ thì 409 kèm `job_id`. Theo dõi và điều khiển qua các endpoint `/api/crawl/jobs/…`; lịch sử của nguồn là `GET /api/crawl/jobs?crawler=aviation:<source>`. |
 | `GET /api/logs` | Các dòng log mới nhất: `level`, `kind`, `job_id`, `search`, `limit`. |
 | `GET /api/settings` · `PUT /api/settings` | Đọc / lưu cấu hình. |
 
@@ -423,7 +424,8 @@ service.py                  CrawlService: điều phối một lần crawl, đ�
        └─ database/         có lọc/phân trang · ORM SQLAlchemy 2 · session · migrations (Alembic)
 aviation.py                 danh mục hàng không theo nguồn (world, vna): parser JSON/CSV (hàm thuần) ·
                             SOURCES (mỗi nguồn một hàm tải, 3 request qua HttpClient dùng chung) ·
-                            AviationRepository (ghi đè theo nguồn + mã, lịch sử đồng bộ)
+                            AviationRepository (ghi đè theo nguồn + mã). Việc đồng bộ chạy thành job
+                            trong web/jobs.py (JobManager.start_aviation), lịch sử nằm ở crawl_runs
 config/                     settings (pydantic-settings, đọc/ghi .env) · logging (JSON Lines, đọc lại log)
 
 web/ (thư mục gốc)          frontend React — xem "Kiến trúc frontend"; chỉ nói chuyện với backend qua /api

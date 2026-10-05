@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { App } from './App'
-import type { AviationSync } from './api/types'
+import type { Job } from './api/types'
 import { makeJob, makeNovel, mockApi, renderPage } from './test/utils'
 
 const STATS = {
@@ -11,14 +11,25 @@ const STATS = {
   chapters: { pending: 6, done: 4, failed: 0 },
   jobs: { running: 0, completed: 1, partial: 0, failed: 0, interrupted: 0, cancelled: 0 },
 }
-const SYNC: AviationSync = {
-  id: 1,
-  status: 'completed',
-  counts: { airport: 2, airline: 1, city: 2, country: 1 },
-  error: null,
-  started_at: '2026-10-05T03:00:00Z',
-  finished_at: '2026-10-05T03:00:05Z',
-}
+const COUNTS = { airport: 2, airline: 1, city: 2, country: 1 }
+/** Job đồng bộ hàng không đã chạy xong của một nguồn. */
+const syncJob = (source: string, overrides: Partial<Job> = {}) =>
+  makeJob({
+    id: 21,
+    crawler: `aviation:${source}`,
+    url: 'https://nguon.test',
+    novel_id: null,
+    novel_title: null,
+    with_chapters: false,
+    status: 'completed',
+    active: false,
+    chapters_total: 3,
+    chapters_ok: 3,
+    result: COUNTS,
+    finished_at: '2026-10-05T03:00:05Z',
+    last_chapter: null,
+    ...overrides,
+  })
 const NO_COUNTS = { airport: 0, airline: 0, city: 0, country: 0 }
 const VNA_AIRPORT = {
   kind: 'airport',
@@ -49,22 +60,26 @@ function backend(worldSynced = true) {
     if (request.path === '/stats') return STATS
     if (request.path === '/sources') return []
     if (request.path === '/novels') return { items: [makeNovel()], total: 1 }
+    if (request.path === '/crawl/jobs') {
+      // Lịch sử của một nguồn hàng không là danh sách job lọc theo crawler.
+      const [, source] = request.query.crawler?.match(/^aviation:(\w+)$/) ?? []
+      const job = source ? syncJob(source) : makeJob({ status: 'completed', active: false })
+      return { items: [job], total: 1 }
+    }
     const [, source, action] = request.path.match(/^\/aviation\/(\w+)\/(\w+)$/) ?? []
-    if (!source) return { items: [makeJob({ status: 'completed', active: false })], total: 1 }
-
-    if (action === 'sync') worldSynced = true
+    if (action === 'sync') {
+      // Backend thật trả job đang chạy rồi chạy nền; ở đây coi như job xong ngay sau đó.
+      worldSynced = true
+      return syncJob(source, { status: 'running', active: true, chapters_ok: 0, result: null })
+    }
     const synced = source === 'vna' || worldSynced
-    if (action === 'sync') return SYNC
     if (action === 'summary') {
       return synced
-        ? { counts: SYNC.counts, last_sync: SYNC }
-        : { counts: NO_COUNTS, last_sync: null }
+        ? { counts: COUNTS, last_job: syncJob(source) }
+        : { counts: NO_COUNTS, last_job: null }
     }
-    if (action === 'records') {
-      const item = source === 'vna' ? VNA_AIRPORT : WORLD_AIRPORT
-      return synced ? { items: [item], total: 1 } : { items: [], total: 0 }
-    }
-    return { items: [SYNC], total: 1 } // syncs
+    const item = source === 'vna' ? VNA_AIRPORT : WORLD_AIRPORT
+    return synced ? { items: [item], total: 1 } : { items: [], total: 0 } // records
   })
 }
 
@@ -141,7 +156,16 @@ describe('App — khu vực Crawler', () => {
     expect(
       await screen.findByText('2 sân bay · 2 thành phố · 1 quốc gia · 1 hãng bay'),
     ).toBeInTheDocument()
-    expect(requests.some((request) => request.path === '/aviation/vna/syncs')).toBe(true)
+    // Lịch sử là bảng job của riêng nguồn này, mỗi dòng dẫn tới trang chi tiết job.
+    expect(screen.getByRole('link', { name: 'Hàng không · Vietnam Airlines' })).toHaveAttribute(
+      'href',
+      '/jobs/21',
+    )
+    expect(
+      requests.some(
+        (request) => request.path === '/crawl/jobs' && request.query.crawler === 'aviation:vna',
+      ),
+    ).toBe(true)
     // Đang ở nguồn Vietnam Airlines: không bảng nào đọc dữ liệu của nguồn thế giới.
     expect(requests.some((request) => request.path === '/aviation/world/records')).toBe(false)
   })
@@ -159,7 +183,9 @@ describe('App — khu vực Crawler', () => {
     await user.click(screen.getAllByRole('button', { name: 'Đồng bộ' })[0])
 
     expect(await screen.findByText('Noi Bai International Airport')).toBeInTheDocument()
-    expect(await screen.findByText(/Đã đồng bộ: 2 sân bay/)).toBeInTheDocument()
+    // Đồng bộ là một job chạy nền: giao diện báo số job và dẫn link tới job đó.
+    expect(await screen.findByText('Đang đồng bộ ở job #21')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'job #21' })).toHaveAttribute('href', '/jobs/21')
     expect(requests.find((request) => request.method === 'POST')?.path).toBe('/aviation/world/sync')
     expect(screen.getByRole('link', { name: 'Xuất JSON' })).toHaveAttribute(
       'href',
@@ -182,5 +208,31 @@ describe('App — khu vực Crawler', () => {
       '/crawlers/aviation/vietnam-airlines/airport',
     )
     expect(screen.queryByRole('link', { name: 'Crawl truyện' })).not.toBeInTheDocument()
+  })
+
+  it('trang Job chung lọc được theo crawler; tab Job của crawler truyện chỉ hiện job truyện', async () => {
+    const user = userEvent.setup()
+    const requests = backend()
+    const jobQueries = () =>
+      requests.filter((request) => request.path === '/crawl/jobs').map((request) => request.query)
+    const first = open('/jobs')
+
+    expect(await screen.findByRole('link', { name: 'Kiếm Lai' })).toBeInTheDocument()
+    expect(jobQueries().at(-1)).toEqual({ page: '1', page_size: '20' }) // mặc định: mọi crawler
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Lọc theo crawler' }),
+      'Hàng không · Vietnam Airlines',
+    )
+
+    expect(await screen.findByRole('link', { name: 'Hàng không · Vietnam Airlines' })).toBeVisible()
+    expect(jobQueries().at(-1)).toEqual({ crawler: 'aviation:vna', page: '1', page_size: '20' })
+    first.unmount()
+
+    open('/crawlers/novel/stories/jobs')
+
+    expect(await screen.findByRole('link', { name: 'Kiếm Lai' })).toBeInTheDocument()
+    expect(jobQueries().at(-1)).toEqual({ crawler: 'novel', page: '1', page_size: '20' })
+    expect(screen.queryByRole('combobox', { name: 'Lọc theo crawler' })).not.toBeInTheDocument()
   })
 })

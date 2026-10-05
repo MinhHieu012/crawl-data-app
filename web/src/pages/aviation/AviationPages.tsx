@@ -1,24 +1,19 @@
-import { Badge, Button, Card, Group, Skeleton, Table, Text, useMatches } from '@mantine/core'
+import { Anchor, Button, Card, Group, Skeleton, Table, Text, useMatches } from '@mantine/core'
 import { IconDownload, IconRefresh } from '@tabler/icons-react'
+import { Link } from 'react-router'
 
 import { BASE_URL } from '../../api/client'
-import {
-  useAviationRecords,
-  useAviationSummary,
-  useAviationSyncs,
-  useSyncAviation,
-} from '../../api/queries'
-import type { AviationKind, AviationSource, AviationSync } from '../../api/types'
+import { useAviationRecords, useAviationSummary, useJobs, useSyncAviation } from '../../api/queries'
+import type { AviationKind, AviationSource, Job } from '../../api/types'
+import { JobsTable } from '../../components/JobsTable'
 import { Pager, SearchInput } from '../../components/ListControls'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
-import { JobStatusBadge } from '../../components/StatusBadge'
 import { useUrlState } from '../../hooks/useUrlState'
-import { formatDateTime, formatDuration, formatNumber } from '../../utils/format'
+import { aviationCounts, formatDateTime } from '../../utils/format'
 import { notifyError, notifySuccess } from '../../utils/notify'
 
 const PAGE_SIZE = 50
-const KINDS: AviationKind[] = ['airport', 'city', 'country', 'airline']
 const LABEL: Record<AviationKind, string> = {
   airport: 'sân bay',
   airline: 'hãng bay',
@@ -47,33 +42,50 @@ const KIND_NOTE: Record<AviationSource, Partial<Record<AviationKind, string>>> =
   },
 }
 
-/** "469 sân bay · 464 thành phố · …" — chỉ kể những loại có trong `counts`. */
-function countsText(counts: AviationSync['counts']): string {
-  return KINDS.filter((kind) => counts[kind] !== undefined)
-    .map((kind) => `${formatNumber(counts[kind] ?? 0)} ${LABEL[kind]}`)
-    .join(' · ')
-}
-
-/** Nút đồng bộ: một lần chạy tải lại cả bốn loại dữ liệu của nguồn. */
+/**
+ * Nút đồng bộ: tạo một job tải lại cả bốn loại dữ liệu của nguồn. Nút quay vòng suốt lúc job của
+ * nguồn này còn chạy — kể cả job được tạo từ tab khác — nên không bấm trùng được.
+ */
 function SyncButton({ source, variant }: { source: AviationSource; variant?: string }) {
   const sync = useSyncAviation(source)
+  const running = useAviationSummary(source).data?.last_job?.status === 'running'
   return (
     <Button
       variant={variant}
       leftSection={<IconRefresh size={16} />}
-      loading={sync.isPending}
+      loading={sync.isPending || running}
       onClick={() =>
         sync.mutate(undefined, {
-          onSuccess: (result) =>
-            result.status === 'completed'
-              ? notifySuccess(`Đã đồng bộ: ${countsText(result.counts)}`)
-              : notifyError(new Error(result.error ?? 'Không rõ lý do'), 'Đồng bộ thất bại'),
-          onError: (error) => notifyError(error, 'Đồng bộ thất bại'),
+          onSuccess: (job) => notifySuccess(`Đang đồng bộ ở job #${job.id}`),
+          onError: (error) => notifyError(error, 'Không tạo được job đồng bộ'),
         })
       }
     >
       Đồng bộ
     </Button>
+  )
+}
+
+/** Câu nói về job đồng bộ gần nhất của nguồn, kèm link tới job đó. */
+function LastJobNote({ job }: { job: Job | null | undefined }) {
+  if (!job) return 'Chưa đồng bộ lần nào.'
+  const link = (
+    <Anchor component={Link} to={`/jobs/${job.id}`} inherit>
+      job #{job.id}
+    </Anchor>
+  )
+  if (job.status === 'running') return <>Đang đồng bộ ở {link}…</>
+  if (job.status === 'completed') {
+    return (
+      <>
+        Đồng bộ gần nhất: {formatDateTime(job.finished_at)} ({link}).
+      </>
+    )
+  }
+  return (
+    <Text span c="red" inherit>
+      Lần đồng bộ gần nhất ({link}) không hoàn tất{job.error ? `: ${job.error}` : '.'}
+    </Text>
   )
 }
 
@@ -91,7 +103,7 @@ export function AviationSummaryLine({ source }: { source: AviationSource }) {
     )
   }
   const total = Object.values(data.counts).reduce((sum, count) => sum + count, 0)
-  return <Text size="sm">{total > 0 ? countsText(data.counts) : 'Chưa đồng bộ lần nào'}</Text>
+  return <Text size="sm">{total > 0 ? aviationCounts(data.counts) : 'Chưa đồng bộ lần nào'}</Text>
 }
 
 interface DataPageProps {
@@ -117,7 +129,8 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
   const hasPlace = kind !== 'airline'
   const hasVietnamese = hasPlace && source === 'vna' // nguồn thế giới không có tên tiếng Việt
   const longCode = source === 'world' && kind === 'city' // mã tự đặt dạng "VN-ho-chi-minh-city"
-  const lastSync = summary.data?.last_sync
+  const lastJob = summary.data?.last_job
+  const syncing = lastJob?.status === 'running'
 
   return (
     <>
@@ -125,10 +138,7 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
         title={LABEL[kind]}
         description={
           <>
-            {SOURCE_NOTE[source]} {KIND_NOTE[source][kind]}{' '}
-            {lastSync
-              ? `Đồng bộ gần nhất: ${formatDateTime(lastSync.finished_at)}.`
-              : 'Chưa đồng bộ lần nào.'}
+            {SOURCE_NOTE[source]} {KIND_NOTE[source][kind]} <LastJobNote job={lastJob} />
           </>
         }
         actions={
@@ -166,6 +176,11 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
               <EmptyState
                 title={`Không có ${LABEL[kind]} nào khớp`}
                 description="Thử mã hoặc tên khác."
+              />
+            ) : syncing ? (
+              <EmptyState
+                title="Đang đồng bộ lần đầu"
+                description="Dữ liệu sẽ hiện ở đây khi job chạy xong."
               />
             ) : (
               <EmptyState
@@ -256,22 +271,22 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
   )
 }
 
-/** Tab "Lịch sử": các lần đồng bộ của một nguồn, mới nhất ở trên. */
+/** Tab "Lịch sử": các job đồng bộ của một nguồn, mới nhất ở trên. */
 export function AviationHistoryPage({ source }: { source: AviationSource }) {
   const [filters, setFilters] = useUrlState({ page: '1' })
   const page = Number(filters.page) || 1
-  const syncs = useAviationSyncs(source, { page, page_size: 20 })
+  const jobs = useJobs({ crawler: `aviation:${source}`, page, page_size: 20 })
 
   return (
     <>
       <PageHeader
         title="Lịch sử"
-        description="Mỗi lần đồng bộ tải lại cả bốn loại dữ liệu của nguồn này. Lần thất bại không làm mất dữ liệu đã có."
+        description="Mỗi lần đồng bộ là một job tải lại cả bốn loại dữ liệu của nguồn này. Job thất bại hay bị dừng không làm mất dữ liệu đã có."
         actions={<SyncButton source={source} />}
       />
       <Card withBorder>
         <QueryState
-          query={syncs}
+          query={jobs}
           isEmpty={(data) => data.total === 0}
           empty={
             <EmptyState
@@ -282,48 +297,7 @@ export function AviationHistoryPage({ source }: { source: AviationSource }) {
         >
           {(data) => (
             <>
-              <Table verticalSpacing="sm" layout="fixed">
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th w={56}>Lần</Table.Th>
-                    <Table.Th w={120}>Trạng thái</Table.Th>
-                    <Table.Th>Kết quả</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {data.items.map((sync) => (
-                    <Table.Tr key={sync.id}>
-                      <Table.Td>
-                        <Text size="sm" fw={600}>
-                          #{sync.id}
-                        </Text>
-                      </Table.Td>
-                      <Table.Td>
-                        {sync.status === 'completed' ? (
-                          <JobStatusBadge status="completed" />
-                        ) : (
-                          <Badge color="red" variant="light">
-                            Thất bại
-                          </Badge>
-                        )}
-                      </Table.Td>
-                      <Table.Td>
-                        <Text
-                          size="sm"
-                          c={sync.error ? 'red' : undefined}
-                          style={{ overflowWrap: 'anywhere' }}
-                        >
-                          {sync.error ?? countsText(sync.counts)}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {formatDateTime(sync.started_at)} ·{' '}
-                          {formatDuration(sync.started_at, sync.finished_at)}
-                        </Text>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+              <JobsTable jobs={data.items} />
               <Pager
                 total={data.total}
                 page={page}

@@ -8,7 +8,10 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from crawl_data_app import aviation
+from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.settings import Settings
+from crawl_data_app.core.exceptions import CrawlerError, ParseError
 from crawl_data_app.core.http_client import HttpClient, Page
 from crawl_data_app.core.models import CrawlRequest
 from crawl_data_app.crawlers import crawler_class_for
@@ -20,16 +23,18 @@ log = logging.getLogger(__name__)
 
 
 class DuplicateJobError(Exception):
-    """Truyện được yêu cầu đang có một job chạy dở."""
+    """Việc được yêu cầu (crawl một truyện, đồng bộ một nguồn) đang có một job chạy dở."""
 
-    def __init__(self, run_id: int) -> None:
-        super().__init__(f"Truyện này đang được crawl ở job #{run_id}")
+    def __init__(self, run_id: int, what: str = "Truyện này đang được crawl") -> None:
+        super().__init__(f"{what} ở job #{run_id}")
         self.run_id = run_id
 
 
 class _Job(NamedTuple):
     task: asyncio.Task[object]
-    novel: tuple[str, str]  # (tên nguồn, đường dẫn truyện) — không phụ thuộc tên miền
+    # Việc job đang làm, để chặn job trùng: ("tên nguồn truyện", đường dẫn truyện) — không phụ thuộc
+    # tên miền — hoặc ("aviation", nguồn hàng không).
+    key: tuple[str, str]
 
 
 class JobManager:
@@ -45,6 +50,7 @@ class JobManager:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self._repo = repository
+        self._aviation = AviationRepository(repository.session_factory)
         self._settings = settings  # hàm, vì cấu hình có thể được sửa trên UI khi server đang chạy
         self._transport = transport
         self._sleep = sleep
@@ -73,10 +79,21 @@ class JobManager:
                 await old.aclose()
         return self._client
 
+    def _reject_duplicate(self, key: tuple[str, str], what: str) -> None:
+        for run_id, job in self._jobs.items():
+            if job.key == key and not job.task.done():
+                raise DuplicateJobError(run_id, what)
+
+    def _register(self, run_id: int, key: tuple[str, str], work: Awaitable[object]) -> int:
+        task = asyncio.ensure_future(work)
+        self._jobs[run_id] = _Job(task, key)
+        task.add_done_callback(lambda done: self._finished(run_id, done))
+        return run_id
+
     async def start(
         self, request: CrawlRequest, *, force: bool = False, retry_failed: bool = True
     ) -> int:
-        """Tạo một lần crawl chạy nền và trả về ID ngay.
+        """Tạo một lần crawl truyện chạy nền và trả về ID ngay.
 
         Ném `CrawlerError` nếu URL không dùng được (website chưa hỗ trợ, nguồn đang tắt, không phải
         URL truyện) và `DuplicateJobError` nếu truyện đang được crawl.
@@ -84,13 +101,11 @@ class JobManager:
         settings = self._settings()
         crawler = crawler_class_for(request.url, settings.crawler.disabled_sources)
         request = request.model_copy(update={"url": crawler.novel_url(request.url)})
-        novel = (crawler.name, urlsplit(request.url).path)
+        key = (crawler.name, urlsplit(request.url).path)
         client = await self._shared_client()
         # Từ đây đến lúc ghi nhận job không còn `await` nào: hai yêu cầu đồng thời không thể cùng lọt
         # qua bước kiểm tra trùng.
-        for run_id, job in self._jobs.items():
-            if job.novel == novel and not job.task.done():
-                raise DuplicateJobError(run_id)
+        self._reject_duplicate(key, "Truyện này đang được crawl")
         service = CrawlService(
             self._repo,
             client,
@@ -99,17 +114,75 @@ class JobManager:
             disabled_sources=settings.crawler.disabled_sources,
         )
         run_id = self._repo.start_run(request)
-        task = asyncio.create_task(
-            service.crawl(request, force=force, retry_failed=retry_failed, run_id=run_id)
+        return self._register(
+            run_id,
+            key,
+            service.crawl(request, force=force, retry_failed=retry_failed, run_id=run_id),
         )
-        self._jobs[run_id] = _Job(task, novel)
-        task.add_done_callback(lambda done: self._finished(run_id, done))
-        return run_id
+
+    async def start_aviation(self, source: str) -> int:
+        """Tạo một job đồng bộ danh mục hàng không của `source` và trả về ID ngay.
+
+        Ném `DuplicateJobError` nếu nguồn đó đang được đồng bộ.
+        """
+        key = ("aviation", source)
+        client = await self._shared_client()
+        self._reject_duplicate(
+            key, "Nguồn này đang được đồng bộ"
+        )  # không `await` từ đây, như `start`
+        run_id = self._repo.start_run(
+            CrawlRequest(url=aviation.HOMES[source]),
+            crawler=aviation.crawler_name(source),
+            total=aviation.FILES_PER_SYNC,
+        )
+        return self._register(run_id, key, self._sync_aviation(source, run_id, client))
+
+    async def _sync_aviation(self, source: str, run_id: int, client: HttpClient) -> None:
+        """Tải ba file của nguồn (ghi tiến độ sau mỗi file) rồi lưu tất cả trong một transaction:
+        dừng hay lỗi giữa chừng thì dữ liệu đã có không bị đụng tới.
+        """
+        extra = {"run_id": run_id}
+        done = 0
+
+        async def fetch(url: str) -> Page:
+            nonlocal done
+            page = await client.get(url)
+            done += 1
+            self._repo.update_run(run_id, chapters_ok=done)
+            log.info("Đã tải %s", url, extra=extra | {"url": url})
+            return page
+
+        try:
+            records = await aviation.SOURCES[source](fetch)
+            counts = self._aviation.save(source, records)
+        except asyncio.CancelledError:
+            # Tạm dừng, huỷ hoặc tắt server; `stop()` sẽ ghi lại trạng thái chính xác nếu là huỷ.
+            self._repo.update_run(run_id, status=RunStatus.INTERRUPTED, finished_at=utcnow())
+            raise
+        except CrawlerError as exc:
+            kind = "parse" if isinstance(exc, ParseError) else "request"
+            log.error("Dừng đồng bộ hàng không (%s): %s", source, exc, extra=extra | {"kind": kind})
+            self._repo.update_run(
+                run_id, status=RunStatus.FAILED, error=str(exc), finished_at=utcnow()
+            )
+        except Exception as exc:
+            self._repo.update_run(
+                run_id,
+                status=RunStatus.FAILED,
+                error=f"Lỗi ngoài dự kiến: {type(exc).__name__}: {exc}",
+                finished_at=utcnow(),
+            )
+            raise
+        else:
+            self._repo.update_run(
+                run_id, status=RunStatus.COMPLETED, result=counts, finished_at=utcnow()
+            )
+            log.info("Đồng bộ hàng không (%s) xong: %s", source, counts, extra=extra)
 
     def _finished(self, run_id: int, task: asyncio.Task[object]) -> None:
         del self._jobs[run_id]
         if not task.cancelled() and task.exception() is not None:
-            # Service đã ghi lỗi vào lịch sử crawl; ở đây chỉ để lại traceback trong log.
+            # Lỗi đã được ghi vào lịch sử crawl; ở đây chỉ để lại traceback trong log.
             log.error(
                 "Job #%d dừng vì lỗi ngoài dự kiến",
                 run_id,
@@ -125,33 +198,24 @@ class JobManager:
         if job is None or not job.task.cancel():
             return False
         await asyncio.wait([job.task])
-        # Service đã ghi `interrupted`; ghi lại để phân biệt huỷ với tạm dừng (và cho trường hợp task
+        # Job đã tự ghi `interrupted`; ghi lại để phân biệt huỷ với tạm dừng (và cho trường hợp task
         # bị dừng trước cả khi kịp chạy bước đầu tiên).
         self._repo.update_run(run_id, status=status, finished_at=utcnow())
         action = "Đã huỷ" if status == RunStatus.CANCELLED else "Tạm dừng"
         log.info("%s job #%d theo yêu cầu", action, run_id, extra={"run_id": run_id})
         return True
 
-    async def with_fetch[T](
-        self, work: Callable[[Callable[[str], Awaitable[Page]]], Awaitable[T]]
-    ) -> T:
-        """Chạy `work(fetch)` trên client dùng chung (cùng nhịp giãn cách và robots.txt với các job).
-
-        Client được giữ suốt lúc `work` chạy, nên tải nhiều trang liên tiếp chỉ đọc robots.txt một lần.
-        """
+    async def fetch(self, url: str) -> Page:
+        """Tải một trang qua client dùng chung (cùng nhịp giãn cách và robots.txt với các job)."""
         client = await self._shared_client()
         self._fetches += 1
         try:
-            return await work(client.get)
+            return await client.get(url)
         finally:
             self._fetches -= 1
 
-    async def fetch(self, url: str) -> Page:
-        """Tải một trang qua client dùng chung."""
-        return await self.with_fetch(lambda fetch: fetch(url))
-
     async def shutdown(self) -> None:
-        """Dừng mọi job (service ghi `interrupted` → lần sau chạy tiếp được) và đóng kết nối."""
+        """Dừng mọi job (job tự ghi `interrupted` → lần sau chạy tiếp được) và đóng kết nối."""
         tasks = [job.task for job in self._jobs.values()]
         for task in tasks:
             task.cancel()

@@ -15,6 +15,7 @@ import { modals } from '@mantine/modals'
 import {
   IconBan,
   IconBook,
+  IconPlane,
   IconPlayerPause,
   IconPlayerPlay,
   IconRefresh,
@@ -28,8 +29,16 @@ import { LogList } from '../../components/LogList'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { JobStatusBadge } from '../../components/StatusBadge'
-import { novelPaths } from '../../crawlers/paths'
-import { formatDateTime, formatDuration, formatNumber, jobScope } from '../../utils/format'
+import { aviationPath, novelPaths } from '../../crawlers/paths'
+import {
+  aviationCounts,
+  formatDateTime,
+  formatDuration,
+  formatNumber,
+  isNovelJob,
+  jobScope,
+  jobTitle,
+} from '../../utils/format'
 import { notifyError, notifySuccess } from '../../utils/notify'
 
 function Metric({ label, value, color }: { label: string; value: number; color?: string }) {
@@ -75,8 +84,9 @@ function JobControls({ job }: { job: Job }) {
       title: `Huỷ job #${job.id}?`,
       children: (
         <Text size="sm">
-          Job sẽ dừng hẳn và không tự chạy lại. Các chương đã tải vẫn được giữ; muốn tải tiếp thì
-          tạo job mới.
+          {isNovelJob(job)
+            ? 'Job sẽ dừng hẳn và không tự chạy lại. Các chương đã tải vẫn được giữ; muốn tải tiếp thì tạo job mới.'
+            : 'Job sẽ dừng hẳn và không tự chạy lại. Dữ liệu đã có từ các lần đồng bộ trước không bị ảnh hưởng.'}
         </Text>
       ),
       labels: { confirm: 'Huỷ job', cancel: 'Không huỷ' },
@@ -84,8 +94,11 @@ function JobControls({ job }: { job: Job }) {
       onConfirm: () => run('cancel', `Đã huỷ job #${job.id}`),
     })
 
-  const rerunLabel = RERUN_LABEL[job.status]
+  const novel = isNovelJob(job)
   const paused = job.status === 'interrupted'
+  // Job hàng không luôn tải lại cả nguồn, nên không có "thử lại chương lỗi" hay "kiểm tra chương mới".
+  const rerunLabel =
+    novel || paused ? RERUN_LABEL[job.status] : job.status !== 'running' && 'Đồng bộ lại'
 
   return (
     <Group gap="xs">
@@ -129,6 +142,16 @@ function JobControls({ job }: { job: Job }) {
           leftSection={<IconBook size={16} />}
         >
           Xem truyện
+        </Button>
+      )}
+      {!novel && (
+        <Button
+          variant="subtle"
+          component={Link}
+          to={aviationPath(job.crawler)}
+          leftSection={<IconPlane size={16} />}
+        >
+          Xem dữ liệu
         </Button>
       )}
     </Group>
@@ -197,12 +220,20 @@ function JobView({ job }: { job: Job }) {
 
         <JobProgress job={job} size="xl" />
 
-        <SimpleGrid cols={{ base: 2, sm: 4 }} mt="md">
-          <Metric label="Thành công" value={job.chapters_ok} color="teal" />
-          <Metric label="Lỗi" value={job.chapters_failed} color="red" />
-          <Metric label="Còn lại" value={remaining} />
-          <Metric label="Bỏ qua (đã có sẵn)" value={job.chapters_skipped} />
-        </SimpleGrid>
+        {isNovelJob(job) ? (
+          <SimpleGrid cols={{ base: 2, sm: 4 }} mt="md">
+            <Metric label="Thành công" value={job.chapters_ok} color="teal" />
+            <Metric label="Lỗi" value={job.chapters_failed} color="red" />
+            <Metric label="Còn lại" value={remaining} />
+            <Metric label="Bỏ qua (đã có sẵn)" value={job.chapters_skipped} />
+          </SimpleGrid>
+        ) : (
+          job.result && (
+            <Text size="sm" mt="md">
+              Đã ghi: <b>{aviationCounts(job.result)}</b>
+            </Text>
+          )
+        )}
 
         {job.last_chapter && (
           <Text size="sm" mt="md">
@@ -241,7 +272,7 @@ export function JobDetailPage() {
   return (
     <>
       <PageHeader
-        title={job.data?.novel_title ?? `Job #${id}`}
+        title={job.data ? jobTitle(job.data) : `Job #${id}`}
         crumbs={[{ label: 'Job crawl', to: '/jobs' }, { label: `Job #${id}` }]}
       />
       <QueryState query={job} skeleton={<Skeleton height={260} radius="md" />}>
