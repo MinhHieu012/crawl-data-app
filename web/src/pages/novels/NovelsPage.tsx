@@ -20,6 +20,7 @@ import { NovelProgress } from '../../components/NovelProgress'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { NOVEL_STATUS, NovelStatusBadge, statusOptions } from '../../components/StatusBadge'
+import { novelPaths } from '../../crawlers/paths'
 import { useUrlState } from '../../hooks/useUrlState'
 import { formatDateTime } from '../../utils/format'
 
@@ -68,7 +69,7 @@ export function NovelsPage() {
         title="Truyện"
         description="Tìm theo tên truyện hoặc tác giả, gõ không dấu cũng được."
         actions={
-          <Button component={Link} to="/crawl" leftSection={<IconPlus size={16} />}>
+          <Button component={Link} to={novelPaths.crawl} leftSection={<IconPlus size={16} />}>
             Crawl truyện
           </Button>
         }
@@ -118,7 +119,7 @@ export function NovelsPage() {
                 title="Chưa có truyện nào"
                 description="Truyện sẽ xuất hiện ở đây sau lần crawl đầu tiên."
                 action={
-                  <Button component={Link} to="/crawl" variant="light">
+                  <Button component={Link} to={novelPaths.crawl} variant="light">
                     Crawl truyện đầu tiên
                   </Button>
                 }
@@ -152,7 +153,7 @@ export function NovelsPage() {
                       <Table.Td>
                         <Anchor
                           component={Link}
-                          to={`/novels/${novel.id}`}
+                          to={novelPaths.novel(novel.id)}
                           fw={600}
                           style={{ overflowWrap: 'anywhere' }}
                         >

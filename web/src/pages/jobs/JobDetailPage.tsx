@@ -28,6 +28,7 @@ import { LogList } from '../../components/LogList'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { JobStatusBadge } from '../../components/StatusBadge'
+import { novelPaths } from '../../crawlers/paths'
 import { formatDateTime, formatDuration, formatNumber, jobScope } from '../../utils/format'
 import { notifyError, notifySuccess } from '../../utils/notify'
 
@@ -124,7 +125,7 @@ function JobControls({ job }: { job: Job }) {
         <Button
           variant="subtle"
           component={Link}
-          to={`/novels/${job.novel_id}`}
+          to={novelPaths.novel(job.novel_id)}
           leftSection={<IconBook size={16} />}
         >
           Xem truyện

@@ -1,7 +1,7 @@
 import { Anchor, Breadcrumbs, Group, Stack, Text, Title } from '@mantine/core'
 import { useDocumentTitle } from '@mantine/hooks'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useOutletContext } from 'react-router'
 
 export interface Crumb {
   label: string
@@ -11,8 +11,10 @@ export interface Crumb {
 
 interface PageHeaderProps {
   title: string
+  /** Tên trên tab trình duyệt khi cần khác `title` (khung tab của crawler ghi thêm tab đang mở). */
+  documentTitle?: string
   description?: ReactNode
-  /** Đường dẫn từ sau "Tổng quan" tới trang hiện tại — chỉ cần cho trang con (chi tiết truyện, job…). */
+  /** Đường dẫn tới trang hiện tại — chỉ cần cho trang con (crawler, chi tiết truyện, job…). */
   crumbs?: Crumb[]
   actions?: ReactNode
 }
@@ -21,18 +23,35 @@ interface PageHeaderProps {
 // `lh`: Breadcrumbs của Mantine đặt line-height 1, cộng với cắt dòng thì xén mất dấu tiếng Việt.
 const CRUMB = { size: 'sm', lh: 'md', truncate: 'end', maw: 'min(60vw, 22rem)' } as const
 
-/** Đầu mỗi trang: breadcrumb (trang con), tiêu đề h1, và các nút hành động chính ở bên phải. */
-export function PageHeader({ title, description, crumbs = [], actions }: PageHeaderProps) {
-  useDocumentTitle(`${title} · Crawl Data App`)
+/**
+ * Đầu mỗi trang: breadcrumb (trang con), tiêu đề h1, và các nút hành động chính ở bên phải. Trang
+ * nằm trong một tab của crawler (`CategoryLayout`) thì h1 và breadcrumb đã có ở khung tab, nên chỉ
+ * còn mô tả và nút hành động — nhờ vậy cùng một trang dùng được cả ở trong lẫn ngoài tab.
+ */
+export function PageHeader(props: PageHeaderProps) {
+  const inTab = useOutletContext<{ inTab?: boolean } | undefined>()?.inTab
+  return inTab ? <TabHeader {...props} /> : <FullHeader {...props} />
+}
+
+function TabHeader({ description, actions }: PageHeaderProps) {
+  return (
+    <Group justify="space-between" align="center" wrap="wrap" gap="sm" mb="md">
+      <Text c="dimmed" size="sm" style={{ flex: '1 1 16rem' }}>
+        {description}
+      </Text>
+      {actions && <Group gap="xs">{actions}</Group>}
+    </Group>
+  )
+}
+
+function FullHeader({ title, documentTitle, description, crumbs = [], actions }: PageHeaderProps) {
+  useDocumentTitle(`${documentTitle ?? title} · Crawl Data App`)
   // Mục cuối trùng hẳn với tiêu đề ngay bên dưới (trang chi tiết truyện) thì bỏ: nói một lần là đủ.
-  const trail: Crumb[] = [
-    { label: 'Tổng quan', to: '/' },
-    ...crumbs.filter((crumb) => crumb.to || crumb.label !== title),
-  ]
+  const trail = crumbs.filter((crumb) => crumb.to || crumb.label !== title)
 
   return (
     <Stack gap={6} mb="lg">
-      {crumbs.length > 0 && (
+      {trail.length > 0 && (
         <Breadcrumbs
           separator="›"
           aria-label="Breadcrumb"

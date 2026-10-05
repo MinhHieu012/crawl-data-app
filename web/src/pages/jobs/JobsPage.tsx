@@ -9,6 +9,7 @@ import { Pager } from '../../components/ListControls'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { JOB_STATUS, statusOptions } from '../../components/StatusBadge'
+import { novelPaths } from '../../crawlers/paths'
 import { useUrlState } from '../../hooks/useUrlState'
 
 const PAGE_SIZE = 20
@@ -24,7 +25,7 @@ export function JobsPage() {
         title="Job crawl"
         description="Mỗi lần crawl một truyện là một job. Lịch sử được giữ lại, kể cả những lần thất bại."
         actions={
-          <Button component={Link} to="/crawl" leftSection={<IconPlus size={16} />}>
+          <Button component={Link} to={novelPaths.crawl} leftSection={<IconPlus size={16} />}>
             Crawl truyện
           </Button>
         }
@@ -49,7 +50,7 @@ export function JobsPage() {
                 title="Chưa có job nào"
                 description="Dán URL của một truyện để bắt đầu crawl."
                 action={
-                  <Button component={Link} to="/crawl" variant="light">
+                  <Button component={Link} to={novelPaths.crawl} variant="light">
                     Crawl truyện đầu tiên
                   </Button>
                 }

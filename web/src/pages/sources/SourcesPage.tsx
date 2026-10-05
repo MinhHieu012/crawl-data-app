@@ -22,6 +22,7 @@ import { useSettings, useSources, useTestSource, useToggleSource } from '../../a
 import type { Source } from '../../api/types'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
+import { novelPaths } from '../../crawlers/paths'
 import { formatNumber } from '../../utils/format'
 import { notifyError, notifySuccess } from '../../utils/notify'
 
@@ -166,7 +167,7 @@ function SourceCard({ source }: { source: Source }) {
         <Button variant="subtle" leftSection={<IconInfoCircle size={16} />} onClick={info.open}>
           Thông tin và cấu hình
         </Button>
-        <Button variant="subtle" component={Link} to={`/novels?source=${source.name}`}>
+        <Button variant="subtle" component={Link} to={`${novelPaths.novels}?source=${source.name}`}>
           Xem truyện
         </Button>
       </Group>

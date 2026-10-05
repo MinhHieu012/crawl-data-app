@@ -1,76 +1,34 @@
-import { Anchor, Button, Card, Group, SimpleGrid, Skeleton, Text, Title } from '@mantine/core'
-import { useHover } from '@mantine/hooks'
-import { IconPlus } from '@tabler/icons-react'
-import type { ReactNode } from 'react'
+import { Button, SimpleGrid, Skeleton } from '@mantine/core'
+import { IconSpider } from '@tabler/icons-react'
 import { Link } from 'react-router'
 
-import { useJobs, useStats } from '../../api/queries'
-import { JobsTable } from '../../components/JobsTable'
+import { useStats } from '../../api/queries'
 import { PageHeader } from '../../components/PageHeader'
-import { EmptyState, QueryState } from '../../components/QueryState'
-import { formatNumber } from '../../utils/format'
+import { QueryState } from '../../components/QueryState'
+import { RecentJobs } from '../../components/RecentJobs'
+import { StatCard } from '../../components/StatCard'
+import { CRAWLERS_PATH } from '../../crawlers/paths'
+import { CRAWLER_MODULES } from '../../crawlers/registry'
 
-interface StatCardProps {
-  label: string
-  value: number
-  hint?: ReactNode
-  color?: string
-  /** Bấm vào thẻ để tới danh sách tương ứng. */
-  to?: string
-}
+const GRID = { base: 2, sm: 4 }
+const CATEGORIES = CRAWLER_MODULES.flatMap((crawler) => crawler.categories)
+const READY = CATEGORIES.filter((category) => category.sections).length
 
-function StatCard({ label, value, hint, color, to }: StatCardProps) {
-  // Thẻ bấm được (có `to`) đổi nền khi rê chuột, để phân biệt với thẻ chỉ để xem.
-  const { hovered, ref } = useHover<HTMLDivElement>()
-  const card = (
-    <Card
-      ref={ref}
-      withBorder
-      padding="md"
-      h="100%"
-      bg={to && hovered ? 'var(--mantine-color-default-hover)' : undefined}
-    >
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
-      <Text fz={28} fw={700} c={value > 0 ? color : undefined} lh={1.3}>
-        {formatNumber(value)}
-      </Text>
-      {hint && (
-        <Text size="xs" c="dimmed">
-          {hint}
-        </Text>
-      )}
-    </Card>
-  )
-  return to ? (
-    <Anchor
-      component={Link}
-      to={to}
-      underline="never"
-      c="inherit"
-      aria-label={`${label}: ${value}`}
-    >
-      {card}
-    </Anchor>
-  ) : (
-    card
-  )
-}
-
-const GRID = { base: 2, sm: 3, lg: 5 }
-
+/**
+ * Tổng quan của cả hệ thống: có bao nhiêu crawler và các job đang ra sao. Số liệu riêng của từng
+ * crawler (số truyện, số chương…) nằm ở tab Tổng quan của crawler đó.
+ */
 export function DashboardPage() {
   const stats = useStats()
-  const jobs = useJobs({ page_size: 8 })
 
   return (
     <>
       <PageHeader
         title="Tổng quan"
+        description="Hoạt động của mọi crawler trong hệ thống."
         actions={
-          <Button component={Link} to="/crawl" leftSection={<IconPlus size={16} />}>
-            Crawl truyện
+          <Button component={Link} to={CRAWLERS_PATH} leftSection={<IconSpider size={16} />}>
+            Mở crawler
           </Button>
         }
       />
@@ -79,7 +37,7 @@ export function DashboardPage() {
         query={stats}
         skeleton={
           <SimpleGrid cols={GRID} mb="lg">
-            {Array.from({ length: 5 }, (_, index) => (
+            {Array.from({ length: 4 }, (_, index) => (
               <Skeleton key={index} height={96} radius="md" />
             ))}
           </SimpleGrid>
@@ -87,18 +45,17 @@ export function DashboardPage() {
       >
         {(data) => (
           <SimpleGrid cols={GRID} mb="lg">
-            <StatCard label="Truyện" value={data.novels} to="/novels" />
             <StatCard
-              label="Chương đã tải"
-              value={data.chapters.done}
-              hint={`${formatNumber(data.chapters.pending)} chờ tải · ${formatNumber(data.chapters.failed)} lỗi`}
+              label="Crawler"
+              value={CRAWLER_MODULES.length}
+              to={CRAWLERS_PATH}
+              hint={`${READY} / ${CATEGORIES.length} loại dữ liệu đã sẵn sàng`}
             />
             <StatCard
               label="Job đang chạy"
               value={data.jobs.running}
               color="blue"
               to="/jobs?status=running"
-              hint="mỗi job crawl một truyện"
             />
             <StatCard
               label="Job hoàn tất"
@@ -117,33 +74,7 @@ export function DashboardPage() {
         )}
       </QueryState>
 
-      <Card withBorder>
-        <Group justify="space-between" mb="sm">
-          <Title order={2} size="h4">
-            Job gần đây
-          </Title>
-          <Button component={Link} to="/jobs" variant="subtle" size="compact-sm">
-            Xem tất cả
-          </Button>
-        </Group>
-        <QueryState
-          query={jobs}
-          isEmpty={(data) => data.items.length === 0}
-          empty={
-            <EmptyState
-              title="Chưa có job nào"
-              description="Dán URL của một truyện để bắt đầu crawl."
-              action={
-                <Button component={Link} to="/crawl" variant="light">
-                  Crawl truyện đầu tiên
-                </Button>
-              }
-            />
-          }
-        >
-          {(data) => <JobsTable jobs={data.items} />}
-        </QueryState>
-      </Card>
+      <RecentJobs limit={8} allTo="/jobs" />
     </>
   )
 }

@@ -7,6 +7,7 @@ import { useChapter, useNovel } from '../../api/queries'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { ChapterStatusBadge } from '../../components/StatusBadge'
+import { NOVEL_CRUMBS, novelPaths } from '../../crawlers/paths'
 import { useStartCrawl } from '../../hooks/useStartCrawl'
 import { formatDateTime } from '../../utils/format'
 
@@ -40,7 +41,7 @@ export function ChapterPage() {
   const { start, isPending } = useStartCrawl()
 
   const total = novel.data?.total_chapters ?? null
-  const linkTo = (target: number) => `/novels/${novelId}/chapters/${target}`
+  const linkTo = (target: number) => novelPaths.chapter(novelId, target)
   const steps = (
     <Group justify="space-between">
       <StepButton
@@ -65,8 +66,8 @@ export function ChapterPage() {
       <PageHeader
         title={chapter.data?.title ?? `Chương ${number}`}
         crumbs={[
-          { label: 'Truyện', to: '/novels' },
-          { label: novel.data?.title ?? `#${novelId}`, to: `/novels/${novelId}` },
+          ...NOVEL_CRUMBS,
+          { label: novel.data?.title ?? `#${novelId}`, to: novelPaths.novel(novelId) },
           { label: `Chương ${number}` },
         ]}
       />

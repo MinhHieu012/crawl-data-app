@@ -39,7 +39,7 @@ describe('NovelsPage', () => {
 
     expect(await screen.findByRole('link', { name: 'Kiếm Lai' })).toHaveAttribute(
       'href',
-      '/novels/3',
+      '/crawlers/novel/stories/novels/3',
     )
     expect(screen.getByText('Phong Hỏa')).toBeInTheDocument()
     expect(screen.getByText('4 / 10 chương')).toBeInTheDocument()
@@ -112,7 +112,7 @@ describe('NovelsPage', () => {
     expect(await screen.findByText('Chưa có truyện nào')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Crawl truyện đầu tiên' })).toHaveAttribute(
       'href',
-      '/crawl',
+      '/crawlers/novel/stories/crawl',
     )
     first.unmount()
 

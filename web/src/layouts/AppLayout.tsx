@@ -14,33 +14,110 @@ import {
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
-  IconBooks,
   IconFileText,
   IconLayoutDashboard,
   IconListCheck,
   IconMoon,
-  IconPlayerPlay,
   IconSettings,
+  IconSpider,
+  IconStack2,
   IconSun,
-  IconWorld,
+  type Icon,
 } from '@tabler/icons-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigationType } from 'react-router'
 
 import { useJobActivity } from '../api/queries'
+import { categoryPath, CRAWLERS_PATH, modulePath } from '../crawlers/paths'
+import { CRAWLER_MODULES } from '../crawlers/registry'
 
-// Thêm màn hình mới: khai báo route trong App.tsx và (nếu cần hiện trên menu) thêm một dòng ở đây.
-const NAVIGATION = [
-  { to: '/', label: 'Tổng quan', icon: IconLayoutDashboard },
-  { to: '/crawl', label: 'Crawl truyện', icon: IconPlayerPlay },
-  { to: '/jobs', label: 'Job crawl', icon: IconListCheck },
-  { to: '/novels', label: 'Truyện', icon: IconBooks },
-  { to: '/sources', label: 'Nguồn', icon: IconWorld },
-  { to: '/logs', label: 'Log', icon: IconFileText },
-  { to: '/settings', label: 'Cài đặt', icon: IconSettings },
+interface NavItem {
+  /** Đích của mục; với nhóm (có `children`) là tiền tố đường dẫn của cả nhóm. */
+  path: string
+  label: string
+  icon?: Icon
+  /** Chỉ sáng khi đúng đường dẫn này, không tính các trang con. */
+  exact?: boolean
+  /** Nhóm mở sẵn dù chưa ở trang nào bên trong. */
+  defaultOpened?: boolean
+  children?: NavItem[]
+}
+
+// Trang chung của hệ thống khai báo ở đây (kèm route trong App.tsx). Phần crawler sinh từ registry:
+// thêm crawler mới không phải sửa menu. Module nhiều loại dữ liệu thành một nhóm con.
+const NAVIGATION: NavItem[] = [
+  { path: '/', label: 'Tổng quan', icon: IconLayoutDashboard, exact: true },
+  {
+    path: CRAWLERS_PATH,
+    label: 'Crawler',
+    icon: IconSpider,
+    defaultOpened: true,
+    children: [
+      { path: CRAWLERS_PATH, label: 'Tất cả crawler', icon: IconStack2, exact: true },
+      ...CRAWLER_MODULES.map((crawler) => ({
+        path: modulePath(crawler.id),
+        label: crawler.name,
+        icon: crawler.icon,
+        children:
+          crawler.categories.length > 1
+            ? [
+                { path: modulePath(crawler.id), label: 'Tổng quan', exact: true },
+                ...crawler.categories.map((category) => ({
+                  path: categoryPath(crawler.id, category.id),
+                  label: category.name,
+                })),
+              ]
+            : undefined,
+      })),
+    ],
+  },
+  { path: '/jobs', label: 'Job', icon: IconListCheck },
+  { path: '/logs', label: 'Log', icon: IconFileText },
+  { path: '/settings', label: 'Cài đặt', icon: IconSettings },
 ]
 
 const NAVBAR_ID = 'app-navbar'
+const NAV_ITEM_STYLE = { borderRadius: 'var(--mantine-radius-default)' }
+
+function NavItems({ items, pathname }: { items: NavItem[]; pathname: string }) {
+  // Nhóm tự mở khi đang ở một trang bên trong; người dùng đã bấm mở/đóng thì theo lựa chọn của họ.
+  const [toggled, setToggled] = useState<Record<string, boolean>>({})
+
+  return items.map((item) => {
+    const active = pathname === item.path || (!item.exact && pathname.startsWith(`${item.path}/`))
+    const icon = item.icon && <item.icon size={18} stroke={1.6} />
+
+    if (item.children) {
+      const opened = toggled[item.path] ?? (active || Boolean(item.defaultOpened))
+      return (
+        <NavLink
+          key={item.label}
+          component="button"
+          label={item.label}
+          leftSection={icon}
+          opened={opened}
+          onChange={(next) => setToggled((current) => ({ ...current, [item.path]: next }))}
+          aria-expanded={opened}
+          style={NAV_ITEM_STYLE}
+        >
+          <NavItems items={item.children} pathname={pathname} />
+        </NavLink>
+      )
+    }
+    return (
+      <NavLink
+        key={item.label}
+        component={Link}
+        to={item.path}
+        label={item.label}
+        leftSection={icon}
+        active={active}
+        aria-current={active ? 'page' : undefined}
+        style={NAV_ITEM_STYLE}
+      />
+    )
+  })
+}
 
 function ColorSchemeToggle() {
   const { setColorScheme } = useMantineColorScheme()
@@ -75,7 +152,7 @@ export function AppLayout() {
   return (
     <AppShell
       header={{ height: 56 }}
-      navbar={{ width: 220, breakpoint: 'sm', collapsed: { mobile: !menuOpened } }}
+      navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !menuOpened } }}
       padding="md"
     >
       <AppShell.Header>
@@ -97,7 +174,7 @@ export function AppLayout() {
               aria-label="Crawl Data App, về trang Tổng quan"
             >
               <Group gap="sm" wrap="nowrap">
-                <IconBooks size={24} color="var(--mantine-primary-color-filled)" aria-hidden />
+                <IconSpider size={24} color="var(--mantine-primary-color-filled)" aria-hidden />
                 {/* Màn hình điện thoại chỉ đủ chỗ cho logo, nút menu và số job đang chạy. */}
                 <Text fw={700} size="lg" visibleFrom="xs" style={{ whiteSpace: 'nowrap' }}>
                   Crawl Data App
@@ -128,22 +205,8 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs" id={NAVBAR_ID} aria-label="Menu chính">
-        {NAVIGATION.map((item) => {
-          const active = item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)
-          return (
-            <NavLink
-              key={item.to}
-              component={Link}
-              to={item.to}
-              label={item.label}
-              leftSection={<item.icon size={18} stroke={1.6} />}
-              active={active}
-              aria-current={active ? 'page' : undefined}
-              style={{ borderRadius: 'var(--mantine-radius-default)' }}
-            />
-          )
-        })}
+      <AppShell.Navbar p="xs" id={NAVBAR_ID} aria-label="Menu chính" style={{ overflowY: 'auto' }}>
+        <NavItems items={NAVIGATION} pathname={pathname} />
       </AppShell.Navbar>
 
       <AppShell.Main>

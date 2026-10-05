@@ -1,18 +1,18 @@
 import { Button } from '@mantine/core'
-import { Link, Route, Routes } from 'react-router'
+import { Link, Navigate, Route, Routes } from 'react-router'
 
 import { EmptyState } from './components/QueryState'
+import { CRAWLERS_PATH } from './crawlers/paths'
+import { CRAWLER_MODULES } from './crawlers/registry'
 import { AppLayout } from './layouts/AppLayout'
-import { CrawlPage } from './pages/crawl/CrawlPage'
+import { CategoryLayout } from './layouts/CategoryLayout'
+import { CrawlersPage } from './pages/crawlers/CrawlersPage'
+import { ModulePage } from './pages/crawlers/ModulePage'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
 import { JobDetailPage } from './pages/jobs/JobDetailPage'
 import { JobsPage } from './pages/jobs/JobsPage'
 import { LogsPage } from './pages/logs/LogsPage'
-import { ChapterPage } from './pages/novels/ChapterPage'
-import { NovelDetailPage } from './pages/novels/NovelDetailPage'
-import { NovelsPage } from './pages/novels/NovelsPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
-import { SourcesPage } from './pages/sources/SourcesPage'
 
 function NotFoundPage() {
   return (
@@ -28,19 +28,42 @@ function NotFoundPage() {
   )
 }
 
-/** Bảng định tuyến: mỗi màn hình một route, tất cả nằm trong khung chung `AppLayout`. */
+/**
+ * Bảng định tuyến, tất cả nằm trong khung chung `AppLayout`. Khu vực Crawler đi theo ba tầng
+ * crawler → loại dữ liệu → tab, sinh ra từ `CRAWLER_MODULES`; các trang còn lại là trang chung của
+ * cả hệ thống.
+ */
 export function App() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<DashboardPage />} />
-        <Route path="crawl" element={<CrawlPage />} />
+        <Route path={CRAWLERS_PATH}>
+          <Route index element={<CrawlersPage />} />
+          <Route path=":moduleId" element={<ModulePage />} />
+          {CRAWLER_MODULES.flatMap((crawler) =>
+            crawler.categories.map((category) => (
+              <Route key={`${crawler.id}/${category.id}`} path={`${crawler.id}/${category.id}`}>
+                <Route element={<CategoryLayout crawler={crawler} category={category} />}>
+                  <Route
+                    index
+                    element={
+                      category.sections && <Navigate to={category.sections[0].path} replace />
+                    }
+                  />
+                  {category.sections?.map((section) => (
+                    <Route key={section.path} path={section.path} element={section.element} />
+                  ))}
+                </Route>
+                {category.pages?.map((page) => (
+                  <Route key={page.path} path={page.path} element={page.element} />
+                ))}
+              </Route>
+            )),
+          )}
+        </Route>
         <Route path="jobs" element={<JobsPage />} />
         <Route path="jobs/:id" element={<JobDetailPage />} />
-        <Route path="novels" element={<NovelsPage />} />
-        <Route path="novels/:id" element={<NovelDetailPage />} />
-        <Route path="novels/:id/chapters/:number" element={<ChapterPage />} />
-        <Route path="sources" element={<SourcesPage />} />
         <Route path="logs" element={<LogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />

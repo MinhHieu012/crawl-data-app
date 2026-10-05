@@ -108,14 +108,34 @@ Chưa build giao diện thì `serve` vẫn chạy và chỉ phục vụ API. D�
 
 | Màn hình | Đường dẫn | Nội dung |
 |---|---|---|
-| Tổng quan | `/` | Số truyện, số chương, số job theo trạng thái; các job gần đây kèm thanh tiến độ. |
-| Crawl truyện | `/crawl` | Tạo job: URL truyện, nguồn, phạm vi (toàn bộ / khoảng chương / chỉ thông tin), bỏ qua chương đã tải, thử lại chương lỗi. Tạo xong chuyển thẳng sang trang theo dõi job. |
-| Job crawl | `/jobs`, `/jobs/:id` | Danh sách có lọc theo trạng thái và phân trang. Chi tiết: tiến độ, số chương thành công / lỗi / còn lại, chương vừa tải, nút tạm dừng / huỷ / tiếp tục / thử lại, log của riêng job đó. |
-| Truyện | `/novels`, `/novels/:id` | Tìm theo tên hoặc tác giả (gõ không dấu cũng ra tên truyện), lọc theo nguồn và tình trạng, sắp xếp, phân trang. Chi tiết: thông tin truyện, danh sách chương theo trạng thái, tải chương còn thiếu / theo khoảng / tải lại một chương, lịch sử crawl. |
-| Đọc chương | `/novels/:id/chapters/:n` | Nội dung chương, chuyển chương trước / sau; chương chưa có thì tải ngay từ đây. |
-| Nguồn | `/sources` | Bật / tắt từng nguồn, kiểm tra kết nối, xem thông tin crawler và cấu hình HTTP đang áp dụng. |
+Giao diện đi theo ba tầng **crawler → loại dữ liệu → tab**. Mỗi crawler (Truyện chữ, Vietnam
+Airlines…) là một module độc lập; module nhiều loại dữ liệu có trang tổng quan riêng, module một loại
+thì vào thẳng khu vực quản lý. Job, log và cài đặt là trang chung của cả hệ thống.
+
+| Màn hình | Đường dẫn | Nội dung |
+|---|---|---|
+| Tổng quan | `/` | Số crawler, số job theo trạng thái; các job gần đây kèm thanh tiến độ. |
+| Tất cả crawler | `/crawlers` | Mỗi crawler một thẻ: loại dữ liệu, số liệu thật, trạng thái "Sẵn sàng" / "Chưa triển khai"; tìm theo tên (gõ không dấu cũng được). |
+| Một crawler | `/crawlers/:crawler` | Mỗi loại dữ liệu một thẻ. Crawler chỉ có một loại thì chuyển thẳng vào loại đó. |
+| Một loại dữ liệu | `/crawlers/:crawler/:loại/:tab` | Khu vực quản lý, mỗi tab một đường dẫn. Loại chưa có crawler ở backend chỉ hiện thông báo "chưa triển khai". |
+| Job | `/jobs`, `/jobs/:id` | Danh sách có lọc theo trạng thái và phân trang. Chi tiết: tiến độ, số chương thành công / lỗi / còn lại, chương vừa tải, nút tạm dừng / huỷ / tiếp tục / thử lại, log của riêng job đó. |
 | Log | `/logs` | Lọc theo mức (INFO / WARNING / ERROR), loại lỗi (request / parser), job, từ khoá; có chế độ tự làm mới. |
 | Cài đặt | `/settings` | Timeout, số lần thử lại, khoảng nghỉ, số request đồng thời, User-Agent, định dạng nội dung, mức log. Database và thư mục log chỉ xem (mật khẩu trong URL database được che). |
+
+Các tab của crawler **Truyện chữ** (`/crawlers/novel/stories/…`):
+
+| Tab | Đường dẫn | Nội dung |
+|---|---|---|
+| Tổng quan | `overview` | Số truyện, số chương đã tải / chờ tải / lỗi; các job gần đây. |
+| Crawl | `crawl` | Tạo job: URL truyện, nguồn, phạm vi (toàn bộ / khoảng chương / chỉ thông tin), bỏ qua chương đã tải, thử lại chương lỗi. Tạo xong chuyển thẳng sang trang theo dõi job. |
+| Truyện | `novels`, `novels/:id` | Tìm theo tên hoặc tác giả (gõ không dấu cũng ra tên truyện), lọc theo nguồn và tình trạng, sắp xếp, phân trang. Chi tiết: thông tin truyện, danh sách chương theo trạng thái, tải chương còn thiếu / theo khoảng / tải lại một chương, lịch sử crawl. |
+| Đọc chương | `novels/:id/chapters/:n` | Nội dung chương, chuyển chương trước / sau; chương chưa có thì tải ngay từ đây. |
+| Job | `jobs` | Cùng danh sách với trang Job chung (hiện chỉ crawler truyện tạo job). |
+| Nguồn | `sources` | Bật / tắt từng website nguồn, kiểm tra kết nối, xem thông tin crawler và cấu hình HTTP đang áp dụng. |
+| Log | `logs` | Cùng nội dung với trang Log chung. |
+
+Crawler **Vietnam Airlines** (sân bay, hãng bay, thành phố, quốc gia) mới chỉ có chỗ trên giao diện:
+backend chưa có crawler nên bốn loại dữ liệu này hiện "Chưa triển khai", không có số liệu nào.
 
 Trang nào cũng có trạng thái đang tải (skeleton), lỗi (kèm nút thử lại) và trống; thao tác phá huỷ (huỷ
 job, tắt nguồn, tải đè một chương) đều hỏi lại; kết quả thao tác báo bằng thông báo góc màn hình. Có
@@ -212,16 +232,21 @@ jsdom 29, TypeScript 6.0 (typescript-eslint chưa hỗ trợ bản 7), Mantine 8
 ```text
 web/src/
 ├── main.tsx           các provider: Mantine (giao diện), TanStack Query (dữ liệu), router
-├── App.tsx            bảng định tuyến — mỗi màn hình một route
+├── App.tsx            bảng định tuyến — route của khu vực Crawler sinh từ crawlers/registry.tsx
 ├── theme.ts           theme Mantine: màu chữ đủ tương phản, mặc định của Badge / Switch / ô số
 ├── api/
 │   ├── client.ts      một cửa gọi backend: ghép URL, timeout, đổi mọi lỗi thành ApiError đọc được
 │   ├── types.ts       kiểu dữ liệu, phản chiếu src/crawl_data_app/web/schemas.py
 │   └── queries.ts     mỗi endpoint một hook: cache, hỏi lại định kỳ, làm mới dữ liệu liên quan
-├── layouts/           AppLayout: thanh trên, menu trái, nút sáng/tối, số job đang chạy
-├── pages/<màn hình>/  dashboard · crawl · jobs · novels · sources · logs · settings
+├── crawlers/
+│   ├── registry.tsx   danh mục crawler: module → loại dữ liệu → tab; menu, thẻ và route sinh từ đây
+│   └── paths.ts       đường dẫn của khu vực Crawler, dùng chung cho registry và các trang
+├── layouts/           AppLayout: thanh trên, menu trái, nút sáng/tối, số job đang chạy ·
+│                      CategoryLayout: tiêu đề, breadcrumb và các tab của một loại dữ liệu
+├── pages/<màn hình>/  dashboard · crawlers · crawl · jobs · novels · sources · logs · settings
 ├── components/        QueryState (đang tải / lỗi / trống) · PageHeader (breadcrumb) · JobsTable ·
-│                      JobProgress · NovelProgress · LogList · StatusBadge · ListControls · Cover
+│                      JobProgress · NovelProgress · LogList · StatusBadge · ListControls · Cover ·
+│                      StatCard · RecentJobs
 ├── hooks/             useUrlState (bộ lọc nằm trên URL) · useStartCrawl (tạo job từ một nút bấm)
 ├── utils/             format (ngày giờ, số, phạm vi job) · notify (thông báo)
 └── test/              cấu hình Vitest và backend giả dùng chung cho các test
@@ -247,7 +272,11 @@ Không có logic crawl nào ở frontend: nhận diện website, chuẩn hoá UR
 - **Bảng không cuộn ngang.** Bảng nhiều cột dùng `useMatches` để bỏ cột phụ ở màn hẹp và đưa thông tin
   đó xuống dưới tên (xem `JobsTable`); `layout="fixed"` để tên dài bị cắt chứ không đẩy bảng rộng ra.
 - **Mỗi trang một `h1`** (do `PageHeader` dựng), tiêu đề từng khối là `h2` cỡ `h4`. Breadcrumb chỉ
-  truyền cho trang con (chi tiết truyện, chương, job).
+  truyền cho trang con (crawler, chi tiết truyện, chương, job). Trang nằm trong tab của một crawler
+  vẫn gọi `PageHeader` như thường: ở đó `h1` và breadcrumb do `CategoryLayout` dựng, `PageHeader` tự
+  thu lại còn mô tả và nút hành động — nên cùng một trang dùng được cả trong lẫn ngoài tab.
+- **Không dựng màn hình cho dữ liệu chưa có.** Loại dữ liệu chưa có crawler ở backend thì không khai
+  báo `sections`; giao diện tự hiện "Chưa triển khai" thay vì bảng trống hay số liệu giả.
 - **Trạng thái đi qua `QueryState`**: tải lần đầu là skeleton, đổi trang / bộ lọc thì dữ liệu cũ mờ đi,
   lỗi có nút thử lại. Form sai thì con trỏ nhảy tới ô sai đầu tiên.
 - **Nút chỉ có icon phải có `aria-label`**; thanh tiến độ đặt nhãn ở `Progress.Section`.
@@ -263,10 +292,42 @@ Không có logic crawl nào ở frontend: nhận diện website, chuẩn hoá UR
    `web/src/api/queries.ts` (thao tác ghi thì nhớ `invalidateQueries` những gì bị ảnh hưởng).
 3. **Trang:** tạo `web/src/pages/<ten>/<Ten>Page.tsx`, mở đầu bằng `PageHeader` và bọc phần dữ liệu
    trong `QueryState` để có sẵn trạng thái đang tải / lỗi / trống.
-4. **Định tuyến:** thêm một `<Route>` trong `web/src/App.tsx` và một dòng trong `NAVIGATION` của
-   `web/src/layouts/AppLayout.tsx` nếu trang cần hiện trên menu.
+4. **Định tuyến:** trang của một crawler thì thêm một dòng vào `sections` (tab) hoặc `pages` (trang
+   con) của loại dữ liệu tương ứng trong `web/src/crawlers/registry.tsx`. Trang chung của hệ thống thì
+   thêm một `<Route>` trong `web/src/App.tsx` và một dòng trong `NAVIGATION` của
+   `web/src/layouts/AppLayout.tsx`.
 5. **Test:** viết `<Ten>Page.test.tsx` cạnh trang, dùng `mockApi` và `renderPage` trong
    `web/src/test/utils.tsx`.
+
+### Thêm một crawler vào giao diện
+
+Thêm một phần tử vào `CRAWLER_MODULES` trong `web/src/crawlers/registry.tsx`; không phải sửa layout,
+menu hay bảng định tuyến:
+
+```tsx
+{
+  id: 'booking',                    // thành đường dẫn /crawlers/booking
+  name: 'Booking',
+  description: 'Dữ liệu khách sạn và chuyến bay.',
+  icon: IconBed,
+  categories: [
+    {
+      id: 'hotel',                  // /crawlers/booking/hotel
+      name: 'Khách sạn',
+      description: 'Danh mục khách sạn.',
+      icon: IconBed,
+      Summary: HotelSummary,        // tuỳ chọn: một dòng số liệu thật trên thẻ
+      sections: [                   // mỗi tab một trang; bỏ trống khi backend chưa có crawler
+        { path: 'data', label: 'Dữ liệu', element: <HotelsPage /> },
+      ],
+      pages: [{ path: 'data/:id', element: <HotelDetailPage /> }],
+    },
+  ],
+}
+```
+
+Trang trong `sections` viết như mọi trang khác (`PageHeader` + `QueryState`). Trang trong `pages` tự
+truyền breadcrumb. Phần backend của crawler mới làm theo mục "Thêm crawler cho một website mới".
 
 ## Cấu hình (`.env`)
 

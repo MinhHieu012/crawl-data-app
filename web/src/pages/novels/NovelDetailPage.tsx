@@ -41,6 +41,7 @@ import {
   NovelStatusBadge,
   statusOptions,
 } from '../../components/StatusBadge'
+import { NOVEL_CRUMBS, novelPaths } from '../../crawlers/paths'
 import { useStartCrawl } from '../../hooks/useStartCrawl'
 import { useUrlState } from '../../hooks/useUrlState'
 import { formatDateTime, toChapterNumber } from '../../utils/format'
@@ -202,7 +203,7 @@ function ChapterList({ novel, crawling }: ChapterListProps) {
                       {chapter.status === 'done' ? (
                         <Anchor
                           component={Link}
-                          to={`/novels/${novel.id}/chapters/${chapter.number}`}
+                          to={novelPaths.chapter(novel.id, chapter.number)}
                           size="sm"
                           style={{ overflowWrap: 'anywhere' }}
                         >
@@ -379,7 +380,7 @@ export function NovelDetailPage() {
     <>
       <PageHeader
         title={novel.data?.title ?? 'Truyện'}
-        crumbs={[{ label: 'Truyện', to: '/novels' }, { label: novel.data?.title ?? `#${id}` }]}
+        crumbs={[...NOVEL_CRUMBS, { label: novel.data?.title ?? `#${id}` }]}
       />
       <QueryState query={novel} skeleton={<Skeleton height={240} radius="md" />}>
         {(data) => <NovelView novel={data} />}
