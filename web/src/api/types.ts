@@ -48,12 +48,38 @@ export interface AviationRecord {
   crawled_at: string
 }
 
-/** Số bản ghi theo loại. */
-export type AviationCounts = Partial<Record<AviationKind, number>>
+/** Số bản ghi theo loại — `result` của một job đồng bộ (hàng không, tỉnh thành). */
+export type RecordCounts = Partial<Record<AviationKind | 'province', number>>
 
 export interface AviationSummary {
   counts: Record<AviationKind, number>
   /** Job đồng bộ gần nhất của nguồn, kể cả job đang chạy. */
+  last_job: Job | null
+}
+
+/** Một tỉnh hoặc thành phố trực thuộc trung ương của Việt Nam (sau sáp nhập năm 2025). */
+export interface Province {
+  /** Mã đơn vị hành chính, ví dụ "01". */
+  code: string
+  name: string
+  name_en: string
+  /** Kèm loại đơn vị: "Thành phố Hà Nội". */
+  full_name: string
+  full_name_en: string
+  code_name: string
+  /** "Thành phố" hoặc "Tỉnh". */
+  unit: string
+  postal_code_prefix: string | null
+  /** Số phường/xã/đặc khu trực thuộc. */
+  ward_count: number
+  /** Lần cuối còn thấy bản ghi này ở nguồn. */
+  crawled_at: string
+}
+
+export interface ProvinceSummary {
+  /** Số tỉnh thành đang có trong database. */
+  count: number
+  /** Job đồng bộ gần nhất, kể cả job đang chạy. */
   last_job: Job | null
 }
 
@@ -100,7 +126,7 @@ export interface ChapterContent extends Chapter {
 
 export interface Job {
   id: number
-  /** Crawler tạo ra job: "novel", hoặc "aviation:<nguồn>" (đồng bộ danh mục hàng không). */
+  /** Crawler tạo ra job: "novel", "aviation:<nguồn>" (danh mục hàng không) hoặc "provinces". */
   crawler: string
   url: string
   novel_id: number | null
@@ -109,11 +135,11 @@ export interface Job {
   from_chapter: number | null
   to_chapter: number | null
   status: JobStatus
-  /** Job hàng không đã xong: số bản ghi theo loại. */
-  result: AviationCounts | null
+  /** Job đồng bộ đã xong: số bản ghi theo loại. */
+  result: RecordCounts | null
   /**
-   * Bộ đếm tiến độ. Job truyện: số chương lần này phải tải (0 khi chưa lấy xong mục lục). Job hàng
-   * không: số file phải tải.
+   * Bộ đếm tiến độ. Job truyện: số chương lần này phải tải (0 khi chưa lấy xong mục lục). Job đồng
+   * bộ (hàng không, tỉnh thành): số file phải tải.
    */
   chapters_total: number
   chapters_ok: number

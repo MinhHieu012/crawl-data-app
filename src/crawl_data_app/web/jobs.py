@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from crawl_data_app import aviation
+from crawl_data_app import aviation, provinces
 from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.settings import Settings
 from crawl_data_app.core.http_client import HttpClient, Page
@@ -32,7 +32,7 @@ class DuplicateJobError(Exception):
 class _Job(NamedTuple):
     task: asyncio.Task[object]
     # Việc job đang làm, để chặn job trùng: ("tên nguồn truyện", đường dẫn truyện) — không phụ thuộc
-    # tên miền — hoặc ("aviation", nguồn hàng không).
+    # tên miền — hoặc ("aviation", nguồn hàng không), hoặc ("provinces", "").
     key: tuple[str, str]
 
 
@@ -50,6 +50,7 @@ class JobManager:
     ) -> None:
         self._repo = repository
         self._aviation = AviationRepository(repository.session_factory)
+        self._provinces = provinces.ProvinceRepository(repository.session_factory)
         self._settings = settings  # hàm, vì cấu hình có thể được sửa trên UI khi server đang chạy
         self._transport = transport
         self._sleep = sleep
@@ -131,6 +132,19 @@ class JobManager:
         )  # không `await` từ đây, như `start`
         run_id = aviation.start_sync_run(self._repo, source)
         work = aviation.sync(source, client.get, self._repo, self._aviation, run_id=run_id)
+        return self._register(run_id, key, work)
+
+    async def start_provinces(self) -> int:
+        """Tạo một job đồng bộ danh mục tỉnh thành Việt Nam và trả về ID ngay.
+
+        Ném `DuplicateJobError` nếu danh mục đang được đồng bộ.
+        """
+        key = (provinces.CRAWLER, "")
+        client = await self._shared_client()
+        # Không `await` từ đây, như `start`.
+        self._reject_duplicate(key, "Danh mục tỉnh thành đang được đồng bộ")
+        run_id = provinces.start_sync_run(self._repo)
+        work = provinces.sync(client.get, self._repo, self._provinces, run_id=run_id)
         return self._register(run_id, key, work)
 
     def _finished(self, run_id: int, task: asyncio.Task[object]) -> None:

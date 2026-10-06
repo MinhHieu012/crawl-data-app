@@ -1,4 +1,4 @@
-"""Giao diện dòng lệnh: crawl, resume, status, export, aviation, sources, init-db, serve (web UI)."""
+"""Giao diện dòng lệnh: crawl, resume, status, export, aviation, provinces, sources, init-db, serve (web UI)."""
 
 import argparse
 import asyncio
@@ -22,7 +22,7 @@ from rich.progress import (
 from rich.table import Table
 from sqlalchemy import make_url
 
-from crawl_data_app import aviation
+from crawl_data_app import aviation, provinces
 from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.logging import setup_logging
 from crawl_data_app.config.settings import DatabaseSettings, Settings, get_settings
@@ -154,6 +154,11 @@ def build_parser() -> argparse.ArgumentParser:
         "chỉ dùng cá nhân, phi thương mại); lặp lại được; bỏ trống = mọi nguồn",
     )
 
+    commands.add_parser(
+        "provinces",
+        help="đồng bộ danh mục 34 tỉnh, thành phố của Việt Nam (sau sáp nhập năm 2025)",
+    )
+
     commands.add_parser("sources", help="liệt kê các website được hỗ trợ")
     commands.add_parser("init-db", help="tạo database / nâng schema lên phiên bản mới nhất")
 
@@ -211,6 +216,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "aviation":
             sources = list(dict.fromkeys(args.source)) or list(aviation.SOURCES)
             return _sync_aviation(sources, settings, repo)
+        if args.command == "provinces":
+            return _sync_provinces(settings, repo)
         if args.command == "crawl":
             requests, force = _crawl_requests(args, parser), args.force
         else:
@@ -382,6 +389,34 @@ def _sync_aviation(sources: Sequence[str], settings: Settings, repo: NovelReposi
         )
     out.print(table)
     return 0 if all(result.status == RunStatus.COMPLETED for result in results) else 1
+
+
+def _sync_provinces(settings: Settings, repo: NovelRepository) -> int:
+    """Đồng bộ danh mục tỉnh thành Việt Nam — một dòng trong lịch sử crawl, như khi bấm Đồng bộ trên
+    web UI. Trả về 0 nếu xong.
+    """
+    store = provinces.ProvinceRepository(repo.session_factory)
+
+    async def run() -> aviation.SyncResult:
+        client = HttpClient(settings.http)
+        try:
+            with err.status("Đang đồng bộ tỉnh thành Việt Nam…"):
+                return await provinces.sync(client.get, repo, store)
+        finally:
+            await client.aclose()
+
+    try:
+        result = asyncio.run(run())
+    except KeyboardInterrupt:
+        err.print(
+            "Đã dừng theo yêu cầu. Dữ liệu đã có không bị thay đổi; chạy lại lệnh để đồng bộ."
+        )
+        return 130
+    if result.status != RunStatus.COMPLETED:
+        out.print(f"Đồng bộ tỉnh thành không xong (job #{result.run_id}): {result.error}")
+        return 1
+    out.print(f"Đã đồng bộ {result.counts['province']} tỉnh thành (job #{result.run_id}).")
+    return 0
 
 
 def _table(title: str, *columns: str, wide: Sequence[str]) -> Table:

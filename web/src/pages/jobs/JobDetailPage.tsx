@@ -15,7 +15,7 @@ import { modals } from '@mantine/modals'
 import {
   IconBan,
   IconBook,
-  IconPlane,
+  IconDatabase,
   IconPlayerPause,
   IconPlayerPlay,
   IconRefresh,
@@ -29,9 +29,9 @@ import { LogList } from '../../components/LogList'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { JobStatusBadge } from '../../components/StatusBadge'
-import { aviationPath, novelPaths } from '../../crawlers/paths'
+import { jobDataPath, novelPaths } from '../../crawlers/paths'
 import {
-  aviationCounts,
+  recordCounts,
   formatDateTime,
   formatDuration,
   formatNumber,
@@ -148,8 +148,8 @@ function JobControls({ job }: { job: Job }) {
         <Button
           variant="subtle"
           component={Link}
-          to={aviationPath(job.crawler)}
-          leftSection={<IconPlane size={16} />}
+          to={jobDataPath(job.crawler)}
+          leftSection={<IconDatabase size={16} />}
         >
           Xem dữ liệu
         </Button>
@@ -230,7 +230,7 @@ function JobView({ job }: { job: Job }) {
         ) : (
           job.result && (
             <Text size="sm" mt="md">
-              Đã ghi: <b>{aviationCounts(job.result)}</b>
+              Đã ghi: <b>{recordCounts(job.result)}</b>
             </Text>
           )
         )}

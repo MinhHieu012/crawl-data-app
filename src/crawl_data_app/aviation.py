@@ -79,7 +79,7 @@ Fetched = list[
 ]  # (bản ghi với tên tiếng Anh, tên tiếng Việt nếu nguồn có)
 
 
-def _fold(text: str) -> str:
+def fold(text: str) -> str:
     """Bỏ dấu và hoa thường để tìm "ha noi" vẫn ra "Hà Nội"."""
     plain = unicodedata.normalize("NFD", text.lower().replace("đ", "d"))
     return "".join(char for char in plain if not unicodedata.combining(char))
@@ -179,7 +179,7 @@ def city_code(country: str, municipality: str) -> str | None:
 
     Dữ liệu mở không có mã thành phố chuẩn; thành phố được suy ra từ cột "municipality" của sân bay.
     """
-    slug = re.sub(r"[^a-z0-9]+", "-", _fold(municipality)).strip("-")
+    slug = re.sub(r"[^a-z0-9]+", "-", fold(municipality)).strip("-")
     return f"{country}-{slug}"[:64] if slug else None
 
 
@@ -241,7 +241,7 @@ def crawler_name(source: str) -> str:
 
 
 class SyncResult(NamedTuple):
-    source: str
+    source: str  # nguồn hàng không; với crawler đồng bộ khác là tên crawler đó
     run_id: int
     status: RunStatus
     counts: dict[str, int]  # số bản ghi theo loại; rỗng nếu không hoàn tất
@@ -273,6 +273,28 @@ async def sync(
     """
     if run_id is None:
         run_id = start_sync_run(runs, source)
+
+    async def work(fetch: Fetch) -> dict[str, int]:
+        return store.save(source, await SOURCES[source](fetch))
+
+    outcome = await run_sync(run_id, get, runs, work, label=f"hàng không ({source})")
+    return SyncResult(source, run_id, *outcome)
+
+
+async def run_sync(
+    run_id: int,
+    get: Fetch,
+    runs: NovelRepository,
+    work: Callable[[Fetch], Awaitable[dict[str, int]]],
+    *,
+    label: str,
+) -> tuple[RunStatus, dict[str, int], str | None]:
+    """Chạy một lần đồng bộ danh mục đã có dòng lịch sử `run_id`; dùng chung cho mọi crawler kiểu
+    "tải vài file rồi ghi đè" (hàng không, tỉnh thành).
+
+    `work` tải các file qua `fetch` nhận được (tiến độ ghi sau mỗi file), lưu tất cả rồi trả về số
+    bản ghi theo loại. `label`: tên việc đang làm, để ghi log. Trả về (trạng thái, số bản ghi, lỗi).
+    """
     extra = {"run_id": run_id}
     done = 0
 
@@ -288,21 +310,21 @@ async def sync(
         runs.update_run(run_id, status=status, finished_at=utcnow(), **values)
 
     try:
-        counts = store.save(source, await SOURCES[source](fetch))
+        counts = await work(fetch)
     except asyncio.CancelledError:
         finish(RunStatus.INTERRUPTED)  # Ctrl+C, tạm dừng/huỷ trên web UI, hoặc tắt server
         raise
     except CrawlerError as exc:
         kind = "parse" if isinstance(exc, ParseError) else "request"
-        log.error("Dừng đồng bộ hàng không (%s): %s", source, exc, extra=extra | {"kind": kind})
+        log.error("Dừng đồng bộ %s: %s", label, exc, extra=extra | {"kind": kind})
         finish(RunStatus.FAILED, error=str(exc))
-        return SyncResult(source, run_id, RunStatus.FAILED, {}, str(exc))
+        return RunStatus.FAILED, {}, str(exc)
     except Exception as exc:
         finish(RunStatus.FAILED, error=f"Lỗi ngoài dự kiến: {type(exc).__name__}: {exc}")
         raise
     finish(RunStatus.COMPLETED, result=counts)
-    log.info("Đồng bộ hàng không (%s) xong: %s", source, counts, extra=extra)
-    return SyncResult(source, run_id, RunStatus.COMPLETED, counts, None)
+    log.info("Đồng bộ %s xong: %s", label, counts, extra=extra)
+    return RunStatus.COMPLETED, counts, None
 
 
 # --- Lưu trữ ---------------------------------------------------------------------------------------
@@ -364,12 +386,12 @@ class AviationRepository:
             for row in rows
             if row.kind == kind
         ]
-        if needle := _fold(search):
+        if needle := fold(search):
             matched = [
                 item
                 for item in matched
                 if any(
-                    needle in _fold(text or "")
+                    needle in fold(text or "")
                     for text in (
                         item.record.code,
                         item.record.name,

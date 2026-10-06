@@ -1,7 +1,14 @@
 // Danh mục crawler của giao diện. Menu, trang "Tất cả crawler", trang tổng quan của module và các
 // route đều sinh ra từ đây: thêm crawler mới = thêm một module (hoặc một category) vào CRAWLER_MODULES.
 
-import { IconBook2, IconPlane, IconPlaneDeparture, IconWorld, type Icon } from '@tabler/icons-react'
+import {
+  IconBook2,
+  IconMapPin,
+  IconPlane,
+  IconPlaneDeparture,
+  IconWorld,
+  type Icon,
+} from '@tabler/icons-react'
 import type { ComponentType, ReactNode } from 'react'
 
 import type { AviationKind, AviationSource } from '../api/types'
@@ -17,6 +24,11 @@ import { ChapterPage } from '../pages/novels/ChapterPage'
 import { NovelDetailPage } from '../pages/novels/NovelDetailPage'
 import { NovelOverview, NovelSummary } from '../pages/novels/NovelOverview'
 import { NovelsPage } from '../pages/novels/NovelsPage'
+import {
+  ProvinceHistoryPage,
+  ProvincesPage,
+  ProvinceSummaryLine,
+} from '../pages/provinces/ProvincesPages'
 import { SourcesPage } from '../pages/sources/SourcesPage'
 import { NOVEL } from './paths'
 
@@ -133,6 +145,25 @@ export const CRAWLER_MODULES: CrawlerModule[] = [
         'Điểm đến và hãng bay đối tác công bố trên vietnamairlines.com.',
         IconPlaneDeparture,
       ),
+    ],
+  },
+  {
+    id: 'provinces',
+    name: 'Tỉnh thành Việt Nam',
+    description: 'Danh mục 34 tỉnh, thành phố của Việt Nam sau sáp nhập năm 2025.',
+    icon: IconMapPin,
+    categories: [
+      {
+        id: 'vietnam',
+        name: 'Tỉnh thành',
+        description: 'Mã, tên, loại đơn vị và số phường/xã của từng tỉnh, thành phố.',
+        icon: IconMapPin,
+        Summary: ProvinceSummaryLine,
+        sections: [
+          { path: 'list', label: 'Tỉnh thành', element: <ProvincesPage /> },
+          { path: 'history', label: 'Lịch sử', element: <ProvinceHistoryPage /> },
+        ],
+      },
     ],
   },
 ]

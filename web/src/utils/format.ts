@@ -1,4 +1,4 @@
-import type { AviationCounts, AviationKind, Job } from '../api/types'
+import type { Job, RecordCounts } from '../api/types'
 
 const DATE_TIME = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
 const LOG_TIME = new Intl.DateTimeFormat('vi-VN', {
@@ -33,18 +33,19 @@ export function formatDuration(start: string, end: string | null): string {
     : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`
 }
 
-const AVIATION_KINDS: AviationKind[] = ['airport', 'city', 'country', 'airline']
-const AVIATION_KIND_LABEL: Record<AviationKind, string> = {
+const RECORD_KINDS = ['airport', 'city', 'country', 'airline', 'province'] as const
+const RECORD_KIND_LABEL: Record<keyof RecordCounts, string> = {
   airport: 'sân bay',
   airline: 'hãng bay',
   city: 'thành phố',
   country: 'quốc gia',
+  province: 'tỉnh thành',
 }
 
-/** "469 sân bay · 464 thành phố · …" — chỉ kể những loại có trong `counts`. */
-export function aviationCounts(counts: AviationCounts): string {
-  return AVIATION_KINDS.filter((kind) => counts[kind] !== undefined)
-    .map((kind) => `${formatNumber(counts[kind] ?? 0)} ${AVIATION_KIND_LABEL[kind]}`)
+/** "469 sân bay · 464 thành phố · …" hay "34 tỉnh thành" — chỉ kể những loại có trong `counts`. */
+export function recordCounts(counts: RecordCounts): string {
+  return RECORD_KINDS.filter((kind) => counts[kind] !== undefined)
+    .map((kind) => `${formatNumber(counts[kind] ?? 0)} ${RECORD_KIND_LABEL[kind]}`)
     .join(' · ')
 }
 
@@ -53,6 +54,7 @@ export function aviationCounts(counts: AviationCounts): string {
 const JOB_TITLE: Record<string, string> = {
   'aviation:world': 'Hàng không · Toàn thế giới',
   'aviation:vna': 'Hàng không · Vietnam Airlines',
+  provinces: 'Tỉnh thành Việt Nam',
 }
 
 /** Mọi giá trị của `job.crawler` kèm tên hiển thị — cho ô lọc theo crawler ở trang Job. */

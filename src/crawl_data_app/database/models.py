@@ -1,4 +1,4 @@
-"""Schema lưu trữ: nguồn → truyện → chương, kèm lịch sử các lần crawl; và danh mục hàng không.
+"""Schema lưu trữ: nguồn → truyện → chương, kèm lịch sử các lần crawl; danh mục hàng không; tỉnh thành.
 
 Mọi cột thời gian lưu giờ UTC dạng naive (không kèm tzinfo) để SQLite và PostgreSQL cho kết quả như nhau.
 """
@@ -101,16 +101,17 @@ class Chapter(Base):
 
 
 class CrawlRun(Base):
-    """Lịch sử crawl: mỗi lần chạy (crawl một truyện, đồng bộ một nguồn hàng không) là một dòng, kể
-    cả khi thất bại.
+    """Lịch sử crawl: mỗi lần chạy (crawl một truyện, đồng bộ một nguồn hàng không, đồng bộ tỉnh
+    thành) là một dòng, kể cả khi thất bại.
     """
 
     # ponytail: các cột `chapters_*` là bộ đếm tiến độ chung — với crawler không phải truyện chúng
-    # đếm đơn vị của crawler đó (hàng không: số file đã tải). Đổi tên cột khi có crawler thứ ba.
+    # đếm đơn vị của crawler đó (hàng không, tỉnh thành: số file đã tải). Đổi tên cột là đổi cả API
+    # contract (`JobOut`) lẫn giao diện, nên để tới khi có lý do khác buộc phải đổi contract.
     __tablename__ = "crawl_runs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # Crawler tạo ra lần chạy này: "novel", hoặc "aviation:<nguồn>" (world, vna).
+    # Crawler tạo ra lần chạy này: "novel", "aviation:<nguồn>" (world, vna), hoặc "provinces".
     crawler: Mapped[str] = mapped_column(String(50), default="novel")
     url: Mapped[str] = mapped_column(
         String(1000)
@@ -153,4 +154,22 @@ class AviationRecord(Base):
     city_code: Mapped[str | None] = mapped_column(String(64))  # chỉ sân bay
     country_code: Mapped[str | None] = mapped_column(String(10))  # sân bay và thành phố
     region: Mapped[str | None] = mapped_column(String(100))
+    crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn
+
+
+class Province(Base):
+    """Một tỉnh hoặc thành phố trực thuộc trung ương của Việt Nam (34 đơn vị sau sáp nhập 2025)."""
+
+    __tablename__ = "vn_provinces"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(10), unique=True)  # mã đơn vị hành chính: "01"
+    name: Mapped[str] = mapped_column(String(100))  # "Hà Nội"
+    name_en: Mapped[str] = mapped_column(String(100))
+    full_name: Mapped[str] = mapped_column(String(150))  # "Thành phố Hà Nội"
+    full_name_en: Mapped[str] = mapped_column(String(150))
+    code_name: Mapped[str] = mapped_column(String(100))  # "ha_noi"
+    unit: Mapped[str] = mapped_column(String(50))  # "Thành phố" | "Tỉnh"
+    postal_code_prefix: Mapped[str | None] = mapped_column(String(100))  # "10, 11, 12, 13, 14"
+    ward_count: Mapped[int]  # số phường/xã/đặc khu trực thuộc, theo nguồn
     crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn

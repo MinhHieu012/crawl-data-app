@@ -11,6 +11,7 @@ hoặc trên một VPS bằng Docker (đang chạy thật; deploy qua GitHub Act
 
 - **Truyện chữ**: thông tin truyện, mục lục, nội dung chương đã làm sạch (hiện có nguồn **TruyenFull**).
 - **Danh mục hàng không**: sân bay, hãng bay, thành phố, quốc gia từ 2 nguồn — `world` (OurAirports + OpenFlights) và `vna` (vietnamairlines.com).
+- **Tỉnh thành Việt Nam**: 34 tỉnh, thành phố sau sáp nhập 2025, từ bộ dữ liệu mở `thanglequoc/vietnamese-provinces-database` (MIT).
 
 Thiết kế để chạy lâu dài và "lịch sự": giãn cách request, tuân thủ `robots.txt`, chạy tiếp sau khi bị ngắt, không tải lại thứ đã có.
 
@@ -28,6 +29,7 @@ User ─ CLI (cli.py, argparse + Rich) ─────────┐
                             └─ repository.py     NovelRepository (transaction ngắn, chống trùng, lịch sử)
                                  └─ database/    ORM SQLAlchemy 2 · session · migrations (Alembic)
 aviation.py: parser JSON/CSV (hàm thuần) + SOURCES + AviationRepository; chạy thành job qua JobManager.start_aviation
+provinces.py: parser JSON (hàm thuần) + ProvinceRepository; dùng lại `aviation.run_sync`; job qua JobManager.start_provinces
 ```
 
 Phụ thuộc đi một chiều: `(cli, web) → service → (crawlers, repository) → (core, database)`. Parser không biết mạng/DB;
@@ -48,7 +50,8 @@ src/crawl_data_app/
 ├── cli.py            lệnh: crawl · resume · status · export · aviation · sources · init-db · serve
 ├── service.py        CrawlService
 ├── repository.py     NovelRepository (mọi truy vấn truyện/chương/crawl_runs)
-├── aviation.py       đồng bộ danh mục hàng không
+├── aviation.py       đồng bộ danh mục hàng không (+ `run_sync`: phần chạy job dùng chung cho mọi crawler kiểu danh mục)
+├── provinces.py      đồng bộ danh mục 34 tỉnh thành Việt Nam (1 request)
 ├── export.py         xuất txt / epub / json
 ├── core/             http_client (giãn cách, retry, robots) · base_crawler (BaseParser/BaseCrawler) · models · content · exceptions
 ├── crawlers/         __init__.py (CRAWLERS + crawler_class_for) · truyenfull/{crawler,parser}.py
@@ -68,7 +71,7 @@ docs/                 deploy-vps-tailscale.md (cài VPS, secret, vận hành, c�
 
 - **Source / Crawler**: một website = một `BaseCrawler` (`name`, `domains`, `parser`) đăng ký trong `CRAWLERS`. Bật/tắt qua `CRAWLER_DISABLED_SOURCES`.
 - **Novel / Chapter**: truyện định danh theo `(source, slug)`, chương theo `(novel, slug)` — **không theo URL** (website đổi tên miền liên tục). Chương có `status` `pending|done|failed`, kèm hash SHA-256 để phát hiện thay đổi.
-- **Job = một dòng `crawl_runs`**: dùng chung cho cả crawl truyện và đồng bộ hàng không (cột `crawler`: `novel`, `aviation:world`, `aviation:vna`). Trạng thái `running|completed|partial|failed|interrupted|cancelled`; tiến độ ghi vào DB sau mỗi chương, API chỉ đọc DB. Các cột `chapters_*` đếm file với job hàng không.
+- **Job = một dòng `crawl_runs`**: dùng chung cho cả crawl truyện và các job đồng bộ (cột `crawler`: `novel`, `aviation:world`, `aviation:vna`, `provinces`). Trạng thái `running|completed|partial|failed|interrupted|cancelled`; tiến độ ghi vào DB sau mỗi chương, API chỉ đọc DB. Các cột `chapters_*` đếm file với job đồng bộ (hàng không, tỉnh thành).
 - **resume / retry**: tạo job *mới* chạy lại đúng phạm vi cũ, chỉ tải chương chưa xong; job `cancelled` thì `resume` không tự chạy lại.
 - **Aviation sync**: tải đủ 3 file rồi mới ghi (job lỗi giữa chừng không làm mất dữ liệu cũ); ghi đè theo `(nguồn, mã)`; mỗi nguồn một job tại một thời điểm.
 
@@ -86,6 +89,8 @@ Thêm website truyện mới (không phải sửa service/repository/CLI):
 6. Nếu muốn có trong UI: thêm module vào `CRAWLER_MODULES` (`web/src/crawlers/registry.tsx`).
 
 Nguồn hàng không mới: thêm parser (hàm thuần trả `list[Record]`) + hàm `fetch_<nguồn>` (gọi `fetch` đúng `FILES_PER_SYNC` = 3 lần) vào `SOURCES`/`HOMES` trong `aviation.py`, rồi cập nhật `registry.tsx`.
+
+Danh mục kiểu "tải vài file rồi ghi đè" khác (mẫu: `provinces.py`): parser hàm thuần + repository riêng + `sync` gọi `aviation.run_sync`; thêm `JobManager.start_<tên>`, nhánh chạy lại trong `rerun_job` (`web/app.py`), tên job trong `web/src/utils/format.ts` và đường dẫn trong `jobDataPath` (`web/src/crawlers/paths.ts`).
 
 ## Backend Architecture
 
@@ -133,9 +138,9 @@ crawl-data-app serve             # API + UI đã build tại http://127.0.0.1:80
 cd web && npm run dev            # dev UI http://localhost:5173 (chạy kèm `serve`)
 cd web && npm run build          # tsc --noEmit rồi build ra web/dist (cần để serve phục vụ UI)
 
-pytest                           # backend (186 test, ~18s, không có request mạng thật)
+pytest                           # backend (198 test, ~20s, không có request mạng thật)
 ruff check . && ruff format --check .
-cd web && npm test               # Vitest (39 test)
+cd web && npm test               # Vitest (40 test)
 cd web && npm run lint && npm run typecheck && npm run format:check
 
 alembic revision --autogenerate -m "mo ta"   # sau khi sửa database/models.py

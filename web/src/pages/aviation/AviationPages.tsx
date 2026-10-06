@@ -1,5 +1,7 @@
 import { Anchor, Button, Card, Group, Skeleton, Table, Text, useMatches } from '@mantine/core'
 import { IconDownload, IconRefresh } from '@tabler/icons-react'
+import type { UseMutationResult } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import { BASE_URL } from '../../api/client'
@@ -10,7 +12,7 @@ import { Pager, SearchInput } from '../../components/ListControls'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { useUrlState } from '../../hooks/useUrlState'
-import { aviationCounts, formatDateTime } from '../../utils/format'
+import { recordCounts, formatDateTime } from '../../utils/format'
 import { notifyError, notifySuccess } from '../../utils/notify'
 
 const PAGE_SIZE = 50
@@ -49,6 +51,19 @@ const KIND_NOTE: Record<AviationSource, Partial<Record<AviationKind, string>>> =
 function SyncButton({ source, variant }: { source: AviationSource; variant?: string }) {
   const sync = useSyncAviation(source)
   const running = useAviationSummary(source).data?.last_job?.status === 'running'
+  return <SyncJobButton sync={sync} running={running} variant={variant} />
+}
+
+interface SyncJobButtonProps {
+  /** Mutation tạo job đồng bộ (`useSyncAviation`, `useSyncProvinces`). */
+  sync: UseMutationResult<Job, Error, void>
+  /** Job đồng bộ gần nhất của danh mục còn đang chạy. */
+  running: boolean
+  variant?: string
+}
+
+/** Nút "Đồng bộ" dùng chung cho mọi crawler kiểu danh mục (hàng không, tỉnh thành). */
+export function SyncJobButton({ sync, running, variant }: SyncJobButtonProps) {
   return (
     <Button
       variant={variant}
@@ -67,7 +82,7 @@ function SyncButton({ source, variant }: { source: AviationSource; variant?: str
 }
 
 /** Câu nói về job đồng bộ gần nhất của nguồn, kèm link tới job đó. */
-function LastJobNote({ job }: { job: Job | null | undefined }) {
+export function LastJobNote({ job }: { job: Job | null | undefined }) {
   if (!job) return 'Chưa đồng bộ lần nào.'
   const link = (
     <Anchor component={Link} to={`/jobs/${job.id}`} inherit>
@@ -103,7 +118,7 @@ export function AviationSummaryLine({ source }: { source: AviationSource }) {
     )
   }
   const total = Object.values(data.counts).reduce((sum, count) => sum + count, 0)
-  return <Text size="sm">{total > 0 ? aviationCounts(data.counts) : 'Chưa đồng bộ lần nào'}</Text>
+  return <Text size="sm">{total > 0 ? recordCounts(data.counts) : 'Chưa đồng bộ lần nào'}</Text>
 }
 
 interface DataPageProps {
@@ -273,17 +288,31 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
 
 /** Tab "Lịch sử": các job đồng bộ của một nguồn, mới nhất ở trên. */
 export function AviationHistoryPage({ source }: { source: AviationSource }) {
+  return (
+    <SyncHistoryPage
+      crawler={`aviation:${source}`}
+      description="Mỗi lần đồng bộ là một job tải lại cả bốn loại dữ liệu của nguồn này. Job thất bại hay bị dừng không làm mất dữ liệu đã có."
+      actions={<SyncButton source={source} />}
+    />
+  )
+}
+
+interface SyncHistoryPageProps {
+  /** Giá trị `job.crawler` của các job cần liệt kê. */
+  crawler: string
+  description: string
+  actions: ReactNode
+}
+
+/** Tab "Lịch sử" dùng chung cho mọi crawler kiểu danh mục: các job đồng bộ của một `crawler`. */
+export function SyncHistoryPage({ crawler, description, actions }: SyncHistoryPageProps) {
   const [filters, setFilters] = useUrlState({ page: '1' })
   const page = Number(filters.page) || 1
-  const jobs = useJobs({ crawler: `aviation:${source}`, page, page_size: 20 })
+  const jobs = useJobs({ crawler, page, page_size: 20 })
 
   return (
     <>
-      <PageHeader
-        title="Lịch sử"
-        description="Mỗi lần đồng bộ là một job tải lại cả bốn loại dữ liệu của nguồn này. Job thất bại hay bị dừng không làm mất dữ liệu đã có."
-        actions={<SyncButton source={source} />}
-      />
+      <PageHeader title="Lịch sử" description={description} actions={actions} />
       <Card withBorder>
         <QueryState
           query={jobs}

@@ -51,6 +51,19 @@ const WORLD_AIRPORT = {
   region: 'Asia',
 }
 
+const HANOI = {
+  code: '01',
+  name: 'Hà Nội',
+  name_en: 'Hanoi',
+  full_name: 'Thành phố Hà Nội',
+  full_name_en: 'Hanoi City',
+  code_name: 'ha_noi',
+  unit: 'Thành phố',
+  postal_code_prefix: '10, 11, 12, 13, 14',
+  ward_count: 126,
+  crawled_at: '2026-10-05T03:00:05Z',
+}
+
 /**
  * Backend giả. Nguồn Vietnam Airlines đã đồng bộ sẵn; nguồn thế giới thì tuỳ `worldSynced` và
  * chuyển sang "đã đồng bộ" khi giao diện gọi API đồng bộ.
@@ -65,6 +78,11 @@ function backend(worldSynced = true) {
       const [, source] = request.query.crawler?.match(/^aviation:(\w+)$/) ?? []
       const job = source ? syncJob(source) : makeJob({ status: 'completed', active: false })
       return { items: [job], total: 1 }
+    }
+    if (request.path === '/provinces/summary') return { count: 1, last_job: null }
+    if (request.path === '/provinces') return { items: [HANOI], total: 1 }
+    if (request.path === '/provinces/sync') {
+      return syncJob('', { id: 22, crawler: 'provinces', status: 'running', active: true })
     }
     const [, source, action] = request.path.match(/^\/aviation\/(\w+)\/(\w+)$/) ?? []
     if (action === 'sync') {
@@ -190,6 +208,35 @@ describe('App — khu vực Crawler', () => {
     expect(screen.getByRole('link', { name: 'Xuất JSON' })).toHaveAttribute(
       'href',
       '/api/aviation/world/export?kind=airport',
+    )
+  })
+
+  it('Tỉnh thành Việt Nam: bảng tỉnh thành, xuất JSON, đồng bộ thành job và lịch sử riêng', async () => {
+    const user = userEvent.setup()
+    const requests = backend()
+    open('/crawlers/provinces')
+
+    expect(
+      await screen.findByRole('tab', { name: 'Tỉnh thành', selected: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tỉnh thành Việt Nam')
+    expect(await screen.findByText('Thành phố Hà Nội')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Xuất JSON' })).toHaveAttribute(
+      'href',
+      '/api/provinces/export',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Đồng bộ' }))
+    expect(await screen.findByText('Đang đồng bộ ở job #22')).toBeInTheDocument()
+    expect(requests.find((request) => request.method === 'POST')?.path).toBe('/provinces/sync')
+
+    await user.click(screen.getByRole('tab', { name: 'Lịch sử' }))
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) => request.path === '/crawl/jobs' && request.query.crawler === 'provinces',
+        ),
+      ).toBe(true),
     )
   })
 

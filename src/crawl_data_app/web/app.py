@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Row, make_url
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from crawl_data_app import __version__
+from crawl_data_app import __version__, provinces
 from crawl_data_app.aviation import SOURCES as AVIATION_SOURCES
 from crawl_data_app.aviation import AviationRepository, RecordOut, crawler_name
 from crawl_data_app.config.logging import read_logs
@@ -50,6 +50,8 @@ from crawl_data_app.web.schemas import (
     LogEntry,
     NovelOut,
     Page,
+    ProvinceOut,
+    ProvinceSummary,
     SettingsOut,
     SettingsUpdate,
     SourceOut,
@@ -371,6 +373,13 @@ def create_app(
             raise ApiError(409, "duplicate_job", str(exc), job_id=exc.run_id) from exc
         return find_job(run_id, detail=True)
 
+    async def launch_provinces() -> JobOut:
+        try:
+            run_id = await jobs.start_provinces()
+        except DuplicateJobError as exc:
+            raise ApiError(409, "duplicate_job", str(exc), job_id=exc.run_id) from exc
+        return find_job(run_id, detail=True)
+
     @api.post("/crawl/jobs", status_code=201)
     async def create_job(body: JobCreate) -> JobOut:
         url = body.url.strip()
@@ -439,6 +448,8 @@ def create_app(
             raise ApiError(409, "job_running", "Job vẫn đang chạy")
         if job.crawler.startswith(AVIATION_PREFIX):  # đồng bộ hàng không luôn tải lại cả nguồn
             return await launch_aviation(job.crawler.removeprefix(AVIATION_PREFIX))
+        if job.crawler == provinces.CRAWLER:
+            return await launch_provinces()
         request = repo.run_request(job_id)
         assert request is not None  # find_job vừa xác nhận job tồn tại
         return await launch(request)
@@ -500,6 +511,42 @@ def create_app(
         giãn cách chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
         """
         return await launch_aviation(source)
+
+    # --- Tỉnh thành Việt Nam ------------------------------------------------------------------
+
+    province_store = provinces.ProvinceRepository(repo.session_factory)
+
+    @api.get("/provinces/summary")
+    async def provinces_summary() -> ProvinceSummary:
+        rows, _ = repo.runs_page(crawler=provinces.CRAWLER, limit=1)
+        return ProvinceSummary(
+            count=province_store.count(), last_job=job_out(*rows[0]) if rows else None
+        )
+
+    @api.get("/provinces")
+    async def list_provinces(
+        search: str = "", page: PageNumber = 1, page_size: PageSize = 50
+    ) -> Page[ProvinceOut]:
+        rows, total = province_store.page(search=search.strip(), **_window(page, page_size))
+        return Page(items=[ProvinceOut.model_validate(row) for row in rows], total=total)
+
+    @api.get("/provinces/export")
+    async def export_provinces() -> Response:
+        """Toàn bộ tỉnh thành thành file JSON tải về (cùng các trường với `GET /provinces`)."""
+        rows, _ = province_store.page(limit=sys.maxsize)
+        items = [ProvinceOut.model_validate(row).model_dump(mode="json") for row in rows]
+        return Response(
+            json.dumps(items, ensure_ascii=False, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": 'attachment; filename="vn-provinces.json"'},
+        )
+
+    @api.post("/provinces/sync", status_code=201)
+    async def sync_provinces() -> JobOut:
+        """Tạo job đồng bộ lại danh mục tỉnh thành (một request, theo robots.txt và nhịp giãn cách
+        chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
+        """
+        return await launch_provinces()
 
     # --- Log và cấu hình ----------------------------------------------------------------------
 
