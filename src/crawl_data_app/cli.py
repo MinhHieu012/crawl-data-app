@@ -26,14 +26,13 @@ from crawl_data_app import aviation
 from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.logging import setup_logging
 from crawl_data_app.config.settings import DatabaseSettings, Settings, get_settings
-from crawl_data_app.core.content import split_title, to_paragraphs
 from crawl_data_app.core.exceptions import CrawlerError
 from crawl_data_app.core.http_client import HttpClient
 from crawl_data_app.core.models import CrawlRequest
 from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
 from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus
 from crawl_data_app.database.session import create_db_engine, init_db, make_session_factory
-from crawl_data_app.export import WRITERS
+from crawl_data_app.export import WRITERS, file_stem, to_chapters
 from crawl_data_app.repository import NovelRepository
 from crawl_data_app.service import CrawlResult, CrawlService
 
@@ -118,7 +117,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     export = commands.add_parser(
-        "export", help="xuất các chương đã tải ra file .txt, mỗi truyện một file"
+        "export", help="xuất các chương đã tải ra file .txt / .epub / .json, mỗi truyện một file"
     )
     export.add_argument(
         "--novel-id",
@@ -134,6 +133,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     export.add_argument(
         "--format", choices=sorted(WRITERS), default="txt", help="định dạng file (mặc định: txt)"
+    )
+    export.add_argument(
+        "--from-chapter", type=int, metavar="N", help="chỉ xuất từ chương số N (mặc định: từ đầu)"
+    )
+    export.add_argument(
+        "--to-chapter", type=int, metavar="M", help="chỉ xuất đến hết chương số M (mặc định: cuối)"
     )
 
     aviation_sync = commands.add_parser(
@@ -192,7 +197,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "status":
             return _show_status(repo, show_errors=args.errors)
         if args.command == "export":
-            return _export(repo, set(args.novel_id), Path(args.out), args.format)
+            return _export(
+                repo,
+                set(args.novel_id),
+                Path(args.out),
+                args.format,
+                args.from_chapter,
+                args.to_chapter,
+            )
         repo.close_stale_runs()
         if args.command == "serve":
             return _serve(args, repo)
@@ -452,22 +464,28 @@ def _show_status(repo: NovelRepository, *, show_errors: bool) -> int:
     return 0
 
 
-def _export(repo: NovelRepository, novel_ids: set[int], out_dir: Path, file_format: str) -> int:
-    """Ghi `<out_dir>/<slug>.<định dạng>` cho từng truyện có chương đã tải. Trả về 1 nếu không xuất được gì."""
+def _export(
+    repo: NovelRepository,
+    novel_ids: set[int],
+    out_dir: Path,
+    file_format: str,
+    first: int | None = None,
+    last: int | None = None,
+) -> int:
+    """Ghi `<out_dir>/<slug>.<định dạng>` cho từng truyện có chương đã tải (trong khoảng `first`–`last`
+    nếu có; khi đó tên file thêm `-c<đầu>-<cuối>`). Trả về 1 nếu không xuất được gì.
+    """
+    ranged = first is not None or last is not None
     exported = 0
     for novel, _source, _counts in repo.novels_overview():
         if novel_ids and novel.id not in novel_ids:
             continue
-        rows = repo.done_chapters(novel.id)
-        if not rows:
-            out.print(f"Bỏ qua (chưa có chương nào đã tải): {novel.title}")
+        chapters = to_chapters(repo.done_chapters(novel.id, first, last))
+        if not chapters:
+            where = " trong khoảng này" if ranged else ""
+            out.print(f"Bỏ qua (chưa có chương nào đã tải{where}): {novel.title}")
             continue
-        chapters = [
-            (row.number, *split_title(row.title, to_paragraphs(row.content, row.content_format)))
-            for row in rows
-        ]
-        # ponytail: tên file chỉ theo slug; thêm tiền tố nguồn nếu hai website có truyện trùng slug.
-        path = out_dir / f"{novel.slug}.{file_format}"
+        path = out_dir / f"{file_stem(novel, chapters, ranged=ranged)}.{file_format}"
         out_dir.mkdir(parents=True, exist_ok=True)
         WRITERS[file_format](path, novel, chapters)
         out.print(f"Đã xuất {len(chapters)} chương: {path}")

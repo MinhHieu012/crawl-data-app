@@ -9,6 +9,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
+from sqlalchemy import Row
+
+from crawl_data_app.core.content import split_title, to_paragraphs
 from crawl_data_app.database.models import Novel
 
 Chapters = Sequence[tuple[int, str, list[str]]]  # (số thứ tự, tiêu đề chương, các đoạn văn)
@@ -27,7 +30,23 @@ def write_txt(path: Path, novel: Novel, chapters: Chapters) -> None:
     path.write_text("\n\n\n".join(blocks) + "\n", encoding="utf-8")
 
 
-def write_json(path: Path, novel: Novel, chapters: Chapters) -> None:
+def to_chapters(rows: Sequence[Row]) -> list[tuple[int, str, list[str]]]:
+    """Các dòng của `NovelRepository.done_chapters` → `Chapters` (nội dung thành đoạn văn text thuần)."""
+    return [
+        (row.number, *split_title(row.title, to_paragraphs(row.content, row.content_format)))
+        for row in rows
+    ]
+
+
+def file_stem(novel: Novel, chapters: Chapters, *, ranged: bool) -> str:
+    """Tên file (chưa có đuôi): `<slug>`, hoặc `<slug>-c<đầu>-<cuối>` khi chỉ xuất một khoảng chương
+    — theo số chương thật sự có trong file, để không ghi đè lên bản xuất toàn bộ.
+    """
+    # ponytail: tên file chỉ theo slug; thêm tiền tố nguồn nếu hai website có truyện trùng slug.
+    return f"{novel.slug}-c{chapters[0][0]}-{chapters[-1][0]}" if ranged else novel.slug
+
+
+def novel_json(novel: Novel, chapters: Chapters) -> str:
     data = {
         "title": novel.title,
         "author": novel.author,
@@ -42,7 +61,11 @@ def write_json(path: Path, novel: Novel, chapters: Chapters) -> None:
             for number, title, paragraphs in chapters
         ],
     }
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+
+
+def write_json(path: Path, novel: Novel, chapters: Chapters) -> None:
+    path.write_text(novel_json(novel, chapters), encoding="utf-8")
 
 
 def _esc(text: str) -> str:

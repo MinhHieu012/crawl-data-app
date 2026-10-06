@@ -23,9 +23,11 @@ import {
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
-import { IconDownload, IconReload } from '@tabler/icons-react'
+import { IconDownload, IconFileExport, IconReload } from '@tabler/icons-react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 
+import { BASE_URL } from '../../api/client'
 import { useChapters, useJobs, useNovel } from '../../api/queries'
 import type { Chapter, ChapterStatus, Novel } from '../../api/types'
 import { Cover } from '../../components/Cover'
@@ -54,16 +56,16 @@ interface RangeModalProps {
   onClose: () => void
 }
 
+const validateTo = (to: number | string, { from }: { from: number | string }) =>
+  typeof to === 'number' && typeof from === 'number' && to < from
+    ? 'Chương kết thúc phải lớn hơn hoặc bằng chương bắt đầu'
+    : null
+
 function RangeModal({ novel, opened, onClose }: RangeModalProps) {
   const { start, isPending } = useStartCrawl()
   const form = useForm<{ from: number | string; to: number | string; force: boolean }>({
     initialValues: { from: 1, to: novel.total_chapters ?? '', force: false },
-    validate: {
-      to: (to, { from }) =>
-        typeof to === 'number' && typeof from === 'number' && to < from
-          ? 'Chương kết thúc phải lớn hơn hoặc bằng chương bắt đầu'
-          : null,
-    },
+    validate: { to: validateTo },
   })
 
   const submit = form.onSubmit(({ from, to, force }) =>
@@ -107,6 +109,75 @@ function RangeModal({ novel, opened, onClose }: RangeModalProps) {
           </Button>
         </Group>
       </form>
+    </Modal>
+  )
+}
+
+/** Xuất JSON theo hai kiểu: toàn bộ chương đã tải, hoặc một khoảng chương. File do backend dựng. */
+function ExportModal({ novel, opened, onClose }: RangeModalProps) {
+  const [scope, setScope] = useState<'all' | 'range'>('all')
+  const form = useForm<{ from: number | string; to: number | string }>({
+    initialValues: { from: 1, to: novel.total_chapters ?? '' },
+    validateInputOnChange: true,
+    validate: { to: validateTo },
+  })
+  const ranged = scope === 'range'
+
+  const params = new URLSearchParams()
+  if (ranged) {
+    const { from, to } = form.values
+    if (typeof from === 'number') params.set('from_chapter', String(from))
+    if (typeof to === 'number') params.set('to_chapter', String(to))
+  }
+  const query = params.toString()
+  const href = `${BASE_URL}/novels/${novel.id}/export${query && `?${query}`}`
+  const download = { leftSection: <IconFileExport size={16} />, children: 'Tải file JSON' }
+
+  return (
+    <Modal opened={opened} onClose={onClose} title="Xuất JSON">
+      <SegmentedControl
+        fullWidth
+        value={scope}
+        onChange={(value) => setScope(value as 'all' | 'range')}
+        data={[
+          { value: 'all', label: 'Toàn bộ chương' },
+          { value: 'range', label: 'Khoảng chương' },
+        ]}
+      />
+      {ranged && (
+        <Group grow align="flex-start" mt="md">
+          <NumberInput
+            label="Từ chương"
+            placeholder="đầu truyện"
+            min={1}
+            allowDecimal={false}
+            {...form.getInputProps('from')}
+          />
+          <NumberInput
+            label="Đến chương"
+            placeholder="cuối truyện"
+            min={1}
+            allowDecimal={false}
+            {...form.getInputProps('to')}
+          />
+        </Group>
+      )}
+      <Text size="sm" c="dimmed" mt="md">
+        File gồm thông tin truyện và nội dung các chương <b>đã tải</b> (hiện có{' '}
+        {novel.chapters_done} chương)
+        {ranged && '; khoảng không có chương nào đã tải thì không có file'}.
+      </Text>
+      <Group justify="flex-end" mt="lg">
+        <Button variant="default" onClick={onClose}>
+          Thôi
+        </Button>
+        {/* Link tải thẳng như trang hàng không; khoảng không hợp lệ thì không có link để bấm. */}
+        {ranged && !form.isValid() ? (
+          <Button disabled {...download} />
+        ) : (
+          <Button component="a" href={href} download onClick={onClose} {...download} />
+        )}
+      </Group>
     </Modal>
   )
 }
@@ -280,6 +351,7 @@ function NovelView({ novel }: { novel: Novel }) {
   const crawling = runningJob !== undefined
   const { start, isPending } = useStartCrawl()
   const [rangeOpened, range] = useDisclosure()
+  const [exportOpened, exporting] = useDisclosure()
 
   return (
     <Stack gap="lg">
@@ -328,6 +400,14 @@ function NovelView({ novel }: { novel: Novel }) {
               <Button variant="default" disabled={crawling} onClick={range.open}>
                 Tải theo khoảng chương…
               </Button>
+              <Button
+                variant="default"
+                leftSection={<IconFileExport size={16} />}
+                disabled={novel.chapters_done === 0}
+                onClick={exporting.open}
+              >
+                Xuất JSON…
+              </Button>
             </Group>
           </Stack>
         </Group>
@@ -365,6 +445,7 @@ function NovelView({ novel }: { novel: Novel }) {
       </Card>
 
       <RangeModal novel={novel} opened={rangeOpened} onClose={range.close} />
+      <ExportModal novel={novel} opened={exportOpened} onClose={exporting.close} />
     </Stack>
   )
 }

@@ -133,9 +133,9 @@ crawl-data-app serve             # API + UI đã build tại http://127.0.0.1:80
 cd web && npm run dev            # dev UI http://localhost:5173 (chạy kèm `serve`)
 cd web && npm run build          # tsc --noEmit rồi build ra web/dist (cần để serve phục vụ UI)
 
-pytest                           # backend (184 test, ~18s, không có request mạng thật)
+pytest                           # backend (186 test, ~18s, không có request mạng thật)
 ruff check . && ruff format --check .
-cd web && npm test               # Vitest (37 test)
+cd web && npm test               # Vitest (39 test)
 cd web && npm run lint && npm run typecheck && npm run format:check
 
 alembic revision --autogenerate -m "mo ta"   # sau khi sửa database/models.py

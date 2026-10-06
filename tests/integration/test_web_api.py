@@ -297,6 +297,38 @@ async def test_chapters_can_be_listed_filtered_and_read(api, repo):
     assert (await api.get("/api/novels/999")).status_code == 404
 
 
+async def test_novel_exports_as_json_download_for_all_chapters_or_a_range(api, repo):
+    novel_id = seed(repo, "kiem-lai", "Kiếm Lai", chapters=5, done=4, author="Phong Hỏa")
+    export = f"/api/novels/{novel_id}/export"
+
+    everything = await api.get(export)
+
+    assert everything.status_code == 200
+    assert everything.headers["content-disposition"] == 'attachment; filename="kiem-lai.json"'
+    assert "Kiếm Lai" in everything.text  # tiếng Việt lưu nguyên dạng, không phải \uXXXX
+    data = everything.json()
+    assert (data["title"], data["author"], data["total_chapters"]) == ("Kiếm Lai", "Phong Hỏa", 5)
+    assert [chapter["number"] for chapter in data["chapters"]] == [1, 2, 3, 4]  # chỉ chương đã tải
+    assert data["chapters"][0] == {
+        "number": 1,
+        "title": "Chương 1: Mở đầu",
+        "paragraphs": ["Nội dung 1."],
+    }
+
+    part = await api.get(export, params={"from_chapter": 2, "to_chapter": 3})
+    assert part.headers["content-disposition"] == 'attachment; filename="kiem-lai-c2-3.json"'
+    assert [chapter["number"] for chapter in part.json()["chapters"]] == [2, 3]
+    open_ended = await api.get(export, params={"from_chapter": 3})
+    assert open_ended.headers["content-disposition"] == 'attachment; filename="kiem-lai-c3-4.json"'
+
+    for params in ({"from_chapter": 5}, {"from_chapter": 3, "to_chapter": 2}):
+        empty = await api.get(export, params=params)
+        assert (empty.status_code, empty.json()["code"]) == (404, "not_found")
+        assert "khoảng chương" in empty.json()["detail"]
+    assert (await api.get(export, params={"from_chapter": 0})).status_code == 422
+    assert (await api.get("/api/novels/999/export")).json()["code"] == "not_found"
+
+
 # --- Nguồn và cấu hình ---------------------------------------------------------------------------
 
 
