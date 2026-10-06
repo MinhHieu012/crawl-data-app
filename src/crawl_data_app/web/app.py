@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Row, make_url
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from crawl_data_app import __version__
+from crawl_data_app import __version__, provinces
 from crawl_data_app.aviation import SOURCES as AVIATION_SOURCES
 from crawl_data_app.aviation import AviationRepository, RecordOut, crawler_name
 from crawl_data_app.config.logging import read_logs
@@ -50,11 +50,14 @@ from crawl_data_app.web.schemas import (
     LogEntry,
     NovelOut,
     Page,
+    ProvinceOut,
+    ProvinceSummary,
     SettingsOut,
     SettingsUpdate,
     SourceOut,
     SourceUpdate,
     Stats,
+    WardOut,
 )
 
 log = logging.getLogger(__name__)
@@ -66,6 +69,8 @@ AVIATION_PREFIX = crawler_name(
 )  # "aviation:" — phần đầu của `crawl_runs.crawler` với job hàng không
 AviationSource = Literal["world", "vna"]
 AviationKind = Literal["airport", "airline", "city", "country"]
+# Mã tỉnh thành để lọc phường/xã; chỉ chữ số vì giá trị này đi vào tên file xuất.
+ProvinceCode = Annotated[str, Query(pattern=r"^\d{0,10}$")]
 
 
 class ApiError(Exception):
@@ -371,6 +376,13 @@ def create_app(
             raise ApiError(409, "duplicate_job", str(exc), job_id=exc.run_id) from exc
         return find_job(run_id, detail=True)
 
+    async def launch_provinces() -> JobOut:
+        try:
+            run_id = await jobs.start_provinces()
+        except DuplicateJobError as exc:
+            raise ApiError(409, "duplicate_job", str(exc), job_id=exc.run_id) from exc
+        return find_job(run_id, detail=True)
+
     @api.post("/crawl/jobs", status_code=201)
     async def create_job(body: JobCreate) -> JobOut:
         url = body.url.strip()
@@ -439,6 +451,8 @@ def create_app(
             raise ApiError(409, "job_running", "Job vẫn đang chạy")
         if job.crawler.startswith(AVIATION_PREFIX):  # đồng bộ hàng không luôn tải lại cả nguồn
             return await launch_aviation(job.crawler.removeprefix(AVIATION_PREFIX))
+        if job.crawler == provinces.CRAWLER:
+            return await launch_provinces()
         request = repo.run_request(job_id)
         assert request is not None  # find_job vừa xác nhận job tồn tại
         return await launch(request)
@@ -500,6 +514,101 @@ def create_app(
         giãn cách chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
         """
         return await launch_aviation(source)
+
+    # --- Tỉnh thành Việt Nam ------------------------------------------------------------------
+
+    province_store = provinces.ProvinceRepository(repo.session_factory)
+
+    @api.get("/provinces/summary")
+    async def provinces_summary() -> ProvinceSummary:
+        rows, _ = repo.runs_page(crawler=provinces.CRAWLER, limit=1)
+        counts = province_store.counts()
+        return ProvinceSummary(
+            count=counts["province"],
+            ward_count=counts["ward"],
+            last_job=job_out(*rows[0]) if rows else None,
+        )
+
+    def ward_out(row: provinces.WardOut) -> WardOut:
+        ward = row.ward
+        return WardOut(
+            code=ward.code,
+            name=ward.name,
+            name_en=ward.name_en,
+            full_name=ward.full_name,
+            full_name_en=ward.full_name_en,
+            code_name=ward.code_name,
+            unit=ward.unit,
+            postal_code=ward.postal_code,
+            province_code=ward.province_code,
+            province_name=row.province_name,
+            crawled_at=ward.crawled_at,
+        )
+
+    @api.get("/provinces/wards")
+    async def list_wards(
+        province_code: ProvinceCode = "",
+        search: str = "",
+        page: PageNumber = 1,
+        page_size: PageSize = 50,
+    ) -> Page[WardOut]:
+        rows, total = province_store.wards_page(
+            province_code=province_code, search=search.strip(), **_window(page, page_size)
+        )
+        return Page(items=[ward_out(row) for row in rows], total=total)
+
+    @api.get("/provinces/wards/export")
+    async def export_wards(province_code: ProvinceCode = "") -> Response:
+        """Phường/xã của một tỉnh thành (`province_code`) hoặc của cả nước thành file JSON tải về
+        (cùng các trường với `GET /provinces/wards`).
+        """
+        rows, _ = province_store.wards_page(province_code=province_code, limit=sys.maxsize)
+        items = [ward_out(row).model_dump(mode="json") for row in rows]
+        filename = f"vn-wards-{province_code}.json" if province_code else "vn-wards.json"
+        return Response(
+            json.dumps(items, ensure_ascii=False, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    @api.get("/provinces")
+    async def list_provinces(
+        search: str = "", page: PageNumber = 1, page_size: PageSize = 50
+    ) -> Page[ProvinceOut]:
+        rows, total = province_store.page(search=search.strip(), **_window(page, page_size))
+        return Page(items=[ProvinceOut.model_validate(row) for row in rows], total=total)
+
+    @api.get("/provinces/export")
+    async def export_provinces(with_wards: bool = False) -> Response:
+        """Toàn bộ tỉnh thành thành file JSON tải về (cùng các trường với `GET /provinces`).
+
+        `with_wards=true`: mỗi tỉnh thành kèm mảng `wards` gồm các phường/xã trực thuộc (các trường
+        của `GET /provinces/wards`, bỏ `province_code` / `province_name` vì đã nằm trong tỉnh).
+        """
+        rows, _ = province_store.page(limit=sys.maxsize)
+        items = [ProvinceOut.model_validate(row).model_dump(mode="json") for row in rows]
+        if with_wards:
+            wards: dict[str, list[dict]] = {}
+            for row in province_store.wards_page(limit=sys.maxsize)[0]:
+                ward = ward_out(row).model_dump(
+                    mode="json", exclude={"province_code", "province_name"}
+                )
+                wards.setdefault(row.ward.province_code, []).append(ward)
+            for item in items:
+                item["wards"] = wards.get(item["code"], [])
+        filename = "vn-provinces-wards.json" if with_wards else "vn-provinces.json"
+        return Response(
+            json.dumps(items, ensure_ascii=False, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    @api.post("/provinces/sync", status_code=201)
+    async def sync_provinces() -> JobOut:
+        """Tạo job đồng bộ lại danh mục tỉnh thành (một request, theo robots.txt và nhịp giãn cách
+        chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
+        """
+        return await launch_provinces()
 
     # --- Log và cấu hình ----------------------------------------------------------------------
 

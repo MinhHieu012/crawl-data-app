@@ -33,6 +33,9 @@ import type {
   AviationRecord,
   AviationSource,
   AviationSummary,
+  Province,
+  ProvinceSummary,
+  Ward,
 } from './types'
 
 /** Chu kỳ hỏi lại khi có job đang chạy. Không có job nào chạy thì không hỏi định kỳ. */
@@ -68,7 +71,7 @@ export interface ChapterListParams {
 }
 
 export interface JobListParams {
-  /** Chỉ job của một crawler: "novel", "aviation:world"… */
+  /** Chỉ job của một crawler: "novel", "aviation:world", "provinces"… */
   crawler?: string
   status?: JobStatus | ''
   novel_id?: number
@@ -185,6 +188,41 @@ export function useAviationRecords(source: AviationSource, params: AviationRecor
   })
 }
 
+/** Số tỉnh thành và job đồng bộ gần nhất; hỏi lại định kỳ khi job đó còn đang chạy. */
+export function useProvinceSummary() {
+  return useQuery({
+    queryKey: ['provinces', 'summary'],
+    queryFn: () => api<ProvinceSummary>('/provinces/summary'),
+    refetchInterval: (query) =>
+      isRunning(query.state.data?.last_job ?? undefined) ? POLL_MS : false,
+  })
+}
+
+/** Cả danh mục trong một trang: chỉ có 34 tỉnh thành nên không phân trang ở giao diện. */
+export function useProvinces(search: string) {
+  return useQuery({
+    queryKey: ['provinces', 'list', search],
+    queryFn: () => api<Page<Province>>('/provinces', { params: { search, page_size: 200 } }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export interface WardParams {
+  /** Chỉ phường/xã của tỉnh thành có mã này; bỏ trống = cả nước. */
+  province_code?: string
+  search?: string
+  page?: number
+  page_size?: number
+}
+
+export function useWards(params: WardParams) {
+  return useQuery({
+    queryKey: ['provinces', 'wards', params],
+    queryFn: () => api<Page<Ward>>('/provinces/wards', { params }),
+    placeholderData: keepPreviousData,
+  })
+}
+
 export function useSettings() {
   return useQuery({ queryKey: ['settings'], queryFn: () => api<Settings>('/settings') })
 }
@@ -202,7 +240,7 @@ export function useJobActivity(): number {
 
   useEffect(() => {
     if (previous.current !== undefined && finished !== undefined && finished > previous.current) {
-      for (const key of ['jobs', 'novels', 'sources', 'aviation', 'logs']) {
+      for (const key of ['jobs', 'novels', 'sources', 'aviation', 'provinces', 'logs']) {
         void queryClient.invalidateQueries({ queryKey: [key] })
       }
     }
@@ -257,20 +295,28 @@ export function useTestSource() {
   })
 }
 
-/** Tạo job đồng bộ lại toàn bộ danh mục của một nguồn; backend trả về job ngay, việc tải chạy nền. */
-export function useSyncAviation(source: AviationSource) {
+/**
+ * Tạo job đồng bộ lại toàn bộ một danh mục; backend trả về job ngay, việc tải chạy nền. `dataKey`:
+ * khoá cache của danh mục đó.
+ */
+function useSyncJob(path: string, dataKey: string[]) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => api<Job>(`/aviation/${source}/sync`, { method: 'POST' }),
+    mutationFn: () => api<Job>(path, { method: 'POST' }),
     onSuccess: (job) => {
       queryClient.setQueryData(['jobs', job.id], job)
-      // `aviation`: nút đồng bộ chuyển sang "đang chạy" và bắt đầu hỏi lại định kỳ.
-      for (const queryKey of [['jobs'], ['stats'], ['aviation', source]]) {
+      // `dataKey`: nút đồng bộ chuyển sang "đang chạy" và bắt đầu hỏi lại định kỳ.
+      for (const queryKey of [['jobs'], ['stats'], dataKey]) {
         void queryClient.invalidateQueries({ queryKey })
       }
     },
   })
 }
+
+export const useSyncAviation = (source: AviationSource) =>
+  useSyncJob(`/aviation/${source}/sync`, ['aviation', source])
+
+export const useSyncProvinces = () => useSyncJob('/provinces/sync', ['provinces'])
 
 export function useUpdateSettings() {
   const queryClient = useQueryClient()

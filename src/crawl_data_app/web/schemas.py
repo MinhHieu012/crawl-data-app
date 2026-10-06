@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel
+from pydantic import AfterValidator, BaseModel, ConfigDict
 
 from crawl_data_app.config.settings import CrawlerSettings, HttpSettings, LogSettings
 from crawl_data_app.core.models import CrawlRequest
@@ -104,7 +104,7 @@ class JobCreate(CrawlRequest):
 
 class JobOut(BaseModel):
     id: int
-    crawler: str  # "novel" hoặc "aviation:<nguồn>"
+    crawler: str  # "novel", "aviation:<nguồn>" hoặc "provinces"
     url: str
     novel_id: int | None
     novel_title: str | None
@@ -112,12 +112,12 @@ class JobOut(BaseModel):
     from_chapter: int | None
     to_chapter: int | None
     status: str
-    # Bộ đếm tiến độ: số chương với job truyện, số file với job đồng bộ hàng không.
+    # Bộ đếm tiến độ: số chương với job truyện, số file với job đồng bộ (hàng không, tỉnh thành).
     chapters_total: int
     chapters_ok: int
     chapters_failed: int
     chapters_skipped: int
-    result: dict[str, int] | None  # hàng không: số bản ghi theo loại khi chạy xong
+    result: dict[str, int] | None  # job đồng bộ: số bản ghi theo loại khi chạy xong
     error: str | None
     started_at: UtcDatetime
     finished_at: UtcDatetime | None
@@ -129,6 +129,41 @@ class JobOut(BaseModel):
 class AviationSummary(BaseModel):
     counts: dict[str, int]  # số bản ghi đang có trong database, theo loại
     last_job: JobOut | None  # job đồng bộ gần nhất của nguồn, kể cả job đang chạy
+
+
+class ProvinceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)  # dựng thẳng từ dòng `vn_provinces`
+
+    code: str  # mã đơn vị hành chính, ví dụ "01"
+    name: str
+    name_en: str
+    full_name: str  # kèm loại đơn vị: "Thành phố Hà Nội"
+    full_name_en: str
+    code_name: str  # "ha_noi"
+    unit: str  # "Thành phố" hoặc "Tỉnh"
+    postal_code_prefix: str | None
+    ward_count: int  # số phường/xã/đặc khu trực thuộc
+    crawled_at: UtcDatetime
+
+
+class WardOut(BaseModel):
+    code: str  # "00004"
+    name: str
+    name_en: str
+    full_name: str  # kèm loại đơn vị: "Phường Ba Đình"
+    full_name_en: str
+    code_name: str  # "ba_dinh"
+    unit: str  # "Phường", "Xã" hoặc "Đặc khu"
+    postal_code: str | None
+    province_code: str
+    province_name: str | None  # tên đầy đủ của tỉnh thành: "Thành phố Hà Nội"
+    crawled_at: UtcDatetime
+
+
+class ProvinceSummary(BaseModel):
+    count: int  # số tỉnh thành đang có trong database
+    ward_count: int  # số phường/xã đang có trong database
+    last_job: JobOut | None  # job đồng bộ gần nhất, kể cả job đang chạy
 
 
 class LogEntry(BaseModel):

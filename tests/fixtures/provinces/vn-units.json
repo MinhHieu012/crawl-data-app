@@ -1,0 +1,99 @@
+[
+  {
+    "Type": "province",
+    "Code": "01",
+    "Name": "Hà Nội",
+    "NameEn": "Hanoi",
+    "FullName": "Thành phố Hà Nội",
+    "FullNameEn": "Hanoi City",
+    "CodeName": "ha_noi",
+    "PostalCodePrefix": "10, 11, 12, 13, 14",
+    "AdministrativeUnitId": 1,
+    "AdministrativeUnitShortName": "Thành phố",
+    "AdministrativeUnitFullName": "Thành phố trực thuộc trung ương",
+    "Wards": [
+      {
+        "Type": "ward",
+        "Code": "00004",
+        "Name": "Ba Đình",
+        "NameEn": "Ba Dinh",
+        "FullName": "Phường Ba Đình",
+        "FullNameEn": "Ba Dinh Ward",
+        "CodeName": "ba_dinh",
+        "ProvinceCode": "01",
+        "PostalCode": "11120",
+        "AdministrativeUnitId": 3,
+        "AdministrativeUnitShortName": "Phường"
+      },
+      {
+        "Type": "ward",
+        "Code": "00070",
+        "Name": "Hoàn Kiếm",
+        "NameEn": "Hoan Kiem",
+        "FullName": "Phường Hoàn Kiếm",
+        "FullNameEn": "Hoan Kiem Ward",
+        "CodeName": "hoan_kiem",
+        "ProvinceCode": "01",
+        "PostalCode": "",
+        "AdministrativeUnitId": 3,
+        "AdministrativeUnitShortName": "Phường"
+      }
+    ]
+  },
+  {
+    "Type": "province",
+    "Code": "04",
+    "Name": "Cao Bằng",
+    "NameEn": "Cao Bang",
+    "FullName": "Tỉnh Cao Bằng",
+    "FullNameEn": "Cao Bang Province",
+    "CodeName": "cao_bang",
+    "PostalCodePrefix": "",
+    "AdministrativeUnitId": 2,
+    "AdministrativeUnitShortName": "Tỉnh",
+    "AdministrativeUnitFullName": "Tỉnh",
+    "Wards": [
+      {
+        "Type": "ward",
+        "Code": "01279",
+        "Name": "Hoà An",
+        "NameEn": "Hoa An",
+        "FullName": "Xã Hoà An",
+        "FullNameEn": "Hoa An Commune",
+        "CodeName": "hoa_an",
+        "ProvinceCode": "04",
+        "PostalCode": "21300",
+        "AdministrativeUnitId": 4,
+        "AdministrativeUnitShortName": "Xã"
+      }
+    ]
+  },
+  {
+    "Type": "province",
+    "Code": "48",
+    "Name": "Đà Nẵng",
+    "NameEn": "Da Nang",
+    "FullName": "Thành phố Đà Nẵng",
+    "FullNameEn": "Da Nang City",
+    "CodeName": "da_nang",
+    "PostalCodePrefix": "50",
+    "AdministrativeUnitId": 1,
+    "AdministrativeUnitShortName": "Thành phố",
+    "AdministrativeUnitFullName": "Thành phố trực thuộc trung ương",
+    "Wards": [
+      {
+        "Type": "ward",
+        "Code": "20333",
+        "Name": "Hoàng Sa",
+        "NameEn": "Hoang Sa",
+        "FullName": "Đặc khu Hoàng Sa",
+        "FullNameEn": "Hoang Sa Special Administrative Region",
+        "CodeName": "hoang_sa",
+        "ProvinceCode": "48",
+        "PostalCode": "50900",
+        "AdministrativeUnitId": 5,
+        "AdministrativeUnitShortName": "Đặc khu"
+      }
+    ]
+  }
+]

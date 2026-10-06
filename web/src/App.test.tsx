@@ -51,6 +51,32 @@ const WORLD_AIRPORT = {
   region: 'Asia',
 }
 
+const HANOI = {
+  code: '01',
+  name: 'Hà Nội',
+  name_en: 'Hanoi',
+  full_name: 'Thành phố Hà Nội',
+  full_name_en: 'Hanoi City',
+  code_name: 'ha_noi',
+  unit: 'Thành phố',
+  postal_code_prefix: '10, 11, 12, 13, 14',
+  ward_count: 126,
+  crawled_at: '2026-10-05T03:00:05Z',
+}
+const BA_DINH = {
+  code: '00004',
+  name: 'Ba Đình',
+  name_en: 'Ba Dinh',
+  full_name: 'Phường Ba Đình',
+  full_name_en: 'Ba Dinh Ward',
+  code_name: 'ba_dinh',
+  unit: 'Phường',
+  postal_code: '11120',
+  province_code: '01',
+  province_name: 'Thành phố Hà Nội',
+  crawled_at: '2026-10-05T03:00:05Z',
+}
+
 /**
  * Backend giả. Nguồn Vietnam Airlines đã đồng bộ sẵn; nguồn thế giới thì tuỳ `worldSynced` và
  * chuyển sang "đã đồng bộ" khi giao diện gọi API đồng bộ.
@@ -65,6 +91,12 @@ function backend(worldSynced = true) {
       const [, source] = request.query.crawler?.match(/^aviation:(\w+)$/) ?? []
       const job = source ? syncJob(source) : makeJob({ status: 'completed', active: false })
       return { items: [job], total: 1 }
+    }
+    if (request.path === '/provinces/summary') return { count: 1, ward_count: 1, last_job: null }
+    if (request.path === '/provinces/wards') return { items: [BA_DINH], total: 1 }
+    if (request.path === '/provinces') return { items: [HANOI], total: 1 }
+    if (request.path === '/provinces/sync') {
+      return syncJob('', { id: 22, crawler: 'provinces', status: 'running', active: true })
     }
     const [, source, action] = request.path.match(/^\/aviation\/(\w+)\/(\w+)$/) ?? []
     if (action === 'sync') {
@@ -190,6 +222,58 @@ describe('App — khu vực Crawler', () => {
     expect(screen.getByRole('link', { name: 'Xuất JSON' })).toHaveAttribute(
       'href',
       '/api/aviation/world/export?kind=airport',
+    )
+  })
+
+  it('Tỉnh thành Việt Nam: bảng tỉnh thành, xuất JSON, đồng bộ thành job và lịch sử riêng', async () => {
+    const user = userEvent.setup()
+    const requests = backend()
+    open('/crawlers/provinces')
+
+    expect(
+      await screen.findByRole('tab', { name: 'Tỉnh thành', selected: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Tỉnh thành Việt Nam')
+    expect(await screen.findByText('Thành phố Hà Nội')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Xuất JSON' })).toHaveAttribute(
+      'href',
+      '/api/provinces/export',
+    )
+    expect(screen.getByRole('link', { name: 'Xuất JSON kèm phường/xã' })).toHaveAttribute(
+      'href',
+      '/api/provinces/export?with_wards=true',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Đồng bộ' }))
+    expect(await screen.findByText('Đang đồng bộ ở job #22')).toBeInTheDocument()
+    expect(requests.find((request) => request.method === 'POST')?.path).toBe('/provinces/sync')
+
+    // Tab Phường/xã: lọc theo tỉnh thành thì cả bảng lẫn file xuất đều theo tỉnh đó.
+    await user.click(screen.getByRole('tab', { name: 'Phường/xã' }))
+    expect(await screen.findByText('Phường Ba Đình')).toBeInTheDocument()
+    await user.selectOptions(
+      await screen.findByRole('combobox', { name: 'Lọc theo tỉnh thành' }),
+      await screen.findByRole('option', { name: 'Thành phố Hà Nội' }),
+    )
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) => request.path === '/provinces/wards' && request.query.province_code === '01',
+        ),
+      ).toBe(true),
+    )
+    expect(screen.getByRole('link', { name: 'Xuất JSON' })).toHaveAttribute(
+      'href',
+      '/api/provinces/wards/export?province_code=01',
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'Lịch sử' }))
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) => request.path === '/crawl/jobs' && request.query.crawler === 'provinces',
+        ),
+      ).toBe(true),
     )
   })
 

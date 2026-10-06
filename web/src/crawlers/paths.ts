@@ -8,9 +8,11 @@ export const modulePath = (moduleId: string) => `${CRAWLERS_PATH}/${moduleId}`
 export const categoryPath = (moduleId: string, categoryId: string) =>
   `${modulePath(moduleId)}/${categoryId}`
 
-/** Khu vực dữ liệu của một job hàng không, theo `job.crawler` ("aviation:world", "aviation:vna"). */
-export const aviationPath = (crawler: string) =>
-  categoryPath('aviation', crawler === 'aviation:vna' ? 'vietnam-airlines' : 'world')
+/** Khu vực dữ liệu của một job đồng bộ, theo `job.crawler` ("aviation:world", "aviation:vna", "provinces"). */
+export const jobDataPath = (crawler: string) =>
+  crawler === 'provinces'
+    ? categoryPath('provinces', 'vietnam')
+    : categoryPath('aviation', crawler === 'aviation:vna' ? 'vietnam-airlines' : 'world')
 
 /** Module truyện chữ: định danh và tên dùng chung cho registry lẫn breadcrumb của các trang con. */
 export const NOVEL = { moduleId: 'novel', categoryId: 'stories', name: 'Truyện chữ' }
