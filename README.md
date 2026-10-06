@@ -3,7 +3,9 @@
 Crawl truyện chữ từ các website đọc truyện (hiện có **TruyenFull**) vào SQLite/PostgreSQL:
 thông tin truyện, mục lục và nội dung từng chương đã làm sạch. Thiết kế để chạy lâu dài một cách
 "lịch sự": giãn cách request, tuân thủ `robots.txt`, tự chạy tiếp sau khi bị gián đoạn và không tải lại
-những gì đã có. Dùng qua dòng lệnh, hoặc qua [web UI](#web-ui) chạy trên chính máy bạn.
+những gì đã có. Kèm theo là danh mục hàng không (sân bay, hãng bay, thành phố, quốc gia) đồng bộ từ
+dữ liệu mở và vietnamairlines.com. Dùng qua dòng lệnh, hoặc qua [web UI](#web-ui) chạy trên chính máy
+bạn hay trên một VPS bằng Docker ([Triển khai lên VPS](#triển-khai-lên-vps)).
 
 > **Trách nhiệm sử dụng.** Công cụ chỉ đọc các trang công khai mà `robots.txt` cho phép và không vượt
 > bất kỳ cơ chế kiểm soát truy cập nào. Nội dung truyện thuộc bản quyền của tác giả/dịch giả; bạn tự
@@ -108,9 +110,8 @@ Chưa build giao diện thì `serve` vẫn chạy và chỉ phục vụ API. D�
 > **Bảo mật.** API **không có đăng nhập**. Mặc định server chỉ nghe trên `127.0.0.1`, chỉ trả lời
 > request gọi đúng tên `127.0.0.1`/`localhost` (chặn DNS rebinding) và từ chối request ghi do website
 > khác gửi tới (chặn CSRF). `--host 0.0.0.0` mở server ra mạng: ai truy cập được đều điều khiển được
-> crawler và sửa được cấu hình — chỉ dùng trong mạng bạn tin tưởng. Muốn chạy trên VPS mà không
-> cần tên miền: xem [hướng dẫn dùng Tailscale](docs/deploy-vps-tailscale.md) — kèm luồng CI/CD
-> (GitHub Actions: test → build image → push GHCR → deploy qua SSH, tự rollback nếu bản mới không healthy).
+> crawler và sửa được cấu hình — chỉ dùng trong mạng bạn tin tưởng. Muốn chạy trên VPS hoặc cho người
+> khác dùng: xem [Triển khai lên VPS](#triển-khai-lên-vps).
 
 ### Các màn hình
 
@@ -360,6 +361,60 @@ menu hay bảng định tuyến:
 Trang trong `sections` viết như mọi trang khác (`PageHeader` + `QueryState`). Trang trong `pages` tự
 truyền breadcrumb. Phần backend của crawler mới làm theo mục "Thêm crawler cho một website mới".
 
+## Triển khai lên VPS
+
+Hướng dẫn từng bước (cài đặt, secret, vận hành, gỡ lỗi): [docs/deploy-vps-tailscale.md](docs/deploy-vps-tailscale.md).
+Phần này chỉ tóm tắt cách các mảnh ghép với nhau.
+
+```text
+git push tag v*  /  gh workflow run deploy.yml
+        ▼
+GitHub Actions (.github/workflows/deploy.yml)
+  test (ruff, pytest, eslint, tsc, prettier, vitest)
+  → build image → chạy thử image (phải healthy)
+  → push ghcr.io/<chủ>/crawl-data-app:<12 ký tự commit>
+  → SSH vào VPS: chép compose.yaml + deploy.sh, chạy `sh deploy.sh <image>`
+        ▼
+VPS (deploy.sh): pull → sao lưu SQLite → tạo lại container → chờ health check
+                 không healthy → chạy lại image cũ + database cũ, job báo đỏ
+```
+
+| File | Vai trò |
+|---|---|
+| `Dockerfile` | Build giao diện (Node) rồi đóng gói vào image Python; `HEALTHCHECK` gọi `GET /api/stats` (API trả lời + đọc được database). |
+| `compose.yaml` | Dịch vụ `app` (cổng 8000 chỉ bind vào IP Tailscale của VPS, volume `state` giữ `.env`, `data/`, `logs/`) và dịch vụ tuỳ chọn `public` (cửa công khai). |
+| `deploy.sh` | Chạy trên VPS: triển khai một image hoặc `rollback`; tự quay về bản trước khi bản mới không healthy. |
+| `.github/workflows/deploy.yml` | Mọi push/PR: test + build + chạy thử. Chỉ **deploy** khi đẩy tag `v*` hoặc bấm tay. |
+
+```bash
+gh workflow run deploy.yml --ref main                      # deploy commit mới nhất của main
+gh run watch                                               # theo dõi
+gh workflow run deploy.yml --ref main -f rollback=true     # quay về image chạy ngay trước đó
+```
+
+Cần biết:
+
+- **Image gắn tag theo commit**, không dùng `latest`: trên VPS `docker compose ps` cho biết chính xác
+  bản đang chạy; `.previous-image` ghi bản trước đó.
+- **Mỗi lần deploy gián đoạn 5–10 giây** và job đang chạy bị ghi `interrupted` (bấm **Tiếp tục**) —
+  vì vậy push thường không tự deploy.
+- **Hai file `.env` khác nhau**: file cạnh `compose.yaml` trên VPS là của Docker Compose (`TAILSCALE_IP`,
+  `APP_IMAGE`, `COMPOSE_PROFILES`); cấu hình của ứng dụng nằm trong volume `state` và sửa ở trang Cài đặt.
+- **Secret chỉ nằm ở GitHub** (environment `production`: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`,
+  `VPS_KNOWN_HOSTS`); registry dùng `GITHUB_TOKEN` có sẵn. Không build/push/SSH từ máy cá nhân.
+
+**Ai truy cập được**
+
+| Lối vào | Ai | Quyền |
+|---|---|---|
+| `http://<IP Tailscale>:8000` | máy trong tailnet của bạn (hoặc được *Share node*) | toàn quyền |
+| `https://<tên-vps>.<tailnet>.ts.net` — cửa công khai, mặc định **tắt** | bất kỳ ai, không cần tài khoản | mọi thứ trừ lưu Cài đặt và bật/tắt nguồn |
+
+Cửa công khai là một proxy Caddy (bật bằng `COMPOSE_PROFILES=public`, đưa ra internet bằng
+`tailscale funnel`) chặn `PUT /api/settings` và `PUT /api/sources/{name}` với lỗi 403
+`{"code": "owner_only", ...}`. Khách vẫn tạo/huỷ được job và xem được Cài đặt, Log — đọc mục
+[Tuân thủ và giới hạn](#tuân-thủ-và-giới-hạn) trước khi bật.
+
 ## Cấu hình (`.env`)
 
 Mọi cấu hình đọc từ biến môi trường hoặc file `.env`; xem [.env.example](.env.example).
@@ -437,6 +492,8 @@ aviation.py                 danh mục hàng không theo nguồn (world, vna): p
 config/                     settings (pydantic-settings, đọc/ghi .env) · logging (JSON Lines, đọc lại log)
 
 web/ (thư mục gốc)          frontend React — xem "Kiến trúc frontend"; chỉ nói chuyện với backend qua /api
+Dockerfile · compose.yaml   đóng gói và chạy trên VPS; deploy.sh + .github/workflows/deploy.yml lo
+                            CI/CD — xem "Triển khai lên VPS"
 ```
 
 Chiều phụ thuộc đi một hướng: `(cli, web) → service → (crawlers, repository) → (core, database)`. Dòng
@@ -453,7 +510,7 @@ không biết gì về mạng hay database; repository không biết gì về HT
 | SQLite mặc định, PostgreSQL qua `DATABASE_URL` | Một file, không cần cài đặt; code chỉ dùng ORM chuẩn nên đổi được database. |
 | Alembic là nguồn sự thật duy nhất của schema | Dữ liệu crawl tích luỹ lâu dài nên phải nâng cấp được schema mà không mất dữ liệu. |
 | Gọi database đồng bộ trong vòng lặp async | Với nhịp ~1 request/giây, vài ms ghi SQLite không đáng kể; đổi lại code đơn giản hơn nhiều. |
-| `argparse` thay vì Typer/Click | Thư viện chuẩn đủ cho 5 lệnh; bớt một cây phụ thuộc. |
+| `argparse` thay vì Typer/Click | Thư viện chuẩn đủ cho 8 lệnh; bớt một cây phụ thuộc. |
 | `service.py`, `repository.py`, `cli.py` là module đơn | Mỗi thứ hiện chỉ có một file; không tạo `pipelines/`, `utils/`, `scripts/` rỗng. Tách thành package khi thật sự cần. |
 | Test bằng `httpx.MockTransport` + plugin `anyio` | Đều đi kèm `httpx`, không cần `respx`/`pytest-asyncio`. |
 | FastAPI + uvicorn cho web UI | `CrawlService` vốn là async nên mỗi job chạy thành một task trong cùng event loop với API — không cần hàng đợi hay worker riêng. Pydantic (đã dùng sẵn) lo kiểm tra dữ liệu và sinh tài liệu `/docs`. |
@@ -462,6 +519,12 @@ không biết gì về mạng hay database; repository không biết gì về HT
 | Mọi job trên web dùng chung một `HttpClient` | Nhịp giãn cách request nằm trong client; dùng chung thì chạy bao nhiêu job tốc độ gửi tới website vẫn không đổi. |
 | React + TypeScript + Vite, Mantine, TanStack Query | Project chưa có frontend. Mantine có sẵn layout, bảng, form, thông báo, hộp thoại xác nhận, chế độ tối; TanStack Query lo cache, polling và làm mới dữ liệu nên không cần thư viện store. |
 | Cấu hình sửa trên web ghi vào `.env` | Một nguồn cấu hình duy nhất cho cả dòng lệnh lẫn web; không thêm bảng cấu hình trong database. |
+| Deploy bằng GitHub Actions + GHCR, image gắn tag theo commit | Repo đã ở GitHub; khoá SSH và quyền push chỉ nằm trong GitHub Secrets. Tag theo commit thì biết chính xác bản đang chạy và rollback được về đúng bản cũ. |
+| Tạo lại container, **không** blue-green | SQLite là một file và job nằm trong bộ nhớ tiến trình nên không chạy song song hai bản được. Đổi lại gián đoạn chỉ vài giây. |
+| Chỉ deploy khi đẩy tag `v*` hoặc bấm tay | Tạo lại container ngắt job crawl đang chạy; không nên xảy ra sau mỗi lần push. |
+| Health check dùng lại `GET /api/stats` | Endpoint có sẵn, đã chạm tới database; không thêm endpoint chỉ để kiểm tra. |
+| Tailscale thay vì mở cổng ra internet | API không có đăng nhập. Cổng 8000 chỉ bind vào IP Tailscale nên không cần tên miền, chứng chỉ hay tường lửa riêng cho app. |
+| Cửa công khai là một proxy Caddy chặn theo đường dẫn, không phải đăng nhập trong app | Phân biệt "chủ máy" và "khách" bằng lối vào (cổng Tailscale / Funnel) nên không phải thêm tài khoản, mật khẩu, phiên đăng nhập vào code. Giá phải trả: thêm endpoint ghi cấu hình thì phải thêm vào danh sách chặn trong `compose.yaml`. |
 
 Những chỗ đơn giản hoá có chủ đích được đánh dấu `# ponytail:` trong code, kèm giới hạn và hướng nâng cấp.
 
@@ -503,13 +566,16 @@ Service, repository, CLI không phải sửa gì.
 ## Test, debug và lỗi thường gặp
 
 ```bash
-pytest                      # 151 test, ~15 giây, không có request mạng thật nào
+pytest                      # 184 test, ~18 giây, không có request mạng thật nào
 ruff check . && ruff format --check .
 
 cd web                      # frontend
-npm test                    # 28 test, ~12 giây, backend được giả lập
+npm test                    # 37 test, ~12 giây, backend được giả lập
 npm run lint && npm run typecheck && npm run format:check
 ```
+
+GitHub Actions chạy lại đúng các lệnh trên với Python 3.12 trên **Linux** ở mỗi push/PR, rồi build và
+chạy thử image. Test phải qua trên cả Windows lẫn Linux (cẩn thận khi so sánh đường dẫn).
 
 - `tests/unit/` — parser trên HTML fixture, bộ làm sạch nội dung, HTTP client (retry, backoff, mã lỗi,
   robots.txt, giãn cách), cấu hình, giao diện crawler.
@@ -539,6 +605,9 @@ liệt kê chương lỗi kèm URL.
 | Web UI báo `Không kết nối được tới máy chủ` | Backend chưa chạy hoặc đã tắt: chạy `crawl-data-app serve`. Khi dùng `npm run dev`, kiểm tra `VITE_DEV_PROXY_TARGET`. |
 | `serve` báo `Chưa có bản build giao diện` | Chưa chạy `npm run build` trong `web/`, hoặc đang chạy `serve` từ thư mục khác (dùng `--ui-dir`). |
 | `UnicodeDecodeError` khi chạy `alembic` | `alembic.ini` có ký tự ngoài ASCII. |
+| Máy khác clone về thiếu file, CI báo `Cannot find module` | File bị `.gitignore` nuốt. Các mẫu `/data/`, `/logs/`, `/exports/` phải neo vào gốc repo; kiểm tra bằng `git status --ignored`. |
+| Workflow đỏ ở job `deploy` | Xem mục "Khi workflow đỏ" trong [hướng dẫn triển khai](docs/deploy-vps-tailscale.md#deploy-rollback-kiểm-tra). Đỏ sau dòng `ROLLBACK` nghĩa là VPS đã tự chạy lại bản cũ. |
+| Cửa công khai báo `Chỉ chủ máy chủ mới đổi được cấu hình` | Đúng thiết kế: lưu Cài đặt và bật/tắt nguồn chỉ làm được qua địa chỉ Tailscale `:8000`. |
 
 ## Tuân thủ và giới hạn
 
@@ -624,7 +693,13 @@ liệt kê chương lỗi kèm URL.
 
 **Giới hạn của web UI**
 
-- **Không có đăng nhập hay phân quyền** — thiết kế cho một người dùng trên máy của chính họ.
+- **Không có đăng nhập hay phân quyền trong ứng dụng** — thiết kế cho một người dùng trên máy của chính
+  họ. Trên VPS, quyền được quyết định bởi lối vào: ai tới được cổng 8000 (qua Tailscale) có toàn quyền;
+  khách qua cửa công khai chỉ bị chặn đổi cấu hình, vẫn tạo/huỷ được job và xem được Cài đặt, Log.
+  Nút Lưu và công tắc bật/tắt nguồn vẫn hiện với khách, bấm vào mới báo lỗi.
+- **Chạy công khai là phát lại dữ liệu cho mọi người**, khác với dùng riêng: nội dung truyện có bản
+  quyền, dữ liệu `vna` chỉ được dùng cá nhân, phi thương mại, dữ liệu OpenFlights (ODbL) phải ghi nguồn.
+  Người bật cửa công khai tự chịu trách nhiệm về việc đó; khách crawl bằng VPS và địa chỉ IP của chủ máy.
 - Job chạy trong bộ nhớ của tiến trình `serve`: tắt server là job dừng (ghi `interrupted`, bấm Tiếp tục
   để chạy lại), và `serve` chỉ chạy được một tiến trình (không có tuỳ chọn nhiều worker).
 - "Tiếp tục" tạo một job mới chứ không nối tiếp job cũ, nên thanh tiến độ của job mới chỉ tính phần còn lại.

@@ -6,7 +6,8 @@ và chữ trên UI bằng **tiếng Việt**.
 
 ## Project Overview
 
-Crawler thu thập dữ liệu công khai vào SQLite (mặc định) / PostgreSQL, dùng được qua CLI hoặc web UI chạy trên máy cá nhân:
+Crawler thu thập dữ liệu công khai vào SQLite (mặc định) / PostgreSQL, dùng được qua CLI hoặc web UI — chạy trên máy cá nhân,
+hoặc trên một VPS bằng Docker (đang chạy thật; deploy qua GitHub Actions):
 
 - **Truyện chữ**: thông tin truyện, mục lục, nội dung chương đã làm sạch (hiện có nguồn **TruyenFull**).
 - **Danh mục hàng không**: sân bay, hãng bay, thành phố, quốc gia từ 2 nguồn — `world` (OurAirports + OpenFlights) và `vna` (vietnamairlines.com).
@@ -56,6 +57,11 @@ src/crawl_data_app/
 └── web/              app.py (endpoint, create_app) · jobs.py (JobManager) · schemas.py (JSON vào/ra)
 tests/                unit/ · integration/ · fixtures/ (HTML/JSON/CSV mẫu tự viết)
 web/src/              api/ (client, queries, types) · crawlers/registry.tsx · pages/ · components/ · layouts/ · hooks/ · theme.ts
+Dockerfile            build web (Node) → image Python; HEALTHCHECK gọi GET /api/stats
+compose.yaml          dịch vụ app (cổng 8000 chỉ bind IP Tailscale, volume state) + public (Caddy, profile tuỳ chọn)
+deploy.sh             chạy TRÊN VPS: pull → sao lưu SQLite → up → chờ healthy → tự rollback
+.github/workflows/    deploy.yml: test → build → chạy thử image → push GHCR → SSH deploy
+docs/                 deploy-vps-tailscale.md (cài VPS, secret, vận hành, cửa công khai)
 ```
 
 ## Core Concepts
@@ -90,6 +96,17 @@ Nguồn hàng không mới: thêm parser (hàm thuần trả `list[Record]`) + h
 - **Config**: `config/settings.py` — nhóm `HttpSettings`, `CrawlerSettings`, `DatabaseSettings`, `LogSettings`; trang Cài đặt của web ghi thẳng vào `.env` (`save_env`, giữ chú thích), biến môi trường OS ưu tiên hơn `.env`.
 - Thời gian lưu DB là UTC naive; API trả `...Z`.
 
+## Deployment
+
+Chi tiết: [docs/deploy-vps-tailscale.md](docs/deploy-vps-tailscale.md) và mục "Triển khai lên VPS" trong README.
+
+- **Luồng**: `.github/workflows/deploy.yml` — job `test` → `build` (build + chạy thử image, push `ghcr.io/minhhieu012/crawl-data-app:<12 ký tự commit>`) → `deploy` (scp `compose.yaml` + `deploy.sh` lên VPS, chạy `sh deploy.sh <image>`). Push/PR chỉ chạy test + build; **deploy chỉ khi đẩy tag `v*` hoặc `workflow_dispatch`** (tạo lại container làm job đang chạy thành `interrupted`).
+- **`deploy.sh`**: ghi `APP_IMAGE` vào `.env` cạnh `compose.yaml`, `docker compose up --wait` dựa vào `HEALTHCHECK`; không healthy thì khôi phục `data/pre-deploy.db` và chạy lại image cũ, thoát mã 1. `.previous-image` giữ bản trước; `sh deploy.sh rollback` quay về đó (không khôi phục DB).
+- **Hai file `.env`**: cạnh `compose.yaml` trên VPS là của Compose (`TAILSCALE_IP`, `APP_IMAGE`, `COMPOSE_PROFILES`); cấu hình app nằm trong volume `crawl-data-app_state` (`/srv/state/.env`).
+- **Truy cập**: cổng 8000 chỉ bind IP Tailscale = toàn quyền (chủ máy). Dịch vụ `public` (Caddy, `COMPOSE_PROFILES=public`, ra internet bằng `tailscale funnel --bg 8080`) cho khách dùng mọi thứ **trừ** `PUT /api/settings` và `PUT /api/sources/*` (403 `owner_only`, do proxy trả, không phải `ApiError` của app).
+- **Secret**: chỉ ở GitHub environment `production` (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`; biến `VPS_PATH`, `VPS_PORT`). Máy cá nhân không giữ khoá vào VPS — cần chạy lệnh trên VPS thì đưa lệnh cho người dùng.
+- CI chạy trên **Linux**, Python 3.12, Node 22; máy dev là Windows → test không được phụ thuộc dấu phân cách đường dẫn hay CRLF (`*.sh` ép LF qua `.gitattributes`).
+
 ## Frontend Architecture
 
 - `main.tsx` (provider Mantine + TanStack Query + router) → `App.tsx` (route chung; route khu vực Crawler sinh từ `crawlers/registry.tsx`: module → loại dữ liệu → tab).
@@ -122,6 +139,8 @@ cd web && npm test               # Vitest (37 test)
 cd web && npm run lint && npm run typecheck && npm run format:check
 
 alembic revision --autogenerate -m "mo ta"   # sau khi sửa database/models.py
+
+docker compose up -d --build     # chạy thử image tại chỗ (cần TAILSCALE_IP, ví dụ 127.0.0.1; thêm COMPOSE_PROFILES=public để thử cửa công khai :8080)
 ```
 
 Chạy lệnh từ thư mục gốc (đường dẫn mặc định `data/`, `logs/`, `.env`, `web/dist` tính theo cwd). `crawl-data-app ...` ≡ `python -m crawl_data_app ...`.
@@ -152,6 +171,9 @@ gh workflow run deploy.yml --ref main -f rollback=true   # quay về image chạ
 
 Frontend (`web/.env.local`, tuỳ chọn): `VITE_API_BASE_URL`, `VITE_DEV_PROXY_TARGET`, `VITE_POLL_INTERVAL_MS`.
 
+Docker Compose (file `.env` cạnh `compose.yaml`, **không** phải cấu hình app): `TAILSCALE_IP` (bắt buộc), `APP_IMAGE` (do `deploy.sh` ghi;
+mặc định `crawl-data-app:local` khi build tại chỗ), `COMPOSE_PROFILES=public` (bật cửa công khai).
+
 ## Testing
 
 - `tests/unit/`: parser trên fixture, `content`, `http_client` (retry/robots/giãn cách), settings, hợp đồng crawler.
@@ -180,3 +202,7 @@ Frontend (`web/.env.local`, tuỳ chọn): `VITE_API_BASE_URL`, `VITE_DEV_PROXY_
 7. Không chạy `crawl`/`resume` bằng CLI khi `serve` đang có job chạy (và ngược lại): lúc khởi động mỗi bên đánh dấu mọi run `running` là `interrupted`.
 8. Nguồn `vna`: chỉ dùng cá nhân, phi thương mại; `world`: OpenFlights ODbL cần ghi nguồn. Đổi phạm vi dùng dữ liệu thì cập nhật mục "Tuân thủ và giới hạn" trong README.
 9. Đổi hành vi/lệnh/endpoint → cập nhật README trong cùng thay đổi. Commit kiểu `feat(scope): …` / `fix(scope): …` bằng tiếng Anh.
+10. **Thêm endpoint ghi cấu hình máy chủ** (ghi `.env`, đổi hành vi cho mọi người dùng) → thêm đường dẫn vào `@owner_only` trong `compose.yaml`, nếu không khách qua cửa công khai sẽ gọi được.
+11. **Không publish cổng 8000 ra `0.0.0.0`** hay IP công khai (API không có đăng nhập; Docker bỏ qua ufw). Không bỏ `HEALTHCHECK`, không đổi `GET /api/stats` thành thứ không chạm DB — rollback dựa vào đó.
+12. **Deploy chỉ qua workflow**, image gắn tag theo commit (không `latest`); không sửa tay `APP_IMAGE` trên VPS. Không đưa khoá SSH, token vào repo hay máy cá nhân.
+13. Mẫu `.gitignore` cho thư mục dữ liệu phải neo vào gốc (`/data/`, `/logs/`, `/exports/`) — mẫu không neo từng làm mất `web/src/pages/logs/`.
