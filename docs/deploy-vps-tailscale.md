@@ -106,7 +106,7 @@ Thời gian gián đoạn mỗi lần deploy khoảng 5–10 giây.
 ```bash
 ssh-keygen -t ed25519 -f deploy_key -N "" -C "github-actions-deploy"
 ssh-copy-id -i deploy_key.pub <user>@<IP công khai của VPS>
-ssh-keyscan -t ed25519 <IP công khai của VPS>      # kết quả dùng cho VPS_KNOWN_HOSTS
+ssh-keyscan <IP công khai của VPS>                 # các dòng không bắt đầu bằng # dùng cho VPS_KNOWN_HOSTS
 ```
 
 Nạp xong vào GitHub thì xoá file `deploy_key` khỏi máy. Tài khoản `<user>` phải thuộc nhóm `docker`
