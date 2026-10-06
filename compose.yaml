@@ -13,5 +13,36 @@ services:
     volumes:
       - state:/srv/state   # .env, data/ (SQLite), logs/
 
+  # Cửa công khai (tuỳ chọn): chỉ chạy khi .env có COMPOSE_PROFILES=public. Khách dùng được mọi thứ
+  # trừ đổi cấu hình; chủ máy vẫn vào thẳng cổng 8000 qua Tailscale với toàn quyền.
+  # Chỉ nghe 127.0.0.1 của VPS — đưa ra internet bằng `tailscale funnel --bg 8080`.
+  public:
+    profiles: [public]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    configs:
+      - source: public_caddyfile
+        target: /etc/caddy/Caddyfile
+
+configs:
+  public_caddyfile:
+    content: |
+      :8080 {
+        # Hai lệnh ghi vào .env của máy chủ: lưu Cài đặt và bật/tắt nguồn.
+        @owner_only {
+          method PUT
+          path /api/settings /api/settings/* /api/sources/*
+        }
+        handle @owner_only {
+          header Content-Type application/json
+          respond `{"code":"owner_only","detail":"Chỉ chủ máy chủ mới đổi được cấu hình"}` 403
+        }
+        handle {
+          reverse_proxy app:8000
+        }
+      }
+
 volumes:
   state:

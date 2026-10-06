@@ -77,8 +77,34 @@ phải không vào được.
 
 - **Cùng làm việc**: mời họ vào tailnet (Tailscale admin → Users → Invite), hoặc dùng *Share node* để
   chỉ chia sẻ riêng VPS này mà không lộ các máy khác của bạn.
-- **Công khai cho bất kỳ ai có link**: không khuyên, vì app không có đăng nhập. Nếu thật sự cần, hãy
-  thêm lớp đăng nhập trước (ví dụ Caddy `basic_auth`) rồi mới dùng `tailscale funnel`.
+- **Công khai cho bất kỳ ai có link**: xem mục dưới.
+
+### Cửa công khai (không cần Tailscale, không cần tài khoản)
+
+`compose.yaml` có sẵn dịch vụ `public` (Caddy), mặc định tắt. Bật lên thì có hai lối vào:
+
+| Lối vào | Ai | Quyền |
+|---|---|---|
+| `https://<tên-vps>.<tailnet>.ts.net` (Tailscale Funnel → `127.0.0.1:8080` → Caddy) | bất kỳ ai | mọi thứ **trừ** lưu trang Cài đặt và bật/tắt nguồn (trả 403 `owner_only`) |
+| `http://<IP Tailscale>:8000` | chỉ máy trong tailnet | toàn quyền |
+
+Bật (một lần, trên VPS):
+
+```bash
+echo "COMPOSE_PROFILES=public" >> ~/crawl-data-app/.env
+cd ~/crawl-data-app && docker compose up -d --no-build
+tailscale funnel --bg 8080        # lần đầu sẽ in đường dẫn để bật Funnel/HTTPS cho tailnet
+tailscale funnel status           # xem địa chỉ công khai
+```
+
+Tắt: `tailscale funnel --https=443 off`, xoá dòng `COMPOSE_PROFILES` khỏi `.env`, rồi
+`docker compose up -d --no-build --remove-orphans`.
+
+> **Hiểu rõ trước khi bật.** Khách vẫn **chạy/huỷ được job crawl và đồng bộ** bằng VPS và IP của bạn, và
+> xem được trang Cài đặt, Log. Công khai cũng là phát lại nội dung cho mọi người: truyện có bản quyền,
+> nguồn `vna` chỉ được dùng cá nhân, phi thương mại (xem mục "Tuân thủ và giới hạn" trong README).
+> Giới hạn tốc độ crawl (`HTTP_REQUEST_DELAY`) chỉ chủ máy đổi được nên khách không thể bắt crawler
+> chạy nhanh hơn mức bạn đặt.
 
 ## Triển khai tự động (CI/CD)
 
