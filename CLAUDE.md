@@ -11,7 +11,7 @@ hoặc trên một VPS bằng Docker (đang chạy thật; deploy qua GitHub Act
 
 - **Truyện chữ**: thông tin truyện, mục lục, nội dung chương đã làm sạch (hiện có nguồn **TruyenFull**).
 - **Danh mục hàng không**: sân bay, hãng bay, thành phố, quốc gia từ 2 nguồn — `world` (OurAirports + OpenFlights) và `vna` (vietnamairlines.com).
-- **Tỉnh thành Việt Nam**: 34 tỉnh, thành phố sau sáp nhập 2025, từ bộ dữ liệu mở `thanglequoc/vietnamese-provinces-database` (MIT).
+- **Tỉnh thành Việt Nam**: 34 tỉnh, thành phố sau sáp nhập 2025 kèm phường/xã trực thuộc, từ bộ dữ liệu mở `thanglequoc/vietnamese-provinces-database` (MIT).
 
 Thiết kế để chạy lâu dài và "lịch sự": giãn cách request, tuân thủ `robots.txt`, chạy tiếp sau khi bị ngắt, không tải lại thứ đã có.
 
@@ -51,7 +51,7 @@ src/crawl_data_app/
 ├── service.py        CrawlService
 ├── repository.py     NovelRepository (mọi truy vấn truyện/chương/crawl_runs)
 ├── aviation.py       đồng bộ danh mục hàng không (+ `run_sync`: phần chạy job dùng chung cho mọi crawler kiểu danh mục)
-├── provinces.py      đồng bộ danh mục 34 tỉnh thành Việt Nam (1 request)
+├── provinces.py      đồng bộ danh mục 34 tỉnh thành Việt Nam kèm phường/xã (1 request)
 ├── export.py         xuất txt / epub / json
 ├── core/             http_client (giãn cách, retry, robots) · base_crawler (BaseParser/BaseCrawler) · models · content · exceptions
 ├── crawlers/         __init__.py (CRAWLERS + crawler_class_for) · truyenfull/{crawler,parser}.py
@@ -138,7 +138,7 @@ crawl-data-app serve             # API + UI đã build tại http://127.0.0.1:80
 cd web && npm run dev            # dev UI http://localhost:5173 (chạy kèm `serve`)
 cd web && npm run build          # tsc --noEmit rồi build ra web/dist (cần để serve phục vụ UI)
 
-pytest                           # backend (198 test, ~20s, không có request mạng thật)
+pytest                           # backend (202 test, ~20s, không có request mạng thật)
 ruff check . && ruff format --check .
 cd web && npm test               # Vitest (40 test)
 cd web && npm run lint && npm run typecheck && npm run format:check

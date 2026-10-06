@@ -173,3 +173,23 @@ class Province(Base):
     postal_code_prefix: Mapped[str | None] = mapped_column(String(100))  # "10, 11, 12, 13, 14"
     ward_count: Mapped[int]  # số phường/xã/đặc khu trực thuộc, theo nguồn
     crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn
+
+
+class Ward(Base):
+    """Một phường, xã hoặc đặc khu — cấp hành chính ngay dưới tỉnh thành sau sáp nhập 2025."""
+
+    __tablename__ = "vn_wards"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(10), unique=True)  # "00004"
+    # Mã tỉnh thành (`vn_provinces.code`). Không đặt khoá ngoại: hai bảng được ghi đè theo mã của
+    # nguồn trong cùng một transaction, và bản ghi cũ được giữ lại kể cả khi nguồn bỏ tỉnh đó.
+    province_code: Mapped[str] = mapped_column(String(10), index=True)
+    name: Mapped[str] = mapped_column(String(100))  # "Ba Đình"
+    name_en: Mapped[str] = mapped_column(String(100))
+    full_name: Mapped[str] = mapped_column(String(150))  # "Phường Ba Đình"
+    full_name_en: Mapped[str] = mapped_column(String(150))
+    code_name: Mapped[str] = mapped_column(String(100))  # "ba_dinh"
+    unit: Mapped[str] = mapped_column(String(50))  # "Phường" | "Xã" | "Đặc khu"
+    postal_code: Mapped[str | None] = mapped_column(String(20))
+    crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn

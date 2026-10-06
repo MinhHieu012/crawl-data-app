@@ -50,7 +50,7 @@ Muốn thao tác bằng giao diện thay cho dòng lệnh: `cd web && npm instal
 | `export` | Xuất các chương đã tải ra `exports/<slug>.txt`, mỗi truyện một file (UTF-8). `--format epub` để xuất EPUB 3 có mục lục, `--format json` để xuất thông tin truyện kèm từng chương dạng danh sách đoạn văn, `--novel-id ID` để chọn truyện (ID xem ở `status`), `--out DIR` để đổi thư mục. Mặc định xuất toàn bộ chương đã tải; `--from-chapter N` / `--to-chapter M` chỉ xuất khoảng chương đó (tính cả hai đầu, bỏ một đầu = không giới hạn đầu đó), file mang tên `<slug>-c<đầu>-<cuối>.<định dạng>` theo chương thật sự có trong file. |
 | `aviation` | Đồng bộ danh mục hàng không (sân bay, hãng bay, thành phố, quốc gia) của mọi nguồn, lần lượt từng nguồn; in bảng số bản ghi theo loại. Mỗi nguồn là một job trong lịch sử, xem lại được ở trang Job của web UI. |
 | `aviation --source world` / `--source vna` | Chỉ một nguồn: `world` là dữ liệu mở toàn thế giới, `vna` là vietnamairlines.com (chỉ dùng cá nhân, phi thương mại). Lặp lại `--source` để chọn nhiều nguồn. |
-| `provinces` | Đồng bộ danh mục 34 tỉnh, thành phố của Việt Nam (sau sáp nhập năm 2025) từ bộ dữ liệu mở `vietnamese-provinces-database`: một request, một job trong lịch sử; in số tỉnh thành đã ghi. |
+| `provinces` | Đồng bộ danh mục 34 tỉnh, thành phố của Việt Nam (sau sáp nhập năm 2025) từ bộ dữ liệu mở `vietnamese-provinces-database`: tỉnh thành kèm phường/xã trực thuộc, một request, một job trong lịch sử; in số tỉnh thành và số phường/xã đã ghi. |
 | `sources` | Các website truyện được hỗ trợ. |
 | `init-db` | Tạo database / nâng schema lên bản mới nhất. |
 | `serve` | Chạy [web UI](#web-ui) và API tại `http://127.0.0.1:8000`. `--port N` đổi cổng, `--ui-dir DIR` trỏ tới bản build giao diện ở chỗ khác, `--host` đổi địa chỉ lắng nghe (đọc phần bảo mật trước). |
@@ -160,12 +160,13 @@ Mỗi nguồn có cùng năm tab:
 | Sân bay · Hãng bay · Thành phố · Quốc gia | `airport` · `airline` · `city` · `country` | Bảng bản ghi (mã, tên, thành phố, quốc gia, vùng hoặc châu lục), tìm theo mã hoặc tên (gõ không dấu cũng được), phân trang; nút **Đồng bộ** và **Xuất JSON** (tải mọi bản ghi của loại đó, không theo ô tìm kiếm). |
 | Lịch sử | `history` | Các job đồng bộ của nguồn: trạng thái, tiến độ, số bản ghi theo loại hoặc lý do thất bại; bấm vào là tới trang chi tiết job. |
 
-Crawler **Tỉnh thành Việt Nam** (`/crawlers/provinces/vietnam/…`) có hai tab:
+Crawler **Tỉnh thành Việt Nam** (`/crawlers/provinces/vietnam/…`) có ba tab:
 
 | Tab | Đường dẫn | Nội dung |
 |---|---|---|
 | Tỉnh thành | `list` | Bảng 34 tỉnh, thành phố sau sáp nhập năm 2025 (mã, tên tiếng Việt và tiếng Anh kèm loại đơn vị, số phường/xã, đầu mã bưu chính), tìm theo mã hoặc tên (gõ không dấu cũng được); nút **Đồng bộ** và **Xuất JSON** (tải mọi tỉnh thành, không theo ô tìm kiếm). |
-| Lịch sử | `history` | Các job đồng bộ danh mục tỉnh thành. |
+| Phường/xã | `wards` | Bảng phường, xã, đặc khu (mã, tên tiếng Việt và tiếng Anh, tỉnh thành, mã bưu chính), tìm theo mã hoặc tên, lọc theo tỉnh thành, phân trang; **Xuất JSON** tải phường/xã của tỉnh thành đang chọn (hoặc cả nước), không theo ô tìm kiếm. Số phường/xã ở tab Tỉnh thành là link sang đây, lọc sẵn theo tỉnh đó. |
+| Lịch sử | `history` | Các job đồng bộ danh mục (tỉnh thành và phường/xã). |
 
 **Mỗi lần đồng bộ là một job** như job crawl truyện: chạy nền, hiện ở trang Job và huy hiệu "job đang
 chạy", có tiến độ theo số file đã tải (3 file mỗi nguồn), log riêng, tạm dừng / huỷ / chạy lại được,
@@ -224,10 +225,12 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `GET /api/aviation/{source}/records` | Bản ghi của một loại: `kind` (`airport` / `airline` / `city` / `country`), `search`, `page`, `page_size`. |
 | `GET /api/aviation/{source}/export` | Toàn bộ bản ghi của một loại (`kind`) thành file JSON tải về (`aviation-<source>-<kind>.json`), cùng các trường với `/records`. |
 | `POST /api/aviation/{source}/sync` | Tạo job đồng bộ lại toàn bộ danh mục của nguồn và trả về job ngay (201); nguồn đang được đồng bộ thì 409 kèm `job_id`. Theo dõi và điều khiển qua các endpoint `/api/crawl/jobs/…`; lịch sử của nguồn là `GET /api/crawl/jobs?crawler=aviation:<source>`. |
-| `GET /api/provinces/summary` | Danh mục tỉnh thành Việt Nam: số tỉnh thành đang có (`count`) và lần đồng bộ gần nhất (`last_job`). |
+| `GET /api/provinces/summary` | Danh mục tỉnh thành Việt Nam: số tỉnh thành (`count`) và số phường/xã (`ward_count`) đang có, và lần đồng bộ gần nhất (`last_job`). |
 | `GET /api/provinces` | Danh sách tỉnh thành xếp theo mã: `search` (mã hoặc tên, không dấu cũng được), `page`, `page_size`. Mỗi dòng có `code`, `name`, `name_en`, `full_name`, `full_name_en`, `code_name`, `unit`, `postal_code_prefix`, `ward_count`, `crawled_at`. |
 | `GET /api/provinces/export` | Toàn bộ tỉnh thành thành file JSON tải về (`vn-provinces.json`), cùng các trường với `GET /api/provinces`. |
-| `POST /api/provinces/sync` | Tạo job đồng bộ lại danh mục tỉnh thành và trả về job ngay (201); đang đồng bộ thì 409 kèm `job_id`. Lịch sử là `GET /api/crawl/jobs?crawler=provinces`. |
+| `GET /api/provinces/wards` | Danh sách phường/xã xếp theo mã: `province_code` (chỉ một tỉnh thành), `search`, `page`, `page_size`. Mỗi dòng có `code`, `name`, `name_en`, `full_name`, `full_name_en`, `code_name`, `unit`, `postal_code`, `province_code`, `province_name`, `crawled_at`. |
+| `GET /api/provinces/wards/export` | Phường/xã của một tỉnh thành (`province_code`, file `vn-wards-<mã>.json`) hoặc của cả nước (`vn-wards.json`) thành file JSON tải về, cùng các trường với `GET /api/provinces/wards`. |
+| `POST /api/provinces/sync` | Tạo job đồng bộ lại danh mục tỉnh thành kèm phường/xã và trả về job ngay (201); đang đồng bộ thì 409 kèm `job_id`. Lịch sử là `GET /api/crawl/jobs?crawler=provinces`. |
 | `GET /api/logs` | Các dòng log mới nhất: `level`, `kind`, `job_id`, `search`, `limit`. |
 | `GET /api/settings` · `PUT /api/settings` | Đọc / lưu cấu hình. |
 
@@ -466,6 +469,7 @@ không có bước thủ công nào khi cài mới hay khi cập nhật code.
 | `crawl_runs` | Lịch sử, cũng là "job" trên web UI: URL yêu cầu, khoảng chương, `status` (`running`/`completed`/`partial`/`failed`/`interrupted`/`cancelled`), số chương cần tải/đã tải/lỗi/bỏ qua (ghi dần trong lúc chạy), lỗi, thời gian | — |
 | `aviation_records` | Danh mục hàng không: nguồn, loại (sân bay / hãng bay / thành phố / quốc gia), mã, tên | `(source, kind, code)` |
 | `vn_provinces` | Tỉnh thành Việt Nam: mã, tên tiếng Việt và tiếng Anh (ngắn và đầy đủ), loại đơn vị, đầu mã bưu chính, số phường/xã | `code` duy nhất |
+| `vn_wards` | Phường/xã/đặc khu: mã, mã tỉnh thành, tên tiếng Việt và tiếng Anh (ngắn và đầy đủ), loại đơn vị, mã bưu chính | `code` duy nhất |
 
 Thời gian lưu theo **UTC** (không kèm múi giờ); lệnh `status` hiển thị theo giờ máy.
 
@@ -585,7 +589,7 @@ Service, repository, CLI không phải sửa gì.
 ## Test, debug và lỗi thường gặp
 
 ```bash
-pytest                      # 198 test, ~20 giây, không có request mạng thật nào
+pytest                      # 202 test, ~20 giây, không có request mạng thật nào
 ruff check . && ruff format --check .
 
 cd web                      # frontend
@@ -703,11 +707,12 @@ liệt kê chương lỗi kèm URL.
   phép **MIT** — dùng lại phải giữ thông báo bản quyền và giấy phép của tác giả. Crawler đọc file
   `json/full_json_generated_data_vn_units.json` trên nhánh `master` qua `raw.githubusercontent.com`.
 - Một lần đồng bộ là 2 request (`robots.txt` + một file khoảng 1,5 MB); lần chạy thử cho 34 tỉnh
-  thành. Dữ liệu chỉ đổi khi có nghị quyết điều chỉnh địa giới — không cần đồng bộ thường xuyên.
+  thành và 3.321 phường/xã. Dữ liệu chỉ đổi khi có nghị quyết điều chỉnh địa giới — không cần đồng bộ thường xuyên.
 - Đây là dữ liệu do cộng đồng tổng hợp từ văn bản nhà nước, không phải nguồn chính thức; tên tiếng
   Anh và đầu mã bưu chính là của bộ dữ liệu này.
-- Chỉ lưu cấp tỉnh. Phường/xã (hơn 3.300 đơn vị, nằm trong cùng file) mới được đếm vào cột
-  `ward_count`, chưa lưu từng dòng; toạ độ và ranh giới (GeoJSON) của nguồn không được tải.
+- Lưu hai cấp: tỉnh thành và phường/xã/đặc khu (lần chạy thử: 2.599 xã, 709 phường, 13 đặc khu).
+  Toạ độ và ranh giới (GeoJSON) của nguồn không được tải.
+- Tìm kiếm và phân trang phường/xã đang lọc trong bộ nhớ (khoảng 0,06 giây một lần tìm).
 - Nguồn đổi cấu trúc file thì lần đồng bộ báo lỗi parser và dữ liệu cũ được giữ nguyên.
 
 **Giới hạn hiện tại**

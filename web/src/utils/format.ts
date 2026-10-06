@@ -33,13 +33,14 @@ export function formatDuration(start: string, end: string | null): string {
     : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`
 }
 
-const RECORD_KINDS = ['airport', 'city', 'country', 'airline', 'province'] as const
+const RECORD_KINDS = ['airport', 'city', 'country', 'airline', 'province', 'ward'] as const
 const RECORD_KIND_LABEL: Record<keyof RecordCounts, string> = {
   airport: 'sân bay',
   airline: 'hãng bay',
   city: 'thành phố',
   country: 'quốc gia',
   province: 'tỉnh thành',
+  ward: 'phường/xã',
 }
 
 /** "469 sân bay · 464 thành phố · …" hay "34 tỉnh thành" — chỉ kể những loại có trong `counts`. */

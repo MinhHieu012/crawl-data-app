@@ -49,7 +49,7 @@ export interface AviationRecord {
 }
 
 /** Số bản ghi theo loại — `result` của một job đồng bộ (hàng không, tỉnh thành). */
-export type RecordCounts = Partial<Record<AviationKind | 'province', number>>
+export type RecordCounts = Partial<Record<AviationKind | 'province' | 'ward', number>>
 
 export interface AviationSummary {
   counts: Record<AviationKind, number>
@@ -76,9 +76,30 @@ export interface Province {
   crawled_at: string
 }
 
+/** Một phường, xã hoặc đặc khu — cấp ngay dưới tỉnh thành. */
+export interface Ward {
+  code: string
+  name: string
+  name_en: string
+  /** Kèm loại đơn vị: "Phường Ba Đình". */
+  full_name: string
+  full_name_en: string
+  code_name: string
+  /** "Phường", "Xã" hoặc "Đặc khu". */
+  unit: string
+  postal_code: string | null
+  province_code: string
+  /** Tên đầy đủ của tỉnh thành: "Thành phố Hà Nội". */
+  province_name: string | null
+  /** Lần cuối còn thấy bản ghi này ở nguồn. */
+  crawled_at: string
+}
+
 export interface ProvinceSummary {
   /** Số tỉnh thành đang có trong database. */
   count: number
+  /** Số phường/xã đang có trong database. */
+  ward_count: number
   /** Job đồng bộ gần nhất, kể cả job đang chạy. */
   last_job: Job | null
 }

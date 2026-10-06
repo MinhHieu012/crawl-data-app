@@ -35,6 +35,7 @@ import type {
   AviationSummary,
   Province,
   ProvinceSummary,
+  Ward,
 } from './types'
 
 /** Chu kỳ hỏi lại khi có job đang chạy. Không có job nào chạy thì không hỏi định kỳ. */
@@ -202,6 +203,22 @@ export function useProvinces(search: string) {
   return useQuery({
     queryKey: ['provinces', 'list', search],
     queryFn: () => api<Page<Province>>('/provinces', { params: { search, page_size: 200 } }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export interface WardParams {
+  /** Chỉ phường/xã của tỉnh thành có mã này; bỏ trống = cả nước. */
+  province_code?: string
+  search?: string
+  page?: number
+  page_size?: number
+}
+
+export function useWards(params: WardParams) {
+  return useQuery({
+    queryKey: ['provinces', 'wards', params],
+    queryFn: () => api<Page<Ward>>('/provinces/wards', { params }),
     placeholderData: keepPreviousData,
   })
 }

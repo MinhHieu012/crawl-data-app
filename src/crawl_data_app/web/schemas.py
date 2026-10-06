@@ -146,8 +146,23 @@ class ProvinceOut(BaseModel):
     crawled_at: UtcDatetime
 
 
+class WardOut(BaseModel):
+    code: str  # "00004"
+    name: str
+    name_en: str
+    full_name: str  # kèm loại đơn vị: "Phường Ba Đình"
+    full_name_en: str
+    code_name: str  # "ba_dinh"
+    unit: str  # "Phường", "Xã" hoặc "Đặc khu"
+    postal_code: str | None
+    province_code: str
+    province_name: str | None  # tên đầy đủ của tỉnh thành: "Thành phố Hà Nội"
+    crawled_at: UtcDatetime
+
+
 class ProvinceSummary(BaseModel):
     count: int  # số tỉnh thành đang có trong database
+    ward_count: int  # số phường/xã đang có trong database
     last_job: JobOut | None  # job đồng bộ gần nhất, kể cả job đang chạy
 
 

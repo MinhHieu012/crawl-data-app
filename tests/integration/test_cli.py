@@ -466,10 +466,10 @@ def test_aviation_failure_is_reported_recorded_and_keeps_old_data(run, sources, 
 def test_provinces_syncs_the_catalogue_as_one_job(run, sources, tmp_path):
     code, out = run("provinces")
 
-    assert (code, out.strip()) == (0, "Đã đồng bộ 3 tỉnh thành (job #1).")
+    assert (code, out.strip()) == (0, "Đã đồng bộ 3 tỉnh thành, 4 phường/xã (job #1).")
     runs = aviation_runs(tmp_path)
     assert [row[:3] for row in runs] == [("provinces", "completed", 1)]
-    assert json.loads(runs[0][3]) == {"province": 3}
+    assert json.loads(runs[0][3]) == {"province": 3, "ward": 4}
 
     sources.pages[provinces.DATA_URL] = lambda _request: httpx.Response(200, text="{}")
     code, out = run("provinces")
@@ -477,8 +477,10 @@ def test_provinces_syncs_the_catalogue_as_one_job(run, sources, tmp_path):
     assert code == 1
     assert "Đồng bộ tỉnh thành không xong (job #2)" in out
     with closing(sqlite3.connect(tmp_path / "data" / "crawl-data-app.db")) as connection:
-        stored = connection.execute("SELECT count(*) FROM vn_provinces").fetchone()
-    assert stored == (3,)  # dữ liệu cũ còn nguyên
+        stored = connection.execute(
+            "SELECT (SELECT count(*) FROM vn_provinces), (SELECT count(*) FROM vn_wards)"
+        ).fetchone()
+    assert stored == (3, 4)  # dữ liệu cũ còn nguyên
 
 
 def test_aviation_rejects_unknown_source(run):

@@ -45,7 +45,11 @@ async def codes(api, **params: object) -> list[str]:
 
 
 async def test_sync_is_a_background_job_that_fills_the_catalogue(api, sources):
-    assert (await api.get(f"{BASE}/summary")).json() == {"count": 0, "last_job": None}
+    assert (await api.get(f"{BASE}/summary")).json() == {
+        "count": 0,
+        "ward_count": 0,
+        "last_job": None,
+    }
 
     created = (await api.post(f"{BASE}/sync")).json()
 
@@ -57,11 +61,12 @@ async def test_sync_is_a_background_job_that_fills_the_catalogue(api, sources):
     assert (created["url"], created["chapters_total"]) == (provinces.HOME, 1)
     job = await finished(api, created["id"])
     assert (job["status"], job["error"], job["chapters_ok"]) == ("completed", None, 1)
-    assert job["result"] == {"province": 3}
+    assert job["result"] == {"province": 3, "ward": 4}
     assert sources.requests_to("raw.githubusercontent.com") == 2  # robots.txt + file dữ liệu
 
     summary = (await api.get(f"{BASE}/summary")).json()
-    assert (summary["count"], summary["last_job"]["id"]) == (3, job["id"])
+    assert (summary["count"], summary["ward_count"]) == (3, 4)
+    assert summary["last_job"]["id"] == job["id"]
     history = (await api.get("/api/crawl/jobs", params={"crawler": "provinces"})).json()
     assert [item["id"] for item in history["items"]] == [job["id"]]
     listed = (await api.get(BASE)).json()
@@ -93,10 +98,57 @@ async def test_export_downloads_every_province_as_json(api, sources):
     assert response.json() == (await api.get(BASE)).json()["items"]
 
 
+async def test_wards_are_listed_with_their_province_filtered_and_searched(api, sources):
+    await sync(api)
+
+    async def wards(**params: object) -> list[str]:
+        response = await api.get(f"{BASE}/wards", params=params)
+        assert response.status_code == 200, response.text
+        return [item["code"] for item in response.json()["items"]]
+
+    listed = (await api.get(f"{BASE}/wards")).json()
+    assert listed["total"] == 4
+    assert listed["items"][0] | {"crawled_at": None} == {
+        "code": "00004",
+        "name": "Ba Đình",
+        "name_en": "Ba Dinh",
+        "full_name": "Phường Ba Đình",
+        "full_name_en": "Ba Dinh Ward",
+        "code_name": "ba_dinh",
+        "unit": "Phường",
+        "postal_code": "11120",
+        "province_code": "01",
+        "province_name": "Thành phố Hà Nội",
+        "crawled_at": None,
+    }
+    assert await wards(province_code="01") == ["00004", "00070"]
+    assert await wards(search="hoa") == ["00070", "01279", "20333"]  # Hoàn Kiếm, Hoà An, Hoàng Sa
+    assert await wards(search="hoa", province_code="04") == ["01279"]
+    assert await wards(search="dac khu") == ["20333"]
+    assert await wards(page=2, page_size=3) == ["20333"]
+    assert await wards(province_code="99") == []
+    assert (await api.get(f"{BASE}/wards", params={"province_code": "../x"})).status_code == 422
+
+
+async def test_wards_export_covers_one_province_or_the_whole_country(api, sources):
+    await sync(api)
+
+    everything = await api.get(f"{BASE}/wards/export")
+    hanoi = await api.get(f"{BASE}/wards/export", params={"province_code": "01"})
+
+    assert everything.headers["content-type"] == "application/json"
+    assert everything.headers["content-disposition"] == 'attachment; filename="vn-wards.json"'
+    assert hanoi.headers["content-disposition"] == 'attachment; filename="vn-wards-01.json"'
+    assert "Phường Hoàn Kiếm" in hanoi.text  # tiếng Việt giữ nguyên, không thành \\uXXXX
+    assert everything.json() == (await api.get(f"{BASE}/wards")).json()["items"]
+    assert [item["code"] for item in hanoi.json()] == ["00004", "00070"]
+
+
 async def test_resync_updates_in_place_and_a_broken_source_keeps_existing_data(api, sources):
     await sync(api)
     await sync(api)
     assert (await api.get(BASE)).json()["total"] == 3  # ghi đè theo mã, không nhân đôi
+    assert (await api.get(f"{BASE}/wards")).json()["total"] == 4
 
     sources.pages[provinces.DATA_URL] = lambda _request: httpx.Response(
         200, text='[{"ma": "01", "ten": "Hà Nội"}]'
@@ -105,7 +157,8 @@ async def test_resync_updates_in_place_and_a_broken_source_keeps_existing_data(a
 
     assert (failed["status"], failed["result"]) == ("failed", None)
     assert "không còn khớp cấu trúc" in failed["error"]
-    assert (await api.get(f"{BASE}/summary")).json()["count"] == 3  # dữ liệu cũ còn nguyên
+    summary = (await api.get(f"{BASE}/summary")).json()
+    assert (summary["count"], summary["ward_count"]) == (3, 4)  # dữ liệu cũ còn nguyên
     logs = (await api.get("/api/logs", params={"job_id": failed["id"], "kind": "parse"})).json()
     assert len(logs) == 1
 

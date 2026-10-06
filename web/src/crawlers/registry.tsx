@@ -28,6 +28,7 @@ import {
   ProvinceHistoryPage,
   ProvincesPage,
   ProvinceSummaryLine,
+  WardsPage,
 } from '../pages/provinces/ProvincesPages'
 import { SourcesPage } from '../pages/sources/SourcesPage'
 import { NOVEL } from './paths'
@@ -150,17 +151,18 @@ export const CRAWLER_MODULES: CrawlerModule[] = [
   {
     id: 'provinces',
     name: 'Tỉnh thành Việt Nam',
-    description: 'Danh mục 34 tỉnh, thành phố của Việt Nam sau sáp nhập năm 2025.',
+    description: 'Danh mục 34 tỉnh, thành phố của Việt Nam sau sáp nhập năm 2025, kèm phường/xã.',
     icon: IconMapPin,
     categories: [
       {
         id: 'vietnam',
         name: 'Tỉnh thành',
-        description: 'Mã, tên, loại đơn vị và số phường/xã của từng tỉnh, thành phố.',
+        description: 'Mã, tên, loại đơn vị của từng tỉnh, thành phố và các phường/xã trực thuộc.',
         icon: IconMapPin,
         Summary: ProvinceSummaryLine,
         sections: [
           { path: 'list', label: 'Tỉnh thành', element: <ProvincesPage /> },
+          { path: 'wards', label: 'Phường/xã', element: <WardsPage /> },
           { path: 'history', label: 'Lịch sử', element: <ProvinceHistoryPage /> },
         ],
       },

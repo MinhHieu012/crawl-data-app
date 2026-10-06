@@ -12,8 +12,32 @@
     "AdministrativeUnitShortName": "Thành phố",
     "AdministrativeUnitFullName": "Thành phố trực thuộc trung ương",
     "Wards": [
-      { "Type": "ward", "Code": "00004", "Name": "Ba Đình", "ProvinceCode": "01" },
-      { "Type": "ward", "Code": "00070", "Name": "Hoàn Kiếm", "ProvinceCode": "01" }
+      {
+        "Type": "ward",
+        "Code": "00004",
+        "Name": "Ba Đình",
+        "NameEn": "Ba Dinh",
+        "FullName": "Phường Ba Đình",
+        "FullNameEn": "Ba Dinh Ward",
+        "CodeName": "ba_dinh",
+        "ProvinceCode": "01",
+        "PostalCode": "11120",
+        "AdministrativeUnitId": 3,
+        "AdministrativeUnitShortName": "Phường"
+      },
+      {
+        "Type": "ward",
+        "Code": "00070",
+        "Name": "Hoàn Kiếm",
+        "NameEn": "Hoan Kiem",
+        "FullName": "Phường Hoàn Kiếm",
+        "FullNameEn": "Hoan Kiem Ward",
+        "CodeName": "hoan_kiem",
+        "ProvinceCode": "01",
+        "PostalCode": "",
+        "AdministrativeUnitId": 3,
+        "AdministrativeUnitShortName": "Phường"
+      }
     ]
   },
   {
@@ -28,7 +52,21 @@
     "AdministrativeUnitId": 2,
     "AdministrativeUnitShortName": "Tỉnh",
     "AdministrativeUnitFullName": "Tỉnh",
-    "Wards": [{ "Type": "ward", "Code": "01273", "Name": "Thục Phán", "ProvinceCode": "04" }]
+    "Wards": [
+      {
+        "Type": "ward",
+        "Code": "01279",
+        "Name": "Hoà An",
+        "NameEn": "Hoa An",
+        "FullName": "Xã Hoà An",
+        "FullNameEn": "Hoa An Commune",
+        "CodeName": "hoa_an",
+        "ProvinceCode": "04",
+        "PostalCode": "21300",
+        "AdministrativeUnitId": 4,
+        "AdministrativeUnitShortName": "Xã"
+      }
+    ]
   },
   {
     "Type": "province",
@@ -42,6 +80,20 @@
     "AdministrativeUnitId": 1,
     "AdministrativeUnitShortName": "Thành phố",
     "AdministrativeUnitFullName": "Thành phố trực thuộc trung ương",
-    "Wards": [{ "Type": "ward", "Code": "20194", "Name": "Hải Châu", "ProvinceCode": "48" }]
+    "Wards": [
+      {
+        "Type": "ward",
+        "Code": "20333",
+        "Name": "Hoàng Sa",
+        "NameEn": "Hoang Sa",
+        "FullName": "Đặc khu Hoàng Sa",
+        "FullNameEn": "Hoang Sa Special Administrative Region",
+        "CodeName": "hoang_sa",
+        "ProvinceCode": "48",
+        "PostalCode": "50900",
+        "AdministrativeUnitId": 5,
+        "AdministrativeUnitShortName": "Đặc khu"
+      }
+    ]
   }
 ]

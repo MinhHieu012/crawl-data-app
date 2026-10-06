@@ -156,7 +156,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands.add_parser(
         "provinces",
-        help="đồng bộ danh mục 34 tỉnh, thành phố của Việt Nam (sau sáp nhập năm 2025)",
+        help="đồng bộ danh mục 34 tỉnh, thành phố của Việt Nam (sau sáp nhập năm 2025) "
+        "kèm phường/xã",
     )
 
     commands.add_parser("sources", help="liệt kê các website được hỗ trợ")
@@ -415,7 +416,10 @@ def _sync_provinces(settings: Settings, repo: NovelRepository) -> int:
     if result.status != RunStatus.COMPLETED:
         out.print(f"Đồng bộ tỉnh thành không xong (job #{result.run_id}): {result.error}")
         return 1
-    out.print(f"Đã đồng bộ {result.counts['province']} tỉnh thành (job #{result.run_id}).")
+    out.print(
+        f"Đã đồng bộ {result.counts['province']} tỉnh thành, {result.counts['ward']} phường/xã "
+        f"(job #{result.run_id})."
+    )
     return 0
 
 

@@ -57,6 +57,7 @@ from crawl_data_app.web.schemas import (
     SourceOut,
     SourceUpdate,
     Stats,
+    WardOut,
 )
 
 log = logging.getLogger(__name__)
@@ -68,6 +69,8 @@ AVIATION_PREFIX = crawler_name(
 )  # "aviation:" — phần đầu của `crawl_runs.crawler` với job hàng không
 AviationSource = Literal["world", "vna"]
 AviationKind = Literal["airport", "airline", "city", "country"]
+# Mã tỉnh thành để lọc phường/xã; chỉ chữ số vì giá trị này đi vào tên file xuất.
+ProvinceCode = Annotated[str, Query(pattern=r"^\d{0,10}$")]
 
 
 class ApiError(Exception):
@@ -519,8 +522,53 @@ def create_app(
     @api.get("/provinces/summary")
     async def provinces_summary() -> ProvinceSummary:
         rows, _ = repo.runs_page(crawler=provinces.CRAWLER, limit=1)
+        counts = province_store.counts()
         return ProvinceSummary(
-            count=province_store.count(), last_job=job_out(*rows[0]) if rows else None
+            count=counts["province"],
+            ward_count=counts["ward"],
+            last_job=job_out(*rows[0]) if rows else None,
+        )
+
+    def ward_out(row: provinces.WardOut) -> WardOut:
+        ward = row.ward
+        return WardOut(
+            code=ward.code,
+            name=ward.name,
+            name_en=ward.name_en,
+            full_name=ward.full_name,
+            full_name_en=ward.full_name_en,
+            code_name=ward.code_name,
+            unit=ward.unit,
+            postal_code=ward.postal_code,
+            province_code=ward.province_code,
+            province_name=row.province_name,
+            crawled_at=ward.crawled_at,
+        )
+
+    @api.get("/provinces/wards")
+    async def list_wards(
+        province_code: ProvinceCode = "",
+        search: str = "",
+        page: PageNumber = 1,
+        page_size: PageSize = 50,
+    ) -> Page[WardOut]:
+        rows, total = province_store.wards_page(
+            province_code=province_code, search=search.strip(), **_window(page, page_size)
+        )
+        return Page(items=[ward_out(row) for row in rows], total=total)
+
+    @api.get("/provinces/wards/export")
+    async def export_wards(province_code: ProvinceCode = "") -> Response:
+        """Phường/xã của một tỉnh thành (`province_code`) hoặc của cả nước thành file JSON tải về
+        (cùng các trường với `GET /provinces/wards`).
+        """
+        rows, _ = province_store.wards_page(province_code=province_code, limit=sys.maxsize)
+        items = [ward_out(row).model_dump(mode="json") for row in rows]
+        filename = f"vn-wards-{province_code}.json" if province_code else "vn-wards.json"
+        return Response(
+            json.dumps(items, ensure_ascii=False, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     @api.get("/provinces")
