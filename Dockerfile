@@ -21,5 +21,8 @@ WORKDIR /srv/state
 VOLUME /srv/state
 
 EXPOSE 8000
+# Khoẻ = API trả lời và đọc được database. `deploy.sh` dựa vào trạng thái này để quyết định rollback.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD ["python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/stats', timeout=4)"]
 # Nghe 0.0.0.0 là trong container; việc chỉ cho Tailscale vào do `ports` trong compose.yaml quyết định.
 CMD ["sh", "-c", "crawl-data-app init-db && exec crawl-data-app serve --host 0.0.0.0 --ui-dir /opt/app/web/dist"]

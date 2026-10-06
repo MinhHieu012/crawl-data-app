@@ -38,7 +38,7 @@ repository không biết HTML; frontend không có logic crawl (nhận diện we
   Pydantic 2 / pydantic-settings, FastAPI + uvicorn, Rich, `argparse` (không Typer/Click). Build: hatchling.
 - **Frontend** (`web/`): React 19 + TypeScript (strict) + Vite, Mantine 8, TanStack Query, React Router 7. Không có thư viện store.
 - **Test/lint**: pytest (+ plugin `anyio`, `httpx.MockTransport`), ruff · Vitest + Testing Library, ESLint, Prettier.
-- Không có Docker/CI trong repo. Không dùng Scrapy/Playwright (có chủ đích — xem README mục "Quyết định kỹ thuật").
+- Docker + CI/CD: `Dockerfile`, `compose.yaml`, `deploy.sh` (chạy trên VPS), `.github/workflows/deploy.yml`. Không dùng Scrapy/Playwright (có chủ đích — xem README mục "Quyết định kỹ thuật").
 
 ## Project Structure
 
@@ -126,6 +126,16 @@ alembic revision --autogenerate -m "mo ta"   # sau khi sửa database/models.py
 
 Chạy lệnh từ thư mục gốc (đường dẫn mặc định `data/`, `logs/`, `.env`, `web/dist` tính theo cwd). `crawl-data-app ...` ≡ `python -m crawl_data_app ...`.
 Không có lệnh "run production" riêng ngoài `serve`.
+
+**Deploy lên VPS** ("build Docker image rồi deploy lên VPS"): không build/push/SSH từ máy cá nhân — secret chỉ nằm ở GitHub.
+Kiểm tra cây làm việc sạch và commit đã được đẩy, rồi chạy workflow và theo dõi tới khi xong; báo lại đúng kết quả
+(job `deploy` đỏ = VPS đã tự quay về bản cũ). Chi tiết: [docs/deploy-vps-tailscale.md](docs/deploy-vps-tailscale.md).
+
+```bash
+gh workflow run deploy.yml --ref main                 # test → build → chạy thử → push GHCR → deploy → health check
+gh run watch --exit-status "$(gh run list --workflow deploy.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+gh workflow run deploy.yml --ref main -f rollback=true   # quay về image chạy ngay trước đó
+```
 
 ## Environment Configuration
 

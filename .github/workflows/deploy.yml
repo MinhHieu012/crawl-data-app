@@ -1,0 +1,128 @@
+name: CI/CD
+
+# Mọi push/PR: test + build image + chạy thử image.
+# Chỉ deploy khi: đẩy tag v* hoặc bấm tay (workflow_dispatch). Không tự deploy mỗi lần push main vì
+# tạo lại container sẽ ngắt job crawl đang chạy.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      rollback:
+        description: Không build — quay VPS về image chạy ngay trước đó
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: ${{ !inputs.rollback }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Backend - ruff + pytest
+        run: |
+          pip install -e ".[dev]"
+          ruff check .
+          ruff format --check .
+          pytest
+      - name: Frontend - lint + typecheck + vitest
+        working-directory: web
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm run format:check
+          npm test
+
+  build:
+    needs: test
+    if: ${{ !inputs.rollback }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tên image theo commit
+        id: image
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+      - name: Build
+        run: |
+          docker build \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "${{ steps.image.outputs.ref }}" .
+      - name: Chạy thử image (phải healthy và phục vụ được giao diện)
+        run: |
+          docker run -d --name smoke "${{ steps.image.outputs.ref }}"
+          for _ in $(seq 40); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' smoke)
+            [ "$status" = starting ] || break
+            sleep 3
+          done
+          docker logs smoke
+          [ "$status" = healthy ]
+          docker exec smoke python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/', timeout=5)"
+      - name: Đẩy lên GHCR
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "${{ steps.image.outputs.ref }}"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            versioned="ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_REF_NAME"
+            docker tag "${{ steps.image.outputs.ref }}" "$versioned"
+            docker push "$versioned"
+          fi
+
+  deploy:
+    needs: build
+    # Rollback thì build bị bỏ qua; còn lại chỉ chạy khi test + build + chạy thử đều qua.
+    if: >-
+      ${{ !cancelled()
+          && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
+          && (inputs.rollback || needs.build.result == 'success') }}
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: deploy-production
+    env:
+      VPS_PATH: ${{ vars.VPS_PATH || 'crawl-data-app' }}
+      TARGET: ${{ inputs.rollback && 'rollback' || needs.build.outputs.image }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Cấu hình SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host vps\n  HostName %s\n  User %s\n  Port %s\n' "$VPS_HOST" "$VPS_USER" "$VPS_PORT" > ~/.ssh/config
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/config
+      - name: Deploy (tự rollback nếu bản mới không healthy)
+        run: |
+          scp compose.yaml deploy.sh "vps:$VPS_PATH/"
+          ssh vps "cd '$VPS_PATH' && sh deploy.sh '$TARGET'"

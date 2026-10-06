@@ -1,0 +1,2 @@
+# Script chạy trên VPS (Linux): checkout trên Windows cũng không được đổi sang CRLF.
+*.sh text eol=lf

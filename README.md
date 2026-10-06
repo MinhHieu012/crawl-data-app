@@ -109,7 +109,8 @@ Chưa build giao diện thì `serve` vẫn chạy và chỉ phục vụ API. D�
 > request gọi đúng tên `127.0.0.1`/`localhost` (chặn DNS rebinding) và từ chối request ghi do website
 > khác gửi tới (chặn CSRF). `--host 0.0.0.0` mở server ra mạng: ai truy cập được đều điều khiển được
 > crawler và sửa được cấu hình — chỉ dùng trong mạng bạn tin tưởng. Muốn chạy trên VPS mà không
-> cần tên miền: xem [hướng dẫn dùng Tailscale](docs/deploy-vps-tailscale.md).
+> cần tên miền: xem [hướng dẫn dùng Tailscale](docs/deploy-vps-tailscale.md) — kèm luồng CI/CD
+> (GitHub Actions: test → build image → push GHCR → deploy qua SSH, tự rollback nếu bản mới không healthy).
 
 ### Các màn hình
 

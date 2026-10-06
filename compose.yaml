@@ -1,5 +1,10 @@
+# Cố định tên project: volume luôn là `crawl-data-app_state` dù thư mục chứa file này tên gì.
+name: crawl-data-app
+
 services:
   app:
+    # VPS: `deploy.sh` ghi APP_IMAGE=ghcr.io/...:<commit> vào .env. Máy cá nhân: `docker compose up -d --build`.
+    image: ${APP_IMAGE:-crawl-data-app:local}
     build: .
     restart: unless-stopped
     ports:
