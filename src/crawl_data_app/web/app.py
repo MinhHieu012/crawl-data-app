@@ -579,14 +579,28 @@ def create_app(
         return Page(items=[ProvinceOut.model_validate(row) for row in rows], total=total)
 
     @api.get("/provinces/export")
-    async def export_provinces() -> Response:
-        """Toàn bộ tỉnh thành thành file JSON tải về (cùng các trường với `GET /provinces`)."""
+    async def export_provinces(with_wards: bool = False) -> Response:
+        """Toàn bộ tỉnh thành thành file JSON tải về (cùng các trường với `GET /provinces`).
+
+        `with_wards=true`: mỗi tỉnh thành kèm mảng `wards` gồm các phường/xã trực thuộc (các trường
+        của `GET /provinces/wards`, bỏ `province_code` / `province_name` vì đã nằm trong tỉnh).
+        """
         rows, _ = province_store.page(limit=sys.maxsize)
         items = [ProvinceOut.model_validate(row).model_dump(mode="json") for row in rows]
+        if with_wards:
+            wards: dict[str, list[dict]] = {}
+            for row in province_store.wards_page(limit=sys.maxsize)[0]:
+                ward = ward_out(row).model_dump(
+                    mode="json", exclude={"province_code", "province_name"}
+                )
+                wards.setdefault(row.ward.province_code, []).append(ward)
+            for item in items:
+                item["wards"] = wards.get(item["code"], [])
+        filename = "vn-provinces-wards.json" if with_wards else "vn-provinces.json"
         return Response(
             json.dumps(items, ensure_ascii=False, indent=2),
             media_type="application/json",
-            headers={"Content-Disposition": 'attachment; filename="vn-provinces.json"'},
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
     @api.post("/provinces/sync", status_code=201)

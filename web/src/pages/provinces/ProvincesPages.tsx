@@ -90,6 +90,18 @@ export function ProvincesPage() {
                 Xuất JSON
               </Button>
             )}
+            {/* Một file cho cả hai cấp: mỗi tỉnh thành kèm mảng phường/xã trực thuộc. */}
+            {(summary.data?.ward_count ?? 0) > 0 && (
+              <Button
+                component="a"
+                href={`${BASE_URL}/provinces/export?with_wards=true`}
+                download
+                variant="default"
+                leftSection={<IconDownload size={16} />}
+              >
+                Xuất JSON kèm phường/xã
+              </Button>
+            )}
             <SyncButton />
           </>
         }

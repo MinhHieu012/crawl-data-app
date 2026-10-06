@@ -239,6 +239,10 @@ describe('App — khu vực Crawler', () => {
       'href',
       '/api/provinces/export',
     )
+    expect(screen.getByRole('link', { name: 'Xuất JSON kèm phường/xã' })).toHaveAttribute(
+      'href',
+      '/api/provinces/export?with_wards=true',
+    )
 
     await user.click(screen.getByRole('button', { name: 'Đồng bộ' }))
     expect(await screen.findByText('Đang đồng bộ ở job #22')).toBeInTheDocument()

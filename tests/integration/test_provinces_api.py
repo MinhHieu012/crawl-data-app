@@ -97,6 +97,31 @@ async def test_export_downloads_every_province_as_json(api, sources):
     assert "Thành phố Đà Nẵng" in response.text  # tiếng Việt giữ nguyên, không thành \\uXXXX
     assert response.json() == (await api.get(BASE)).json()["items"]
 
+    # Kèm phường/xã: mỗi tỉnh thành thêm mảng `wards`, phần còn lại y như bản không kèm.
+    nested = await api.get(f"{BASE}/export", params={"with_wards": "true"})
+    assert nested.headers["content-disposition"] == (
+        'attachment; filename="vn-provinces-wards.json"'
+    )
+    assert [{**item, "wards": None} for item in nested.json()] == [
+        {**item, "wards": None} for item in response.json()
+    ]
+    assert [[ward["code"] for ward in item["wards"]] for item in nested.json()] == [
+        ["00004", "00070"],
+        ["01279"],
+        ["20333"],
+    ]
+    assert nested.json()[0]["wards"][0] | {"crawled_at": None} == {
+        "code": "00004",
+        "name": "Ba Đình",
+        "name_en": "Ba Dinh",
+        "full_name": "Phường Ba Đình",
+        "full_name_en": "Ba Dinh Ward",
+        "code_name": "ba_dinh",
+        "unit": "Phường",
+        "postal_code": "11120",
+        "crawled_at": None,
+    }
+
 
 async def test_wards_are_listed_with_their_province_filtered_and_searched(api, sources):
     await sync(api)

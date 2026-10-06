@@ -164,7 +164,7 @@ Crawler **Tỉnh thành Việt Nam** (`/crawlers/provinces/vietnam/…`) có ba 
 
 | Tab | Đường dẫn | Nội dung |
 |---|---|---|
-| Tỉnh thành | `list` | Bảng 34 tỉnh, thành phố sau sáp nhập năm 2025 (mã, tên tiếng Việt và tiếng Anh kèm loại đơn vị, số phường/xã, đầu mã bưu chính), tìm theo mã hoặc tên (gõ không dấu cũng được); nút **Đồng bộ** và **Xuất JSON** (tải mọi tỉnh thành, không theo ô tìm kiếm). |
+| Tỉnh thành | `list` | Bảng 34 tỉnh, thành phố sau sáp nhập năm 2025 (mã, tên tiếng Việt và tiếng Anh kèm loại đơn vị, số phường/xã, đầu mã bưu chính), tìm theo mã hoặc tên (gõ không dấu cũng được); nút **Đồng bộ**, **Xuất JSON** (tải mọi tỉnh thành, không theo ô tìm kiếm) và **Xuất JSON kèm phường/xã** (một file cho cả hai cấp: mỗi tỉnh thành kèm danh sách phường/xã trực thuộc). |
 | Phường/xã | `wards` | Bảng phường, xã, đặc khu (mã, tên tiếng Việt và tiếng Anh, tỉnh thành, mã bưu chính), tìm theo mã hoặc tên, lọc theo tỉnh thành, phân trang; **Xuất JSON** tải phường/xã của tỉnh thành đang chọn (hoặc cả nước), không theo ô tìm kiếm. Số phường/xã ở tab Tỉnh thành là link sang đây, lọc sẵn theo tỉnh đó. |
 | Lịch sử | `history` | Các job đồng bộ danh mục (tỉnh thành và phường/xã). |
 
@@ -227,7 +227,7 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `POST /api/aviation/{source}/sync` | Tạo job đồng bộ lại toàn bộ danh mục của nguồn và trả về job ngay (201); nguồn đang được đồng bộ thì 409 kèm `job_id`. Theo dõi và điều khiển qua các endpoint `/api/crawl/jobs/…`; lịch sử của nguồn là `GET /api/crawl/jobs?crawler=aviation:<source>`. |
 | `GET /api/provinces/summary` | Danh mục tỉnh thành Việt Nam: số tỉnh thành (`count`) và số phường/xã (`ward_count`) đang có, và lần đồng bộ gần nhất (`last_job`). |
 | `GET /api/provinces` | Danh sách tỉnh thành xếp theo mã: `search` (mã hoặc tên, không dấu cũng được), `page`, `page_size`. Mỗi dòng có `code`, `name`, `name_en`, `full_name`, `full_name_en`, `code_name`, `unit`, `postal_code_prefix`, `ward_count`, `crawled_at`. |
-| `GET /api/provinces/export` | Toàn bộ tỉnh thành thành file JSON tải về (`vn-provinces.json`), cùng các trường với `GET /api/provinces`. |
+| `GET /api/provinces/export` | Toàn bộ tỉnh thành thành file JSON tải về (`vn-provinces.json`), cùng các trường với `GET /api/provinces`. Thêm `with_wards=true` để mỗi tỉnh thành kèm mảng `wards` gồm các phường/xã trực thuộc (file `vn-provinces-wards.json`). |
 | `GET /api/provinces/wards` | Danh sách phường/xã xếp theo mã: `province_code` (chỉ một tỉnh thành), `search`, `page`, `page_size`. Mỗi dòng có `code`, `name`, `name_en`, `full_name`, `full_name_en`, `code_name`, `unit`, `postal_code`, `province_code`, `province_name`, `crawled_at`. |
 | `GET /api/provinces/wards/export` | Phường/xã của một tỉnh thành (`province_code`, file `vn-wards-<mã>.json`) hoặc của cả nước (`vn-wards.json`) thành file JSON tải về, cùng các trường với `GET /api/provinces/wards`. |
 | `POST /api/provinces/sync` | Tạo job đồng bộ lại danh mục tỉnh thành kèm phường/xã và trả về job ngay (201); đang đồng bộ thì 409 kèm `job_id`. Lịch sử là `GET /api/crawl/jobs?crawler=provinces`. |
