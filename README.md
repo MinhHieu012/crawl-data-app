@@ -108,7 +108,8 @@ Chưa build giao diện thì `serve` vẫn chạy và chỉ phục vụ API. D�
 > **Bảo mật.** API **không có đăng nhập**. Mặc định server chỉ nghe trên `127.0.0.1`, chỉ trả lời
 > request gọi đúng tên `127.0.0.1`/`localhost` (chặn DNS rebinding) và từ chối request ghi do website
 > khác gửi tới (chặn CSRF). `--host 0.0.0.0` mở server ra mạng: ai truy cập được đều điều khiển được
-> crawler và sửa được cấu hình — chỉ dùng trong mạng bạn tin tưởng.
+> crawler và sửa được cấu hình — chỉ dùng trong mạng bạn tin tưởng. Muốn chạy trên VPS mà không
+> cần tên miền: xem [hướng dẫn dùng Tailscale](docs/deploy-vps-tailscale.md).
 
 ### Các màn hình
 

@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      # Chỉ mở trên địa chỉ Tailscale của VPS (KHÔNG để 0.0.0.0): Docker bỏ qua ufw khi publish cổng.
+      - "${TAILSCALE_IP:?Đặt TAILSCALE_IP=$(tailscale ip -4) trong file .env cạnh compose.yaml}:8000:8000"
+    volumes:
+      - state:/srv/state   # .env, data/ (SQLite), logs/
+
+volumes:
+  state:
