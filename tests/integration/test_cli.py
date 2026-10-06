@@ -348,6 +348,28 @@ def test_export_json_keeps_metadata_and_real_chapter_numbers(run, site, tmp_path
     }
 
 
+def test_export_chapter_range_goes_to_its_own_file_named_after_the_chapters_in_it(
+    run, site, tmp_path
+):
+    root = site.add_novel("truyen-khoang", chapters=5)
+    run("crawl", "--url", root, "--to-chapter", "4")
+
+    code, out = run("export", "--format", "json", "--from-chapter", "2", "--to-chapter", "9")
+
+    assert code == 0
+    assert "Đã xuất 3 chương" in out
+    exports = tmp_path / "exports"
+    # Tên file theo chương thật sự có (2–4), không theo số người dùng gõ (2–9).
+    data = json.loads((exports / "truyen-khoang-c2-4.json").read_text(encoding="utf-8"))
+    assert [chapter["number"] for chapter in data["chapters"]] == [2, 3, 4]
+    assert not (exports / "truyen-khoang.json").exists()
+
+    code, out = run("export", "--from-chapter", "5")  # chương 5 chưa tải
+
+    assert code == 1
+    assert "trong khoảng này" in out
+
+
 def test_serve_starts_the_web_app_on_localhost_only_by_default(run, monkeypatch):
     started = []
     monkeypatch.setattr("uvicorn.run", lambda app, **options: started.append((app, options)))

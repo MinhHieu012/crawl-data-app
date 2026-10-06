@@ -36,6 +36,7 @@ from crawl_data_app.core.exceptions import (
 from crawl_data_app.core.models import CrawlRequest
 from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
 from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus
+from crawl_data_app.export import file_stem, novel_json, to_chapters
 from crawl_data_app.repository import NovelRepository
 from crawl_data_app.web.jobs import DuplicateJobError, JobManager
 from crawl_data_app.web.schemas import (
@@ -261,6 +262,32 @@ def create_app(
     ) -> Page[ChapterOut]:
         rows, total = repo.chapters_page(novel_id, status=status, **_window(page, page_size))
         return Page(items=[ChapterOut(**row._mapping) for row in rows], total=total)
+
+    @api.get("/novels/{novel_id}/export")
+    async def export_novel(
+        novel_id: int,
+        from_chapter: Annotated[int | None, Query(ge=1)] = None,
+        to_chapter: Annotated[int | None, Query(ge=1)] = None,
+    ) -> Response:
+        """Thông tin truyện kèm các chương đã tải thành file JSON tải về (cùng cấu trúc với
+        `export --format json`). Bỏ trống cả hai tham số = toàn bộ chương; có `from_chapter` /
+        `to_chapter` = chỉ các chương trong khoảng đó (tính cả hai đầu).
+        """
+        rows, _ = repo.novels_page(novel_id=novel_id)
+        if not rows:
+            raise ApiError(404, "not_found", f"Không có truyện #{novel_id}")
+        novel = rows[0][0]
+        chapters = to_chapters(repo.done_chapters(novel_id, from_chapter, to_chapter))
+        ranged = from_chapter is not None or to_chapter is not None
+        if not chapters:
+            where = " trong khoảng chương này" if ranged else ""
+            raise ApiError(404, "not_found", f"Truyện #{novel_id} chưa có chương nào đã tải{where}")
+        filename = f"{file_stem(novel, chapters, ranged=ranged)}.json"
+        return Response(
+            novel_json(novel, chapters),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @api.get("/novels/{novel_id}/chapters/{number}")
     async def get_chapter(novel_id: int, number: int) -> ChapterContent:

@@ -330,13 +330,22 @@ class NovelRepository:
                 )
             )
 
-    def done_chapters(self, novel_id: int) -> Sequence[Row]:
-        """Các chương đã tải của một truyện, theo thứ tự: (number, title, content, content_format)."""
+    def done_chapters(
+        self, novel_id: int, first: int | None = None, last: int | None = None
+    ) -> Sequence[Row]:
+        """Các chương đã tải của một truyện, theo thứ tự: (number, title, content, content_format).
+
+        `first`/`last` giới hạn theo số thứ tự chương (tính cả hai đầu); bỏ trống = không giới hạn.
+        """
         stmt = (
             select(Chapter.number, Chapter.title, Chapter.content, Chapter.content_format)
             .where(Chapter.novel_id == novel_id, Chapter.status == ChapterStatus.DONE)
             .order_by(Chapter.number)
         )
+        if first is not None:
+            stmt = stmt.where(Chapter.number >= first)
+        if last is not None:
+            stmt = stmt.where(Chapter.number <= last)
         with self._session_factory() as session:
             return session.execute(stmt).all()
 

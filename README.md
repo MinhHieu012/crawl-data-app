@@ -46,7 +46,7 @@ Muốn thao tác bằng giao diện thay cho dòng lệnh: `cd web && npm instal
 | `resume --url URL` | Lặp lại lần crawl gần nhất của truyện đó (cùng khoảng chương). |
 | `status` | Truyện đã lưu, số chương đã tải/lỗi, 10 lần crawl gần nhất. |
 | `status --errors` | Thêm danh sách chương đang lỗi kèm URL và nguyên nhân. |
-| `export` | Xuất các chương đã tải ra `exports/<slug>.txt`, mỗi truyện một file (UTF-8). `--format epub` để xuất EPUB 3 có mục lục, `--format json` để xuất thông tin truyện kèm từng chương dạng danh sách đoạn văn, `--novel-id ID` để chọn truyện (ID xem ở `status`), `--out DIR` để đổi thư mục. |
+| `export` | Xuất các chương đã tải ra `exports/<slug>.txt`, mỗi truyện một file (UTF-8). `--format epub` để xuất EPUB 3 có mục lục, `--format json` để xuất thông tin truyện kèm từng chương dạng danh sách đoạn văn, `--novel-id ID` để chọn truyện (ID xem ở `status`), `--out DIR` để đổi thư mục. Mặc định xuất toàn bộ chương đã tải; `--from-chapter N` / `--to-chapter M` chỉ xuất khoảng chương đó (tính cả hai đầu, bỏ một đầu = không giới hạn đầu đó), file mang tên `<slug>-c<đầu>-<cuối>.<định dạng>` theo chương thật sự có trong file. |
 | `aviation` | Đồng bộ danh mục hàng không (sân bay, hãng bay, thành phố, quốc gia) của mọi nguồn, lần lượt từng nguồn; in bảng số bản ghi theo loại. Mỗi nguồn là một job trong lịch sử, xem lại được ở trang Job của web UI. |
 | `aviation --source world` / `--source vna` | Chỉ một nguồn: `world` là dữ liệu mở toàn thế giới, `vna` là vietnamairlines.com (chỉ dùng cá nhân, phi thương mại). Lặp lại `--source` để chọn nhiều nguồn. |
 | `sources` | Các website truyện được hỗ trợ. |
@@ -137,7 +137,7 @@ Các tab của crawler **Truyện chữ** (`/crawlers/novel/stories/…`):
 |---|---|---|
 | Tổng quan | `overview` | Số truyện, số chương đã tải / chờ tải / lỗi; các job gần đây. |
 | Crawl | `crawl` | Tạo job: URL truyện, nguồn, phạm vi (toàn bộ / khoảng chương / chỉ thông tin), bỏ qua chương đã tải, thử lại chương lỗi. Tạo xong chuyển thẳng sang trang theo dõi job. |
-| Truyện | `novels`, `novels/:id` | Tìm theo tên hoặc tác giả (gõ không dấu cũng ra tên truyện), lọc theo nguồn và tình trạng, sắp xếp, phân trang. Chi tiết: thông tin truyện, danh sách chương theo trạng thái, tải chương còn thiếu / theo khoảng / tải lại một chương, lịch sử crawl. |
+| Truyện | `novels`, `novels/:id` | Tìm theo tên hoặc tác giả (gõ không dấu cũng ra tên truyện), lọc theo nguồn và tình trạng, sắp xếp, phân trang. Chi tiết: thông tin truyện, danh sách chương theo trạng thái, tải chương còn thiếu / theo khoảng, xuất JSON (toàn bộ chương hoặc một khoảng chương) / tải lại một chương, lịch sử crawl. |
 | Đọc chương | `novels/:id/chapters/:n` | Nội dung chương, chuyển chương trước / sau; chương chưa có thì tải ngay từ đây. |
 | Job | `jobs` | Cùng danh sách với trang Job chung (job của mọi crawler). |
 | Nguồn | `sources` | Bật / tắt từng website nguồn, kiểm tra kết nối, xem thông tin crawler và cấu hình HTTP đang áp dụng. |
@@ -204,6 +204,7 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `GET /api/novels/{id}` | Một truyện kèm số chương theo trạng thái. |
 | `GET /api/novels/{id}/chapters` | Mục lục đã lưu: `status`, `page`, `page_size`. |
 | `GET /api/novels/{id}/chapters/{number}` | Nội dung một chương, dạng danh sách đoạn văn. |
+| `GET /api/novels/{id}/export` | Thông tin truyện kèm các chương đã tải thành file JSON tải về (cùng cấu trúc với `export --format json`). Không tham số = toàn bộ chương (`<slug>.json`); `from_chapter` / `to_chapter` = một khoảng chương, tính cả hai đầu (`<slug>-c<đầu>-<cuối>.json`). Không có chương đã tải nào khớp thì 404 `not_found`. |
 | `POST /api/crawl/jobs` | Tạo job: `url`, `source`, `with_chapters`, `from_chapter`, `to_chapter`, `force`, `retry_failed`. |
 | `GET /api/crawl/jobs` | Danh sách job của mọi crawler: `status`, `novel_id`, `crawler` (`novel`, `aviation:world`, `aviation:vna`), `page`, `page_size`. Mỗi job có `crawler`, và `result` (số bản ghi theo loại) với job hàng không đã xong; các trường `chapters_*` đếm chương với job truyện và file với job hàng không. |
 | `GET /api/crawl/jobs/{id}` | Một job kèm tiến độ và chương vừa tải. |
@@ -566,11 +567,11 @@ Service, repository, CLI không phải sửa gì.
 ## Test, debug và lỗi thường gặp
 
 ```bash
-pytest                      # 184 test, ~18 giây, không có request mạng thật nào
+pytest                      # 186 test, ~18 giây, không có request mạng thật nào
 ruff check . && ruff format --check .
 
 cd web                      # frontend
-npm test                    # 37 test, ~12 giây, backend được giả lập
+npm test                    # 39 test, ~12 giây, backend được giả lập
 npm run lint && npm run typecheck && npm run format:check
 ```
 
@@ -709,6 +710,6 @@ liệt kê chương lỗi kèm URL.
 - "Kiểm tra kết nối" chỉ tải trang chủ của nguồn: xác nhận website truy cập được và `robots.txt` cho
   phép, **không** xác nhận parser còn khớp cấu trúc trang.
 - Tìm không dấu chỉ áp dụng cho tên truyện (dựa trên slug), chưa áp dụng cho tên tác giả.
-- Chưa có xoá truyện và xuất file từ giao diện (vẫn dùng lệnh `export`).
+- Chưa có xoá truyện từ giao diện. Giao diện chỉ xuất JSON; muốn `.txt` / `.epub` thì dùng lệnh `export`.
 - Bản build gồm một file JavaScript khoảng 630 kB (194 kB khi nén gzip), chưa tách theo từng trang.
 - Giao diện chỉ có tiếng Việt.
