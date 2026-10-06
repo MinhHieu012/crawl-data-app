@@ -120,9 +120,10 @@ test (ruff, pytest, eslint, tsc, vitest)
       → không healthy: chạy lại image cũ + database cũ, job báo đỏ
 ```
 
-Bước nào lỗi thì dừng ở đó; trước bước tạo lại container, bản đang chạy không bị đụng tới. Mỗi push/PR
-đều chạy test + build + chạy thử, nhưng **chỉ deploy khi đẩy tag `v*` hoặc bấm tay** — vì tạo lại
-container làm job crawl đang chạy bị ghi `interrupted` (bấm **Tiếp tục** trên giao diện sau khi deploy).
+Bước nào lỗi thì dừng ở đó; trước bước tạo lại container, bản đang chạy không bị đụng tới. Workflow
+**chỉ chạy khi code vào `main`** (push thẳng hoặc merge PR) và chạy trọn từ test tới deploy; PR và nhánh
+khác không kích hoạt gì, commit chỉ đổi `*.md` / `docs/` cũng được bỏ qua. Mỗi lần deploy tạo lại
+container nên job crawl đang chạy bị ghi `interrupted` (bấm **Tiếp tục** trên giao diện sau khi deploy).
 Thời gian gián đoạn mỗi lần deploy khoảng 5–10 giây.
 
 ### Cấu hình một lần
@@ -172,8 +173,8 @@ chưa có "bản trước" nên nếu hỏng sẽ không tự rollback được.
 Trên máy của bạn (cần [GitHub CLI](https://cli.github.com), hoặc bấm *Run workflow* ở tab Actions):
 
 ```bash
-gh workflow run deploy.yml --ref main                      # deploy commit mới nhất của main
-git tag v0.2.0 && git push origin v0.2.0                   # hoặc: deploy theo tag phiên bản
+git push origin main                                       # code vào main là tự test → build → deploy
+gh workflow run deploy.yml --ref main                      # deploy lại bằng tay commit mới nhất của main
 gh run watch                                               # theo dõi
 gh workflow run deploy.yml --ref main -f rollback=true     # quay về image chạy ngay trước đó
 ```

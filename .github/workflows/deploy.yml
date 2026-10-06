@@ -1,13 +1,12 @@
 name: CI/CD
 
-# Mọi push/PR: test + build image + chạy thử image.
-# Chỉ deploy khi: đẩy tag v* hoặc bấm tay (workflow_dispatch). Không tự deploy mỗi lần push main vì
-# tạo lại container sẽ ngắt job crawl đang chạy.
+# Chỉ chạy khi code vào main (push thẳng hoặc merge PR): test → build → chạy thử image → push GHCR → deploy.
+# Commit chỉ đổi tài liệu thì bỏ qua, vì deploy tạo lại container và ngắt job crawl đang chạy.
+# workflow_dispatch giữ lại để rollback và deploy lại bằng tay.
 on:
   push:
     branches: [main]
-    tags: ["v*"]
-  pull_request:
+    paths-ignore: ["**.md", "docs/**"]
   workflow_dispatch:
     inputs:
       rollback:
@@ -84,23 +83,15 @@ jobs:
           [ "$status" = healthy ]
           docker exec smoke python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/', timeout=5)"
       - name: Đẩy lên GHCR
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker push "${{ steps.image.outputs.ref }}"
-          if [ "$GITHUB_REF_TYPE" = tag ]; then
-            versioned="ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_REF_NAME"
-            docker tag "${{ steps.image.outputs.ref }}" "$versioned"
-            docker push "$versioned"
-          fi
 
   deploy:
     needs: build
     # Rollback thì build bị bỏ qua; còn lại chỉ chạy khi test + build + chạy thử đều qua.
     if: >-
-      ${{ !cancelled()
-          && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v'))
-          && (inputs.rollback || needs.build.result == 'success') }}
+      ${{ !cancelled() && (inputs.rollback || needs.build.result == 'success') }}
     runs-on: ubuntu-latest
     environment: production
     concurrency: deploy-production

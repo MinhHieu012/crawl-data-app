@@ -367,7 +367,7 @@ Hướng dẫn từng bước (cài đặt, secret, vận hành, gỡ lỗi): [d
 Phần này chỉ tóm tắt cách các mảnh ghép với nhau.
 
 ```text
-git push tag v*  /  gh workflow run deploy.yml
+push / merge vào main  (hoặc bấm tay: gh workflow run deploy.yml)
         ▼
 GitHub Actions (.github/workflows/deploy.yml)
   test (ruff, pytest, eslint, tsc, prettier, vitest)
@@ -384,7 +384,7 @@ VPS (deploy.sh): pull → sao lưu SQLite → tạo lại container → chờ he
 | `Dockerfile` | Build giao diện (Node) rồi đóng gói vào image Python; `HEALTHCHECK` gọi `GET /api/stats` (API trả lời + đọc được database). |
 | `compose.yaml` | Dịch vụ `app` (cổng 8000 chỉ bind vào IP Tailscale của VPS, volume `state` giữ `.env`, `data/`, `logs/`) và dịch vụ tuỳ chọn `public` (cửa công khai). |
 | `deploy.sh` | Chạy trên VPS: triển khai một image hoặc `rollback`; tự quay về bản trước khi bản mới không healthy. |
-| `.github/workflows/deploy.yml` | Mọi push/PR: test + build + chạy thử. Chỉ **deploy** khi đẩy tag `v*` hoặc bấm tay. |
+| `.github/workflows/deploy.yml` | Chỉ chạy khi code vào `main` (push hoặc merge PR; bỏ qua commit chỉ đổi `*.md` / `docs/`) hoặc bấm tay: test → build → chạy thử → **deploy**. |
 
 ```bash
 gh workflow run deploy.yml --ref main                      # deploy commit mới nhất của main
@@ -521,7 +521,7 @@ không biết gì về mạng hay database; repository không biết gì về HT
 | Cấu hình sửa trên web ghi vào `.env` | Một nguồn cấu hình duy nhất cho cả dòng lệnh lẫn web; không thêm bảng cấu hình trong database. |
 | Deploy bằng GitHub Actions + GHCR, image gắn tag theo commit | Repo đã ở GitHub; khoá SSH và quyền push chỉ nằm trong GitHub Secrets. Tag theo commit thì biết chính xác bản đang chạy và rollback được về đúng bản cũ. |
 | Tạo lại container, **không** blue-green | SQLite là một file và job nằm trong bộ nhớ tiến trình nên không chạy song song hai bản được. Đổi lại gián đoạn chỉ vài giây. |
-| Chỉ deploy khi đẩy tag `v*` hoặc bấm tay | Tạo lại container ngắt job crawl đang chạy; không nên xảy ra sau mỗi lần push. |
+| Tự deploy mỗi lần code vào `main`, PR/nhánh khác không chạy gì | `main` luôn khớp với bản đang chạy, không phải nhớ gắn tag hay bấm tay. Giá phải trả: mỗi lần deploy ngắt job crawl đang chạy (bấm **Tiếp tục**), nên commit chỉ đổi tài liệu được bỏ qua. |
 | Health check dùng lại `GET /api/stats` | Endpoint có sẵn, đã chạm tới database; không thêm endpoint chỉ để kiểm tra. |
 | Tailscale thay vì mở cổng ra internet | API không có đăng nhập. Cổng 8000 chỉ bind vào IP Tailscale nên không cần tên miền, chứng chỉ hay tường lửa riêng cho app. |
 | Cửa công khai là một proxy Caddy chặn theo đường dẫn, không phải đăng nhập trong app | Phân biệt "chủ máy" và "khách" bằng lối vào (cổng Tailscale / Funnel) nên không phải thêm tài khoản, mật khẩu, phiên đăng nhập vào code. Giá phải trả: thêm endpoint ghi cấu hình thì phải thêm vào danh sách chặn trong `compose.yaml`. |

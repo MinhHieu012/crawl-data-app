@@ -100,7 +100,7 @@ Nguồn hàng không mới: thêm parser (hàm thuần trả `list[Record]`) + h
 
 Chi tiết: [docs/deploy-vps-tailscale.md](docs/deploy-vps-tailscale.md) và mục "Triển khai lên VPS" trong README.
 
-- **Luồng**: `.github/workflows/deploy.yml` — job `test` → `build` (build + chạy thử image, push `ghcr.io/minhhieu012/crawl-data-app:<12 ký tự commit>`) → `deploy` (scp `compose.yaml` + `deploy.sh` lên VPS, chạy `sh deploy.sh <image>`). Push/PR chỉ chạy test + build; **deploy chỉ khi đẩy tag `v*` hoặc `workflow_dispatch`** (tạo lại container làm job đang chạy thành `interrupted`).
+- **Luồng**: `.github/workflows/deploy.yml` — job `test` → `build` (build + chạy thử image, push `ghcr.io/minhhieu012/crawl-data-app:<12 ký tự commit>`) → `deploy` (scp `compose.yaml` + `deploy.sh` lên VPS, chạy `sh deploy.sh <image>`). **Chỉ chạy khi code vào `main`** (push/merge PR; bỏ qua commit chỉ đổi `*.md` / `docs/`) hoặc `workflow_dispatch`, và luôn chạy tới deploy — PR/nhánh khác không kích hoạt gì (tạo lại container làm job đang chạy thành `interrupted`).
 - **`deploy.sh`**: ghi `APP_IMAGE` vào `.env` cạnh `compose.yaml`, `docker compose up --wait` dựa vào `HEALTHCHECK`; không healthy thì khôi phục `data/pre-deploy.db` và chạy lại image cũ, thoát mã 1. `.previous-image` giữ bản trước; `sh deploy.sh rollback` quay về đó (không khôi phục DB).
 - **Hai file `.env`**: cạnh `compose.yaml` trên VPS là của Compose (`TAILSCALE_IP`, `APP_IMAGE`, `COMPOSE_PROFILES`); cấu hình app nằm trong volume `crawl-data-app_state` (`/srv/state/.env`).
 - **Truy cập**: cổng 8000 chỉ bind IP Tailscale = toàn quyền (chủ máy). Dịch vụ `public` (Caddy, `COMPOSE_PROFILES=public`, ra internet bằng `tailscale funnel --bg 8080`) cho khách dùng mọi thứ **trừ** `PUT /api/settings` và `PUT /api/sources/*` (403 `owner_only`, do proxy trả, không phải `ApiError` của app).
@@ -147,11 +147,12 @@ Chạy lệnh từ thư mục gốc (đường dẫn mặc định `data/`, `log
 Không có lệnh "run production" riêng ngoài `serve`.
 
 **Deploy lên VPS** ("build Docker image rồi deploy lên VPS"): không build/push/SSH từ máy cá nhân — secret chỉ nằm ở GitHub.
-Kiểm tra cây làm việc sạch và commit đã được đẩy, rồi chạy workflow và theo dõi tới khi xong; báo lại đúng kết quả
+Đẩy code vào `main` là workflow tự chạy (đừng `gh workflow run` thêm — sẽ deploy hai lần); chỉ chạy tay khi cần deploy lại
+hoặc commit chỉ đổi tài liệu. Kiểm tra cây làm việc sạch và commit đã được đẩy, rồi theo dõi tới khi xong; báo lại đúng kết quả
 (job `deploy` đỏ = VPS đã tự quay về bản cũ). Chi tiết: [docs/deploy-vps-tailscale.md](docs/deploy-vps-tailscale.md).
 
 ```bash
-gh workflow run deploy.yml --ref main                 # test → build → chạy thử → push GHCR → deploy → health check
+gh workflow run deploy.yml --ref main                 # deploy lại bằng tay: test → build → chạy thử → push GHCR → deploy → health check
 gh run watch --exit-status "$(gh run list --workflow deploy.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh workflow run deploy.yml --ref main -f rollback=true   # quay về image chạy ngay trước đó
 ```
