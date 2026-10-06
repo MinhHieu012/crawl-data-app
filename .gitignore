@@ -13,6 +13,7 @@ node_modules/
 
 # Cấu hình cục bộ và dữ liệu sinh ra khi chạy
 .env
-data/
-logs/
-exports/
+# Neo vào gốc repo: `logs/` không neo từng nuốt mất web/src/pages/logs/.
+/data/
+/logs/
+/exports/
