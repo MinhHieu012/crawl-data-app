@@ -118,8 +118,9 @@ jobs:
           VPS_PORT: ${{ vars.VPS_PORT || '22' }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
-          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # tr: secret nạp từ Windows hay dính CRLF, ssh sẽ không đọc được khoá.
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
           printf 'Host vps\n  HostName %s\n  User %s\n  Port %s\n' "$VPS_HOST" "$VPS_USER" "$VPS_PORT" > ~/.ssh/config
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/config
       - name: Deploy (tự rollback nếu bản mới không healthy)
