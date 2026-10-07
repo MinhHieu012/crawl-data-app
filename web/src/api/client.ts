@@ -1,6 +1,8 @@
 // Một cửa duy nhất để gọi backend: ghép URL, đặt timeout và đổi mọi kiểu thất bại
 // (mất mạng, quá hạn, 4xx, 5xx) thành `ApiError` có câu thông báo đọc được cho người dùng.
 
+import i18n, { type I18nKey } from '../i18n'
+
 export const BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
 const DEFAULT_TIMEOUT_MS = 15_000
 
@@ -62,14 +64,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     })
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === 'TimeoutError') {
-      throw new ApiError('Máy chủ phản hồi quá lâu. Kiểm tra backend rồi thử lại.', {
-        kind: 'timeout',
-      })
+      throw new ApiError(i18n.t('api.timeout'), { kind: 'timeout' })
     }
-    throw new ApiError(
-      'Không kết nối được tới máy chủ. Kiểm tra backend (crawl-data-app serve) có đang chạy không.',
-      { kind: 'network' },
-    )
+    throw new ApiError(i18n.t('api.network'), { kind: 'network' })
   }
   if (!response.ok) throw await toApiError(response)
   return (await response.json()) as T
@@ -91,7 +88,10 @@ async function toApiError(response: Response): Promise<ApiError> {
   let message: string | undefined
 
   if (typeof data.detail === 'string') {
-    message = data.detail
+    // ponytail: backend chỉ viết `detail` bằng tiếng Việt; ngôn ngữ khác dùng câu chung theo `code`
+    // (mất chi tiết như số job, tên nguồn). Nâng cấp: backend dịch `detail` theo Accept-Language.
+    const key = `api.codes.${String(data.code)}`
+    message = i18n.language !== 'vi' && i18n.exists(key) ? i18n.t(key as I18nKey) : data.detail
   } else if (Array.isArray(data.detail)) {
     // Lỗi kiểm tra dữ liệu của FastAPI: [{ loc: ["body", "http", "request_delay"], msg: "..." }]
     for (const item of data.detail) {
@@ -102,7 +102,7 @@ async function toApiError(response: Response): Promise<ApiError> {
     const lines = Object.entries(fields).map(([field, text]) =>
       field ? `${field}: ${text}` : text,
     )
-    message = `Dữ liệu gửi lên không hợp lệ — ${lines.join('; ')}`
+    message = i18n.t('api.invalid', { details: lines.join('; ') })
   }
 
   return new ApiError(message ?? fallbackMessage(response.status), {
@@ -115,10 +115,10 @@ async function toApiError(response: Response): Promise<ApiError> {
 }
 
 function fallbackMessage(status: number): string {
-  if (status === 404) return 'Không tìm thấy dữ liệu được yêu cầu.'
+  if (status === 404) return i18n.t('api.codes.not_found')
   if (status === 502 || status === 503 || status === 504) {
-    return `Không liên lạc được với backend (HTTP ${status}). Kiểm tra crawl-data-app serve có đang chạy không.`
+    return i18n.t('api.unreachable', { status })
   }
-  if (status >= 500) return `Máy chủ gặp lỗi (HTTP ${status}). Xem log của backend rồi thử lại.`
-  return `Yêu cầu không thực hiện được (HTTP ${status}).`
+  if (status >= 500) return i18n.t('api.serverError', { status })
+  return i18n.t('api.failed', { status })
 }

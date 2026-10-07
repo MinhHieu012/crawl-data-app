@@ -123,6 +123,10 @@ Giao diện đi theo ba tầng **crawler → loại dữ liệu → tab**. Mỗi
 Airlines…) là một module độc lập; module nhiều loại dữ liệu có trang tổng quan riêng, module một loại
 thì vào thẳng khu vực quản lý. Job, log và cài đặt là trang chung của cả hệ thống.
 
+Giao diện có **tiếng Việt và tiếng Anh**. Lần đầu mở, ngôn ngữ lấy theo ngôn ngữ của máy (trình duyệt):
+máy tiếng Việt thì hiện tiếng Việt, còn lại hiện tiếng Anh. Nút đổi ngôn ngữ nằm ở góc trên bên phải,
+cạnh nút sáng/tối; lựa chọn được nhớ lại cho những lần sau.
+
 | Màn hình | Đường dẫn | Nội dung |
 |---|---|---|
 | Tổng quan | `/` | Số crawler, số job theo trạng thái; các job gần đây kèm thanh tiến độ. |
@@ -235,7 +239,8 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `GET /api/settings` · `PUT /api/settings` | Đọc / lưu cấu hình. |
 
 Danh sách có phân trang trả về `{"items": [...], "total": N}`. Thời gian là UTC kèm múi giờ (`...Z`),
-giao diện tự đổi sang giờ máy. Lỗi luôn có dạng `{"code": "...", "detail": "câu thông báo tiếng Việt"}`:
+giao diện tự đổi sang giờ máy. Lỗi luôn có dạng `{"code": "...", "detail": "câu thông báo tiếng Việt"}`
+(giao diện tiếng Việt hiện nguyên `detail`; ngôn ngữ khác hiện câu của chính nó theo `code`):
 
 | HTTP | `code` | Khi nào |
 |---|---|---|
@@ -283,6 +288,8 @@ web/src/
 ├── main.tsx           các provider: Mantine (giao diện), TanStack Query (dữ liệu), router
 ├── App.tsx            bảng định tuyến — route của khu vực Crawler sinh từ crawlers/registry.tsx
 ├── theme.ts           theme Mantine: màu chữ đủ tương phản, mặc định của Badge / Switch / ô số
+├── i18n.ts            đa ngôn ngữ (i18next): chọn ngôn ngữ theo máy, nhớ lựa chọn, kiểu của khoá dịch
+├── locales/           vi.json (bản gốc) · en.json — mọi chữ hiển thị của giao diện
 ├── api/
 │   ├── client.ts      một cửa gọi backend: ghép URL, timeout, đổi mọi lỗi thành ApiError đọc được
 │   ├── types.ts       kiểu dữ liệu, phản chiếu src/crawl_data_app/web/schemas.py
@@ -290,7 +297,7 @@ web/src/
 ├── crawlers/
 │   ├── registry.tsx   danh mục crawler: module → loại dữ liệu → tab; menu, thẻ và route sinh từ đây
 │   └── paths.ts       đường dẫn của khu vực Crawler, dùng chung cho registry và các trang
-├── layouts/           AppLayout: thanh trên, menu trái, nút sáng/tối, số job đang chạy ·
+├── layouts/           AppLayout: thanh trên, menu trái, nút ngôn ngữ, nút sáng/tối, số job đang chạy ·
 │                      CategoryLayout: tiêu đề, breadcrumb và các tab của một loại dữ liệu
 ├── pages/<màn hình>/  dashboard · crawlers · crawl · jobs · novels · sources · aviation · provinces · logs · settings
 ├── components/        QueryState (đang tải / lỗi / trống) · PageHeader (breadcrumb) · JobsTable ·
@@ -307,7 +314,8 @@ Ba loại state được tách riêng, không có thư viện store nào:
   state của component. Thao tác ghi xong thì hook tự làm mới các truy vấn liên quan; `useJobActivity`
   ở layout phát hiện job vừa kết thúc và làm mới truyện, thống kê, log dù đang ở trang nào.
 - **State của giao diện** — bộ lọc và số trang nằm trên URL (`useUrlState`); sáng/tối do Mantine lưu ở
-  `localStorage`; còn lại (hộp thoại đang mở, công tắc "tự làm mới") là `useState` tại chỗ.
+  `localStorage`, ngôn ngữ đã chọn cũng vậy (khoá `language`, do `i18n.ts` đọc/ghi); còn lại (hộp thoại
+  đang mở, công tắc "tự làm mới") là `useState` tại chỗ.
 - **State của form** — `@mantine/form` (form crawl, cài đặt, khoảng chương). Lỗi theo trường mà
   backend trả về (HTTP 422) được gắn lại đúng ô nhập.
 
@@ -316,6 +324,14 @@ Không có logic crawl nào ở frontend: nhận diện website, chuẩn hoá UR
 
 ### Quy ước giao diện
 
+- **Chữ hiển thị nằm trong `locales/vi.json` và `locales/en.json`**, không viết thẳng trong trang.
+  Component gọi `const { t } = useTranslation()` rồi `t('nhom.khoa')`; hàm thuần ngoài component
+  (`utils/format.ts`, `api/client.ts`) gọi `i18n.t`. Câu có chèn thẻ (chữ đậm, link) dùng `<Trans>`.
+  Hằng số ở cấp module (registry, bảng trạng thái) chỉ giữ **khoá** kiểu `I18nKey` và dịch lúc hiển
+  thị — gọi `t()` ngay ở cấp module thì chữ không đổi theo khi người dùng đổi ngôn ngữ. Kiểu của khoá
+  lấy từ `vi.json` nên gõ sai khoá là `npm run typecheck` báo; `i18n.test.ts` kiểm tra hai file có
+  cùng bộ khoá. Tiếng Anh cần dạng số ít/số nhiều thì thêm hậu tố `_one` / `_other` cho khoá đó.
+  Ngày giờ và số định dạng theo ngôn ngữ đang chọn (`utils/format.ts`).
 - **Màu và cỡ chữ lấy từ theme**, không viết mã màu hay số bo góc trong trang. `theme.ts` tính lại màu
   chữ của Mantine để đạt 4.5:1 (`theme.test.ts` kiểm tra); đổi màu thương hiệu thì sửa `primaryColor`.
 - **Bảng không cuộn ngang.** Bảng nhiều cột dùng `useMatches` để bỏ cột phụ ở màn hẹp và đưa thông tin
@@ -340,10 +356,11 @@ Không có logic crawl nào ở frontend: nhận diện website, chuẩn hoá UR
 2. **Kiểu và hook:** khai báo kiểu ở `web/src/api/types.ts`, thêm hook `useXxx` ở
    `web/src/api/queries.ts` (thao tác ghi thì nhớ `invalidateQueries` những gì bị ảnh hưởng).
 3. **Trang:** tạo `web/src/pages/<ten>/<Ten>Page.tsx`, mở đầu bằng `PageHeader` và bọc phần dữ liệu
-   trong `QueryState` để có sẵn trạng thái đang tải / lỗi / trống.
+   trong `QueryState` để có sẵn trạng thái đang tải / lỗi / trống. Chữ của trang thêm vào cả
+   `locales/vi.json` lẫn `locales/en.json`.
 4. **Định tuyến:** trang của một crawler thì thêm một dòng vào `sections` (tab) hoặc `pages` (trang
    con) của loại dữ liệu tương ứng trong `web/src/crawlers/registry.tsx`. Trang chung của hệ thống thì
-   thêm một `<Route>` trong `web/src/App.tsx` và một dòng trong `NAVIGATION` của
+   thêm một `<Route>` trong `web/src/App.tsx` và một dòng trong `navigation` của
    `web/src/layouts/AppLayout.tsx`.
 5. **Test:** viết `<Ten>Page.test.tsx` cạnh trang, dùng `mockApi` và `renderPage` trong
    `web/src/test/utils.tsx`.
@@ -351,23 +368,24 @@ Không có logic crawl nào ở frontend: nhận diện website, chuẩn hoá UR
 ### Thêm một crawler vào giao diện
 
 Thêm một phần tử vào `CRAWLER_MODULES` trong `web/src/crawlers/registry.tsx`; không phải sửa layout,
-menu hay bảng định tuyến:
+menu hay bảng định tuyến. Tên, mô tả và nhãn tab là **khoá dịch** — thêm chữ tương ứng vào nhóm
+`registry` của `locales/vi.json` và `locales/en.json`:
 
 ```tsx
 {
   id: 'booking',                    // thành đường dẫn /crawlers/booking
-  name: 'Booking',
-  description: 'Dữ liệu khách sạn và chuyến bay.',
+  name: 'registry.booking.name',    // vi: "Booking"
+  description: 'registry.booking.description',
   icon: IconBed,
   categories: [
     {
       id: 'hotel',                  // /crawlers/booking/hotel
-      name: 'Khách sạn',
-      description: 'Danh mục khách sạn.',
+      name: 'registry.booking.hotel.name',
+      description: 'registry.booking.hotel.description',
       icon: IconBed,
       Summary: HotelSummary,        // tuỳ chọn: một dòng số liệu thật trên thẻ
       sections: [                   // mỗi tab một trang; bỏ trống khi backend chưa có crawler
-        { path: 'data', label: 'Dữ liệu', element: <HotelsPage /> },
+        { path: 'data', label: 'registry.tabs.data', element: <HotelsPage /> },
       ],
       pages: [{ path: 'data/:id', element: <HotelDetailPage /> }],
     },
@@ -593,7 +611,7 @@ pytest                      # 202 test, ~20 giây, không có request mạng th�
 ruff check . && ruff format --check .
 
 cd web                      # frontend
-npm test                    # 40 test, ~12 giây, backend được giả lập
+npm test                    # 43 test, ~15 giây, backend được giả lập
 npm run lint && npm run typecheck && npm run format:check
 ```
 
@@ -610,7 +628,9 @@ chạy thử image. Test phải qua trên cả Windows lẫn Linux (cẩn thận
   chặn request từ website khác.
 - `web/src/**/*.test.ts(x)` — lớp gọi API (mất mạng, quá hạn, 4xx, 422, 5xx), form tạo job (kiểm tra
   dữ liệu, nội dung gửi đi, lỗi trùng job / website chưa hỗ trợ), trang job (tiến độ tự cập nhật, tạm
-  dừng, huỷ có xác nhận, thử lại), danh sách truyện (tìm kiếm, lọc, phân trang, trống, lỗi).
+  dừng, huỷ có xác nhận, thử lại), danh sách truyện (tìm kiếm, lọc, phân trang, trống, lỗi), đa ngôn
+  ngữ (hai bảng dịch cùng bộ khoá, chọn ngôn ngữ theo máy, nút đổi ngôn ngữ đổi chữ tại chỗ). Các test
+  giao diện chạy ở tiếng Việt (`test/setup.ts`).
 
 Debug: đặt `LOG_LEVEL=DEBUG` để thấy từng request. `logs/crawler.log` là JSON Lines (mỗi dòng một sự
 kiện, có trường `url` ở các dòng lỗi) nên lọc được bằng `jq`/`findstr`. `crawl-data-app status --errors`
@@ -747,5 +767,8 @@ liệt kê chương lỗi kèm URL.
   phép, **không** xác nhận parser còn khớp cấu trúc trang.
 - Tìm không dấu chỉ áp dụng cho tên truyện (dựa trên slug), chưa áp dụng cho tên tác giả.
 - Chưa có xoá truyện từ giao diện. Giao diện chỉ xuất JSON; muốn `.txt` / `.epub` thì dùng lệnh `export`.
-- Bản build gồm một file JavaScript khoảng 630 kB (194 kB khi nén gzip), chưa tách theo từng trang.
-- Giao diện chỉ có tiếng Việt.
+- Bản build gồm một file JavaScript khoảng 790 kB (241 kB khi nén gzip), chưa tách theo từng trang;
+  bảng dịch của mọi ngôn ngữ nằm chung trong file đó.
+- Giao diện có tiếng Việt và tiếng Anh, nhưng chữ do backend sinh ra (lý do job dừng, dòng log, mô tả
+  nguồn, kết quả kiểm tra kết nối) và CLI chỉ có tiếng Việt. Lỗi API ở giao diện tiếng Anh là câu
+  chung theo `code`, không kèm chi tiết như số job hay tên nguồn.

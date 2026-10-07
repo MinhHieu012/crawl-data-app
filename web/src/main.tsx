@@ -11,6 +11,7 @@ import { BrowserRouter } from 'react-router'
 
 import { createQueryClient } from './api/queries'
 import { App } from './App'
+import './i18n'
 import { cssVariablesResolver, theme } from './theme'
 
 const queryClient = createQueryClient()

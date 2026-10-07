@@ -10,6 +10,7 @@ import {
   useMatches,
 } from '@mantine/core'
 import { IconDownload } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { BASE_URL } from '../../api/client'
@@ -26,8 +27,6 @@ const WARDS_PAGE_SIZE = 50
 /** Tab "Phường/xã", lọc sẵn theo một tỉnh thành. */
 const wardsPath = (provinceCode: string) =>
   `${categoryPath('provinces', 'vietnam')}/wards?province=${provinceCode}`
-const SOURCE_NOTE =
-  'Lấy từ bộ dữ liệu mở vietnamese-provinces-database (giấy phép MIT), theo địa giới sau sáp nhập năm 2025.'
 
 /** Nút đồng bộ: quay vòng suốt lúc job đồng bộ còn chạy — kể cả job tạo từ tab khác. */
 function SyncButton({ variant }: { variant?: string }) {
@@ -38,12 +37,13 @@ function SyncButton({ variant }: { variant?: string }) {
 
 /** Dòng số liệu trên thẻ của crawler ở các trang tổng quan. */
 export function ProvinceSummaryLine() {
+  const { t } = useTranslation()
   const { data, isError } = useProvinceSummary()
 
   if (!data) {
     return isError ? (
       <Text size="sm" c="red">
-        Không tải được số liệu
+        {t('common.statsError')}
       </Text>
     ) : (
       <Skeleton height={20} width={220} />
@@ -53,13 +53,14 @@ export function ProvinceSummaryLine() {
     <Text size="sm">
       {data.count > 0
         ? recordCounts({ province: data.count, ward: data.ward_count })
-        : 'Chưa đồng bộ lần nào'}
+        : t('sync.never')}
     </Text>
   )
 }
 
 /** Tab dữ liệu: bảng 34 tỉnh, thành phố. Cả danh mục nằm trên một trang nên không có phân trang. */
 export function ProvincesPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useUrlState({ search: '' })
   const provinces = useProvinces(filters.search)
   const summary = useProvinceSummary()
@@ -70,10 +71,10 @@ export function ProvincesPage() {
   return (
     <>
       <PageHeader
-        title="Tỉnh thành"
+        title={t('registry.tabs.provinces')}
         description={
           <>
-            {SOURCE_NOTE} <LastJobNote job={lastJob} />
+            {t('provinces.sourceNote')} <LastJobNote job={lastJob} />
           </>
         }
         actions={
@@ -87,7 +88,7 @@ export function ProvincesPage() {
                 variant="default"
                 leftSection={<IconDownload size={16} />}
               >
-                Xuất JSON
+                {t('common.exportJson')}
               </Button>
             )}
             {/* Một file cho cả hai cấp: mỗi tỉnh thành kèm mảng phường/xã trực thuộc. */}
@@ -99,7 +100,7 @@ export function ProvincesPage() {
                 variant="default"
                 leftSection={<IconDownload size={16} />}
               >
-                Xuất JSON kèm phường/xã
+                {t('provinces.exportWithWards')}
               </Button>
             )}
             <SyncButton />
@@ -111,8 +112,8 @@ export function ProvincesPage() {
           <SearchInput
             value={filters.search}
             onSearch={(search) => setFilters({ search })}
-            label="Tìm tỉnh thành"
-            placeholder="Mã hoặc tên, gõ không dấu cũng được"
+            label={t('provinces.search')}
+            placeholder={t('common.searchByCodeOrName')}
           />
         </Group>
         <QueryState
@@ -121,18 +122,15 @@ export function ProvincesPage() {
           empty={
             filters.search ? (
               <EmptyState
-                title="Không có tỉnh thành nào khớp"
-                description="Thử mã hoặc tên khác."
+                title={t('provinces.noMatch')}
+                description={t('common.tryOtherCodeOrName')}
               />
             ) : lastJob?.status === 'running' ? (
-              <EmptyState
-                title="Đang đồng bộ lần đầu"
-                description="Dữ liệu sẽ hiện ở đây khi job chạy xong."
-              />
+              <EmptyState title={t('sync.firstTitle')} description={t('sync.firstDescription')} />
             ) : (
               <EmptyState
-                title="Chưa có dữ liệu"
-                description="Bấm Đồng bộ để tải danh mục tỉnh thành kèm phường/xã (một request)."
+                title={t('common.noData')}
+                description={t('provinces.emptyDescription')}
                 action={<SyncButton variant="light" />}
               />
             )
@@ -142,12 +140,12 @@ export function ProvincesPage() {
             <Table verticalSpacing="sm" highlightOnHover layout="fixed">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th w={72}>Mã</Table.Th>
-                  <Table.Th>Tên</Table.Th>
-                  {wide && <Table.Th>Tên tiếng Anh</Table.Th>}
-                  {wide && <Table.Th w={110}>Phường/xã</Table.Th>}
-                  {wide && <Table.Th>Đầu mã bưu chính</Table.Th>}
-                  {wide && <Table.Th w={150}>Cập nhật</Table.Th>}
+                  <Table.Th w={72}>{t('common.code')}</Table.Th>
+                  <Table.Th>{t('common.name')}</Table.Th>
+                  {wide && <Table.Th>{t('common.englishName')}</Table.Th>}
+                  {wide && <Table.Th w={110}>{t('registry.tabs.wards')}</Table.Th>}
+                  {wide && <Table.Th>{t('provinces.postalPrefix')}</Table.Th>}
+                  {wide && <Table.Th w={150}>{t('common.updated')}</Table.Th>}
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -164,7 +162,7 @@ export function ProvincesPage() {
                       </Text>
                       {!wide && (
                         <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
-                          {province.full_name_en} · {formatNumber(province.ward_count)} phường/xã
+                          {province.full_name_en} · {recordCounts({ ward: province.ward_count })}
                         </Text>
                       )}
                     </Table.Td>
@@ -197,6 +195,7 @@ export function ProvincesPage() {
 
 /** Tab "Phường/xã": phường, xã, đặc khu của cả nước hoặc của một tỉnh thành. */
 export function WardsPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useUrlState({ search: '', province: '', page: '1' })
   const page = Number(filters.page) || 1
   const wards = useWards({
@@ -211,7 +210,7 @@ export function WardsPage() {
   const wide = useMatches({ base: false, md: true }, { getInitialValueInEffect: false })
   const lastJob = summary.data?.last_job
   const provinceOptions = [
-    { value: '', label: 'Cả nước' },
+    { value: '', label: t('wards.allProvinces') },
     ...(provinces.data?.items ?? []).map((item) => ({ value: item.code, label: item.full_name })),
   ]
   const exportQuery = filters.province ? `?province_code=${filters.province}` : ''
@@ -219,11 +218,10 @@ export function WardsPage() {
   return (
     <>
       <PageHeader
-        title="Phường/xã"
+        title={t('registry.tabs.wards')}
         description={
           <>
-            Phường, xã và đặc khu — cấp ngay dưới tỉnh thành. {SOURCE_NOTE}{' '}
-            <LastJobNote job={lastJob} />
+            {t('wards.description')} {t('provinces.sourceNote')} <LastJobNote job={lastJob} />
           </>
         }
         actions={
@@ -237,7 +235,7 @@ export function WardsPage() {
                 variant="default"
                 leftSection={<IconDownload size={16} />}
               >
-                Xuất JSON
+                {t('common.exportJson')}
               </Button>
             )}
             <SyncButton />
@@ -249,11 +247,11 @@ export function WardsPage() {
           <SearchInput
             value={filters.search}
             onSearch={(search) => setFilters({ search })}
-            label="Tìm phường/xã"
-            placeholder="Mã hoặc tên, gõ không dấu cũng được"
+            label={t('wards.search')}
+            placeholder={t('common.searchByCodeOrName')}
           />
           <NativeSelect
-            aria-label="Lọc theo tỉnh thành"
+            aria-label={t('wards.filterProvince')}
             data={provinceOptions}
             value={filters.province}
             onChange={(event) => setFilters({ province: event.currentTarget.value })}
@@ -265,18 +263,15 @@ export function WardsPage() {
           empty={
             filters.search || filters.province ? (
               <EmptyState
-                title="Không có phường/xã nào khớp"
-                description="Thử mã, tên hoặc tỉnh thành khác."
+                title={t('wards.noMatch.title')}
+                description={t('wards.noMatch.description')}
               />
             ) : lastJob?.status === 'running' ? (
-              <EmptyState
-                title="Đang đồng bộ lần đầu"
-                description="Dữ liệu sẽ hiện ở đây khi job chạy xong."
-              />
+              <EmptyState title={t('sync.firstTitle')} description={t('sync.firstDescription')} />
             ) : (
               <EmptyState
-                title="Chưa có dữ liệu"
-                description="Bấm Đồng bộ để tải danh mục tỉnh thành kèm phường/xã (một request)."
+                title={t('common.noData')}
+                description={t('provinces.emptyDescription')}
                 action={<SyncButton variant="light" />}
               />
             )
@@ -287,12 +282,12 @@ export function WardsPage() {
               <Table verticalSpacing="sm" highlightOnHover layout="fixed">
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th w={84}>Mã</Table.Th>
-                    <Table.Th>Tên</Table.Th>
-                    {wide && <Table.Th>Tên tiếng Anh</Table.Th>}
-                    {wide && <Table.Th>Tỉnh thành</Table.Th>}
-                    {wide && <Table.Th w={120}>Mã bưu chính</Table.Th>}
-                    {wide && <Table.Th w={150}>Cập nhật</Table.Th>}
+                    <Table.Th w={84}>{t('common.code')}</Table.Th>
+                    <Table.Th>{t('common.name')}</Table.Th>
+                    {wide && <Table.Th>{t('common.englishName')}</Table.Th>}
+                    {wide && <Table.Th>{t('wards.province')}</Table.Th>}
+                    {wide && <Table.Th w={120}>{t('wards.postalCode')}</Table.Th>}
+                    {wide && <Table.Th w={150}>{t('common.updated')}</Table.Th>}
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -343,10 +338,11 @@ export function WardsPage() {
 
 /** Tab "Lịch sử": các job đồng bộ danh mục tỉnh thành, mới nhất ở trên. */
 export function ProvinceHistoryPage() {
+  const { t } = useTranslation()
   return (
     <SyncHistoryPage
       crawler="provinces"
-      description="Mỗi lần đồng bộ là một job tải lại cả danh mục (tỉnh thành và phường/xã). Job thất bại hay bị dừng không làm mất dữ liệu đã có."
+      description={t('provinces.historyDescription')}
       actions={<SyncButton />}
     />
   )

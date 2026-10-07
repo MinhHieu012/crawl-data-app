@@ -1,6 +1,7 @@
 import { Badge, Button, Card, Group, Stack, Text, ThemeIcon, Title } from '@mantine/core'
 import { IconArrowRight, type Icon } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 interface CrawlerCardProps {
@@ -23,6 +24,7 @@ export function CrawlerCard({
   ready,
   children,
 }: CrawlerCardProps) {
+  const { t } = useTranslation()
   return (
     <Card withBorder padding="lg" h="100%">
       <Stack gap="sm" h="100%">
@@ -36,7 +38,7 @@ export function CrawlerCard({
             </Title>
           </Group>
           <Badge color={ready ? 'teal' : 'gray'} variant="light" style={{ flexShrink: 0 }}>
-            {ready ? 'Sẵn sàng' : 'Chưa triển khai'}
+            {ready ? t('card.ready') : t('card.notReady')}
           </Badge>
         </Group>
         <Text size="sm" c="dimmed">
@@ -48,11 +50,11 @@ export function CrawlerCard({
           to={to}
           variant={ready ? 'filled' : 'default'}
           rightSection={<IconArrowRight size={16} />}
-          aria-label={`Mở ${title}`}
+          aria-label={t('card.openNamed', { title })}
           mt="auto"
           style={{ alignSelf: 'flex-start' }}
         >
-          Mở
+          {t('card.open')}
         </Button>
       </Stack>
     </Card>

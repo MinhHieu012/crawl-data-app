@@ -2,12 +2,14 @@ import { Alert, Box, Button, Center, Group, Skeleton, Stack, Text, ThemeIcon } f
 import { IconAlertTriangle, IconInbox } from '@tabler/icons-react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { errorMessage } from '../utils/notify'
 
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
+  const { t } = useTranslation()
   return (
-    <Stack gap="sm" role="status" aria-busy="true" aria-label="Đang tải">
+    <Stack gap="sm" role="status" aria-busy="true" aria-label={t('common.loading')}>
       {Array.from({ length: rows }, (_, index) => (
         <Skeleton key={index} height={36} radius="sm" />
       ))}
@@ -49,11 +51,12 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ error, onRetry, retrying }: ErrorStateProps) {
+  const { t } = useTranslation()
   return (
-    <Alert color="red" icon={<IconAlertTriangle size={18} />} title="Không tải được dữ liệu">
+    <Alert color="red" icon={<IconAlertTriangle size={18} />} title={t('query.loadFailed')}>
       <Text size="sm">{errorMessage(error)}</Text>
       <Button mt="sm" size="xs" variant="light" color="red" onClick={onRetry} loading={retrying}>
-        Thử lại
+        {t('common.retry')}
       </Button>
     </Alert>
   )
@@ -75,6 +78,7 @@ interface QueryStateProps<T> {
  * dõi job) thì vẫn giữ dữ liệu cũ và chỉ cảnh báo, không xoá trắng màn hình.
  */
 export function QueryState<T>({ query, children, skeleton, isEmpty, empty }: QueryStateProps<T>) {
+  const { t } = useTranslation()
   const retry = () => void query.refetch()
 
   if (query.data === undefined) {
@@ -91,10 +95,10 @@ export function QueryState<T>({ query, children, skeleton, isEmpty, empty }: Que
         <Alert color="yellow" icon={<IconAlertTriangle size={18} />} mb="md">
           <Group justify="space-between" gap="xs">
             <Text size="sm">
-              Không cập nhật được dữ liệu mới, đang hiển thị dữ liệu cũ. {errorMessage(query.error)}
+              {t('query.stale')} {errorMessage(query.error)}
             </Text>
             <Button size="xs" variant="light" color="yellow" onClick={retry}>
-              Thử lại
+              {t('common.retry')}
             </Button>
           </Group>
         </Alert>
@@ -104,7 +108,7 @@ export function QueryState<T>({ query, children, skeleton, isEmpty, empty }: Que
         style={{ opacity: reloading ? 0.55 : 1, transition: 'opacity 150ms' }}
       >
         {isEmpty?.(query.data)
-          ? (empty ?? <EmptyState title="Chưa có dữ liệu" />)
+          ? (empty ?? <EmptyState title={t('common.noData')} />)
           : children(query.data)}
       </Box>
     </>

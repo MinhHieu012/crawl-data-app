@@ -1,6 +1,7 @@
 import { Button, Card, Group, NativeSelect } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useJobs } from '../../api/queries'
@@ -12,7 +13,7 @@ import { EmptyState, QueryState } from '../../components/QueryState'
 import { JOB_STATUS, statusOptions } from '../../components/StatusBadge'
 import { novelPaths } from '../../crawlers/paths'
 import { useUrlState } from '../../hooks/useUrlState'
-import { JOB_CRAWLERS } from '../../utils/format'
+import { jobCrawlers } from '../../utils/format'
 
 const PAGE_SIZE = 20
 // Màn hẹp: hai ô lọc chia đều một hàng; từ `sm` mỗi ô rộng cố định.
@@ -26,6 +27,7 @@ interface JobsPageProps {
 }
 
 export function JobsPage({ actions, crawler }: JobsPageProps) {
+  const { t } = useTranslation()
   const [filters, setFilters] = useUrlState({ status: '', crawler: '', page: '1' })
   const page = Number(filters.page) || 1
   const jobs = useJobs({
@@ -39,12 +41,12 @@ export function JobsPage({ actions, crawler }: JobsPageProps) {
   return (
     <>
       <PageHeader
-        title="Job crawl"
-        description="Mỗi lần crawl một truyện hay đồng bộ một nguồn dữ liệu là một job. Lịch sử được giữ lại, kể cả những lần thất bại."
+        title={t('jobs.title')}
+        description={t('jobs.description')}
         actions={
           actions ?? (
             <Button component={Link} to={novelPaths.crawl} leftSection={<IconPlus size={16} />}>
-              Crawl truyện
+              {t('common.crawlNovel')}
             </Button>
           )
         }
@@ -53,16 +55,16 @@ export function JobsPage({ actions, crawler }: JobsPageProps) {
         <Group mb="md">
           {!crawler && (
             <NativeSelect
-              aria-label="Lọc theo crawler"
-              data={[{ value: '', label: 'Mọi crawler' }, ...JOB_CRAWLERS]}
+              aria-label={t('jobs.filterCrawler')}
+              data={[{ value: '', label: t('jobs.allCrawlers') }, ...jobCrawlers()]}
               value={filters.crawler}
               onChange={(event) => setFilters({ crawler: event.currentTarget.value })}
               flex={FILTER_FLEX}
             />
           )}
           <NativeSelect
-            aria-label="Lọc theo trạng thái"
-            data={statusOptions(JOB_STATUS, 'Mọi trạng thái')}
+            aria-label={t('jobs.filterStatus')}
+            data={statusOptions(JOB_STATUS, t('jobs.allStatuses'))}
             value={filters.status}
             onChange={(event) => setFilters({ status: event.currentTarget.value })}
             flex={FILTER_FLEX}
@@ -74,16 +76,16 @@ export function JobsPage({ actions, crawler }: JobsPageProps) {
           empty={
             filtering ? (
               <EmptyState
-                title="Không có job nào khớp bộ lọc"
-                description="Thử trạng thái hoặc crawler khác."
+                title={t('jobs.noMatch.title')}
+                description={t('jobs.noMatch.description')}
               />
             ) : (
               <EmptyState
-                title="Chưa có job nào"
-                description="Dán URL của một truyện để bắt đầu crawl."
+                title={t('jobs.empty.title')}
+                description={t('jobs.empty.description')}
                 action={
                   <Button component={Link} to={novelPaths.crawl} variant="light">
-                    Crawl truyện đầu tiên
+                    {t('common.crawlFirstNovel')}
                   </Button>
                 }
               />

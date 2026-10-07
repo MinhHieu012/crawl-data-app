@@ -16,6 +16,7 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import { IconInfoCircle, IconPlugConnected } from '@tabler/icons-react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useSettings, useSources, useTestSource, useToggleSource } from '../../api/queries'
@@ -28,18 +29,19 @@ import { notifyError, notifySuccess } from '../../utils/notify'
 
 /** Thông tin crawler và cấu hình HTTP đang áp dụng cho nguồn (cấu hình là chung cho mọi nguồn). */
 function SourceInfo({ source }: { source: Source }) {
+  const { t } = useTranslation()
   const settings = useSettings()
   return (
     <Stack gap="md">
-      <Text size="sm">{source.description || 'Crawler này chưa có mô tả.'}</Text>
+      <Text size="sm">{source.description || t('sources.noDescription')}</Text>
       <Table variant="vertical" withTableBorder layout="fixed">
         <Table.Tbody>
           <Table.Tr>
-            <Table.Th w="40%">Tên miền nhận diện</Table.Th>
+            <Table.Th w="40%">{t('sources.domains')}</Table.Th>
             <Table.Td>{source.domains.join(', ')}</Table.Td>
           </Table.Tr>
           <Table.Tr>
-            <Table.Th>Trang kiểm tra kết nối</Table.Th>
+            <Table.Th>{t('sources.testPage')}</Table.Th>
             <Table.Td>https://{source.domains[0]}/</Table.Td>
           </Table.Tr>
         </Table.Tbody>
@@ -49,17 +51,20 @@ function SourceInfo({ source }: { source: Source }) {
           <Table variant="vertical" withTableBorder layout="fixed">
             <Table.Tbody>
               <Table.Tr>
-                <Table.Th w="40%">Khoảng nghỉ giữa hai request</Table.Th>
-                <Table.Td>{http.request_delay} giây</Table.Td>
+                <Table.Th w="40%">{t('sources.delay')}</Table.Th>
+                <Table.Td>{t('common.seconds', { value: http.request_delay })}</Table.Td>
               </Table.Tr>
               <Table.Tr>
-                <Table.Th>Request đồng thời tối đa</Table.Th>
+                <Table.Th>{t('settings.concurrency.label')}</Table.Th>
                 <Table.Td>{http.concurrency}</Table.Td>
               </Table.Tr>
               <Table.Tr>
-                <Table.Th>Timeout / số lần thử lại</Table.Th>
+                <Table.Th>{t('sources.timeoutRetries')}</Table.Th>
                 <Table.Td>
-                  {http.request_timeout} giây / {http.max_retries} lần
+                  {t('sources.timeoutRetriesValue', {
+                    timeout: http.request_timeout,
+                    retries: http.max_retries,
+                  })}
                 </Table.Td>
               </Table.Tr>
               <Table.Tr>
@@ -71,18 +76,17 @@ function SourceInfo({ source }: { source: Source }) {
         )}
       </QueryState>
       <Text size="xs" c="dimmed">
-        Crawler luôn đọc robots.txt trước và dừng khi bị website từ chối. Sửa các thông số trên ở
-        trang{' '}
-        <Anchor component={Link} to="/settings" inherit>
-          Cài đặt
-        </Anchor>
-        .
+        <Trans
+          i18nKey="sources.robotsNote"
+          components={{ settings: <Anchor component={Link} to="/settings" inherit /> }}
+        />
       </Text>
     </Stack>
   )
 }
 
 function SourceCard({ source }: { source: Source }) {
+  const { t } = useTranslation()
   const toggle = useToggleSource()
   const test = useTestSource()
   const [infoOpened, info] = useDisclosure()
@@ -91,7 +95,8 @@ function SourceCard({ source }: { source: Source }) {
     toggle.mutate(
       { name: source.name, enabled },
       {
-        onSuccess: () => notifySuccess(`Đã ${enabled ? 'bật' : 'tắt'} nguồn ${source.name}`),
+        onSuccess: () =>
+          notifySuccess(t(enabled ? 'sources.enabled' : 'sources.disabled', { name: source.name })),
         onError: (error) => notifyError(error),
       },
     )
@@ -99,14 +104,12 @@ function SourceCard({ source }: { source: Source }) {
   const onToggle = (enabled: boolean) => {
     if (enabled) return setEnabled(true)
     modals.openConfirmModal({
-      title: `Tắt nguồn ${source.name}?`,
-      children: (
-        <Text size="sm">
-          Sẽ không tạo được job mới cho nguồn này cho tới khi bật lại. Job đang chạy và dữ liệu đã
-          crawl không bị ảnh hưởng.
-        </Text>
-      ),
-      labels: { confirm: 'Tắt nguồn', cancel: 'Giữ nguyên' },
+      title: t('sources.disableConfirm.title', { name: source.name }),
+      children: <Text size="sm">{t('sources.disableConfirm.body')}</Text>,
+      labels: {
+        confirm: t('sources.disableConfirm.confirm'),
+        cancel: t('sources.disableConfirm.cancel'),
+      },
       confirmProps: { color: 'red' },
       onConfirm: () => setEnabled(false),
     })
@@ -121,7 +124,7 @@ function SourceCard({ source }: { source: Source }) {
               {source.name}
             </Title>
             <Badge color={source.enabled ? 'teal' : 'gray'} variant="light">
-              {source.enabled ? 'Đang bật' : 'Đang tắt'}
+              {source.enabled ? t('sources.on') : t('sources.off')}
             </Badge>
           </Group>
           <Text size="sm" c="dimmed">
@@ -129,7 +132,7 @@ function SourceCard({ source }: { source: Source }) {
           </Text>
         </div>
         <Switch
-          label="Cho phép crawl"
+          label={t('sources.allowCrawl')}
           checked={source.enabled}
           disabled={toggle.isPending}
           onChange={(event) => onToggle(event.currentTarget.checked)}
@@ -139,7 +142,7 @@ function SourceCard({ source }: { source: Source }) {
       <Group gap="xl" mt="md">
         <div>
           <Text size="xs" c="dimmed">
-            Truyện đã crawl
+            {t('sources.novelsCrawled')}
           </Text>
           <Text fw={700} fz="xl">
             {formatNumber(source.novels)}
@@ -147,7 +150,7 @@ function SourceCard({ source }: { source: Source }) {
         </div>
         <div>
           <Text size="xs" c="dimmed">
-            Chương đã tải
+            {t('chapters.done')}
           </Text>
           <Text fw={700} fz="xl">
             {formatNumber(source.chapters_done)}
@@ -162,13 +165,13 @@ function SourceCard({ source }: { source: Source }) {
           loading={test.isPending}
           onClick={() => test.mutate(source.name)}
         >
-          Kiểm tra kết nối
+          {t('sources.test')}
         </Button>
         <Button variant="subtle" leftSection={<IconInfoCircle size={16} />} onClick={info.open}>
-          Thông tin và cấu hình
+          {t('sources.info')}
         </Button>
         <Button variant="subtle" component={Link} to={`${novelPaths.novels}?source=${source.name}`}>
-          Xem truyện
+          {t('sources.viewNovels')}
         </Button>
       </Group>
 
@@ -176,24 +179,31 @@ function SourceCard({ source }: { source: Source }) {
         <Alert
           mt="md"
           color={test.data.ok ? 'teal' : 'red'}
-          title={test.data.ok ? 'Kết nối được' : 'Không kết nối được'}
+          title={test.data.ok ? t('sources.testOk') : t('sources.testFail')}
         >
           <Text size="sm" style={{ overflowWrap: 'anywhere' }}>
             {test.data.message}
           </Text>
           <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
-            {test.data.url} · {formatNumber(Math.round(test.data.elapsed_ms / 100) / 10)} giây (gồm
-            cả thời gian giãn cách request)
+            {test.data.url} ·{' '}
+            {t('sources.testElapsed', {
+              seconds: formatNumber(Math.round(test.data.elapsed_ms / 100) / 10),
+            })}
           </Text>
         </Alert>
       )}
       {test.isError && (
-        <Alert mt="md" color="red" title="Không kiểm tra được">
+        <Alert mt="md" color="red" title={t('sources.testError')}>
           {test.error.message}
         </Alert>
       )}
 
-      <Modal opened={infoOpened} onClose={info.close} title={`Nguồn ${source.name}`} size="lg">
+      <Modal
+        opened={infoOpened}
+        onClose={info.close}
+        title={t('sources.modalTitle', { name: source.name })}
+        size="lg"
+      >
         <SourceInfo source={source} />
       </Modal>
     </Card>
@@ -201,18 +211,16 @@ function SourceCard({ source }: { source: Source }) {
 }
 
 export function SourcesPage() {
+  const { t } = useTranslation()
   const sources = useSources()
 
   return (
     <>
-      <PageHeader
-        title="Nguồn truyện"
-        description="Các website mà crawler đọc được. Thêm nguồn mới bằng cách viết crawler ở backend."
-      />
+      <PageHeader title={t('sources.title')} description={t('sources.description')} />
       <QueryState
         query={sources}
         isEmpty={(data) => data.length === 0}
-        empty={<EmptyState title="Backend chưa đăng ký crawler nào" />}
+        empty={<EmptyState title={t('sources.empty')} />}
       >
         {(data) => (
           <SimpleGrid cols={{ base: 1, lg: 2 }}>

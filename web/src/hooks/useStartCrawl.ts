@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { ApiError } from '../api/client'
 import { useCreateJob } from '../api/queries'
 import type { JobCreate } from '../api/types'
+import i18n from '../i18n'
 import { notifyError, notifySuccess } from '../utils/notify'
 
 /**
@@ -16,11 +17,11 @@ export function useStartCrawl() {
   const start = (request: JobCreate) =>
     createJob.mutate(request, {
       onSuccess: (job) => {
-        notifySuccess(`Đã tạo job #${job.id}`)
+        notifySuccess(i18n.t('crawl.created', { id: job.id }))
         navigate(`/jobs/${job.id}`)
       },
       onError: (error) => {
-        notifyError(error, 'Không tạo được job')
+        notifyError(error, i18n.t('crawl.createFailed'))
         if (error instanceof ApiError && error.jobId) navigate(`/jobs/${error.jobId}`)
       },
     })

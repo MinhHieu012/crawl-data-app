@@ -1,0 +1,583 @@
+{
+  "common": {
+    "crawlers": "Crawlers",
+    "jobs": "Jobs",
+    "overview": "Overview",
+    "history": "History",
+    "all": "All",
+    "retry": "Retry",
+    "dismiss": "Cancel",
+    "loading": "Loading",
+    "noData": "No data yet",
+    "statsError": "Could not load the figures",
+    "unknownError": "An unknown error occurred.",
+    "actionFailed": "Action failed",
+    "crawlNovel": "Crawl a novel",
+    "crawlFirstNovel": "Crawl your first novel",
+    "viewNovel": "View novel",
+    "exportJson": "Export JSON",
+    "source": "Source",
+    "scope": "Scope",
+    "status": "Status",
+    "code": "Code",
+    "name": "Name",
+    "englishName": "English name",
+    "updated": "Updated",
+    "seconds": "{{value}} s",
+    "runningJobs_one": "{{count}} job running",
+    "runningJobs_other": "{{count}} jobs running",
+    "searchByCodeOrName": "Code or name, accents are optional",
+    "tryOtherCodeOrName": "Try another code or name."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The address is wrong or the page has been moved.",
+    "action": "Back to the dashboard"
+  },
+  "layout": {
+    "allCrawlers": "All crawlers",
+    "toLight": "Switch to light theme",
+    "toDark": "Switch to dark theme",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu",
+    "home": "Crawl Data App, back to the dashboard",
+    "runningShort": "{{count}} running",
+    "mainMenu": "Main menu",
+    "language": "Language"
+  },
+  "registry": {
+    "novel": {
+      "name": "Web novels",
+      "description": "Crawl web novels from reading websites into the database.",
+      "stories": {
+        "name": "Novels",
+        "description": "Novel details, table of contents and the text of every chapter."
+      }
+    },
+    "aviation": {
+      "name": "Aviation",
+      "description": "Airports, airlines, cities and countries, per data source.",
+      "world": {
+        "name": "Worldwide",
+        "description": "Global open data from OurAirports and OpenFlights."
+      },
+      "vna": {
+        "name": "Vietnam Airlines",
+        "description": "Destinations and partner airlines published on vietnamairlines.com."
+      }
+    },
+    "provinces": {
+      "name": "Vietnam provinces",
+      "description": "The 34 provinces and cities of Vietnam after the 2025 merger, with their wards.",
+      "vietnam": {
+        "name": "Provinces",
+        "description": "Code, name and unit type of every province or city and the wards under it."
+      }
+    },
+    "tabs": {
+      "crawl": "Crawl",
+      "sources": "Sources",
+      "airport": "Airports",
+      "airline": "Airlines",
+      "city": "Cities",
+      "country": "Countries",
+      "provinces": "Provinces",
+      "wards": "Wards"
+    }
+  },
+  "status": {
+    "job": {
+      "running": "Running",
+      "completed": "Completed",
+      "partial": "Chapters failed",
+      "failed": "Failed",
+      "interrupted": "Paused",
+      "cancelled": "Cancelled"
+    },
+    "chapter": {
+      "done": "Downloaded",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "novel": {
+      "ongoing": "Ongoing",
+      "completed": "Completed",
+      "paused": "On hiatus",
+      "unknown": "Unknown"
+    }
+  },
+  "chapters": {
+    "done": "Chapters downloaded",
+    "failed": "Chapters failed",
+    "pending": "Chapters pending"
+  },
+  "pager": {
+    "first": "First page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "last": "Last page",
+    "empty": "No rows",
+    "range": "{{first}}–{{last}} of {{total}}"
+  },
+  "progress": {
+    "preparing": "Preparing",
+    "preparingNovel": "Fetching the novel details and table of contents…",
+    "preparingSync": "Preparing…",
+    "stoppedBeforeToc": "Stopped before the table of contents was fetched",
+    "stoppedBeforeAny": "Stopped before anything was downloaded",
+    "infoOnly": "Novel details only",
+    "nothingToDownload": "No chapters to download",
+    "filesDone": "Files downloaded",
+    "filesFailed": "Files failed",
+    "chapters": "{{done}} / {{total}} chapters · {{percent}}%",
+    "files": "{{done}} / {{total}} files · {{percent}}%"
+  },
+  "novelProgress": {
+    "noToc": "Table of contents not crawled yet",
+    "count": "{{done}} / {{total}} chapters",
+    "failed": "{{failed}} failed"
+  },
+  "duration": {
+    "seconds": "{{seconds}}s",
+    "minutes": "{{minutes}}m {{seconds}}s",
+    "hours": "{{hours}}h {{minutes}}m"
+  },
+  "records": {
+    "airport_one": "{{count, number}} airport",
+    "airport_other": "{{count, number}} airports",
+    "airline_one": "{{count, number}} airline",
+    "airline_other": "{{count, number}} airlines",
+    "city_one": "{{count, number}} city",
+    "city_other": "{{count, number}} cities",
+    "country_one": "{{count, number}} country",
+    "country_other": "{{count, number}} countries",
+    "province_one": "{{count, number}} province",
+    "province_other": "{{count, number}} provinces",
+    "ward_one": "{{count, number}} ward",
+    "ward_other": "{{count, number}} wards"
+  },
+  "jobScope": {
+    "catalog": "Whole catalogue",
+    "allChapters": "All chapters",
+    "range": "Chapters {{from}}–{{to}}",
+    "end": "end"
+  },
+  "jobsTable": {
+    "content": "Content",
+    "progress": "Progress",
+    "started": "Started"
+  },
+  "query": {
+    "loadFailed": "Could not load the data",
+    "stale": "Could not refresh, showing the previous data."
+  },
+  "category": {
+    "notReady": {
+      "title": "This crawler is not implemented yet",
+      "description": "The backend has no crawler or data tables for “{{name}}” yet, so there are no jobs, data or logs to show. Once it does, this area will have tabs for crawl settings, jobs, data, history and logs."
+    },
+    "backTo": "Back to {{name}}",
+    "tabsLabel": "Sections of {{title}}"
+  },
+  "module": {
+    "notFound": {
+      "title": "No such crawler",
+      "description": "The address is wrong or the crawler has been removed from the registry.",
+      "action": "View all crawlers"
+    }
+  },
+  "card": {
+    "ready": "Ready",
+    "notReady": "Not implemented",
+    "open": "Open",
+    "openNamed": "Open {{title}}"
+  },
+  "crawlers": {
+    "description": "Each crawler is an independent module with one or more kinds of data.",
+    "search": "Search crawlers",
+    "searchPlaceholder": "Crawler name or kind of data",
+    "noMatch": {
+      "title": "No matching crawlers",
+      "description": "Try another keyword, such as the name of a kind of data."
+    },
+    "more": {
+      "title": "More crawlers",
+      "description": "Declare another module in <code>web/src/crawlers/registry.tsx</code> to get its card, menu entry and routes here."
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Activity of every crawler in the system.",
+    "openCrawlers": "Open crawlers",
+    "readyHint": "{{ready}} / {{total}} kinds of data ready",
+    "running": "Running jobs",
+    "completed": "Completed jobs",
+    "failed": "Failed jobs",
+    "failedHint": "{{failed}} failed · {{partial}} with failed chapters"
+  },
+  "novelOverview": {
+    "summary": "Novels: {{novels}} · Chapters downloaded: {{chapters}}",
+    "description": "Novel data collected so far and the most recent crawls."
+  },
+  "recentJobs": {
+    "title": "Recent jobs",
+    "viewAll": "View all"
+  },
+  "jobs": {
+    "title": "Crawl jobs",
+    "description": "Every crawl of a novel or sync of a data source is a job. The history is kept, including failed runs.",
+    "filterCrawler": "Filter by crawler",
+    "allCrawlers": "All crawlers",
+    "filterStatus": "Filter by status",
+    "allStatuses": "All statuses",
+    "noMatch": {
+      "title": "No jobs match the filters",
+      "description": "Try another status or crawler."
+    },
+    "empty": {
+      "title": "No jobs yet",
+      "description": "Paste the URL of a novel to start crawling."
+    }
+  },
+  "logs": {
+    "title": "Logs",
+    "description": "Crawler logs, newest first. Set the log level to DEBUG on the Settings page to see every request.",
+    "tableLabel": "Log entries",
+    "kinds": {
+      "all": "All kinds of entries",
+      "request": "Request errors (network, HTTP, blocked)",
+      "parse": "Parser errors (HTML structure changed)",
+      "other": "Other errors"
+    },
+    "search": "Search the logs",
+    "searchPlaceholder": "URL, chapter, message…",
+    "filterJob": "Filter by job",
+    "kindLabel": "Kind of error",
+    "level": "Log level",
+    "autoRefresh": "Auto-refresh",
+    "noMatch": "No log entries match the filters",
+    "empty": {
+      "title": "No logs yet",
+      "description": "Logs appear after the first crawl."
+    },
+    "limited": "Showing the {{limit}} newest entries matching the filters — narrow the filters to see older ones.",
+    "count_one": "{{count}} entry",
+    "count_other": "{{count}} entries"
+  },
+  "chapter": {
+    "previous": "Previous chapter",
+    "next": "Next chapter",
+    "numbered": "Chapter {{number}}",
+    "notDownloaded": {
+      "title": "This chapter has not been downloaded",
+      "description": "Its content is not in the database yet."
+    },
+    "download": "Download this chapter",
+    "downloadedAt": "Downloaded {{time}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Crawler parameters. The speed limits are deliberate, to avoid overloading the source websites.",
+    "validation": {
+      "required": "Required",
+      "timeout": "Enter a number of seconds greater than 0",
+      "retries": "Between 0 and 10 retries",
+      "concurrency": "Between 1 and 8 requests",
+      "delay": "At least 0.5 seconds — to avoid overloading the source websites"
+    },
+    "saved": "Settings saved",
+    "saveFailed": "Could not save the settings",
+    "envNote": "Settings are written to the file <b>{{file}}</b> in the directory the server runs from and apply to jobs started after all running jobs have finished. Operating system environment variables, if set, still take precedence over this file.",
+    "userAgentHint": "Identify as a bot and leave a way to contact you, e.g. crawl-data-app/0.1 (+mailto:you@example.com)",
+    "delay": {
+      "label": "Delay between requests (seconds)",
+      "description": "At least 0.5. The crawler sends at most 1 request per delay."
+    },
+    "concurrency": {
+      "label": "Max concurrent requests",
+      "description": "Between 1 and 8. Only matters when the website responds slower than the delay."
+    },
+    "timeout": "Timeout per request (seconds)",
+    "retries": {
+      "label": "Retries",
+      "description": "On temporary errors (timeout, HTTP 429/5xx); the wait doubles each time."
+    },
+    "crawlerAndLog": "Crawler and logs",
+    "contentFormat": {
+      "label": "Chapter content format",
+      "description": "Only applies to chapters downloaded from now on.",
+      "html": "HTML (one <p> tag per paragraph)"
+    },
+    "logLevelHint": "DEBUG records every request.",
+    "readOnly": {
+      "legend": "Read-only",
+      "note": "To change these two, edit the .env file and restart the server.",
+      "passwordHidden": "The password, if any, is masked.",
+      "logDir": "Log directory"
+    },
+    "unsaved": "Unsaved changes",
+    "undo": "Undo",
+    "save": "Save settings"
+  },
+  "novels": {
+    "title": "Novels",
+    "description": "Search by title or author, accents are optional.",
+    "sort": {
+      "recent": "Last crawled",
+      "title": "Title A → Z",
+      "done": "Most chapters downloaded",
+      "longest": "Longest novels"
+    },
+    "allSources": "All sources",
+    "search": "Search novels",
+    "searchPlaceholder": "Title or author",
+    "filterSource": "Filter by source",
+    "filterStatus": "Filter by publication status",
+    "allStatuses": "All publication statuses",
+    "sortLabel": "Sort",
+    "noMatch": {
+      "title": "No novels match the filters",
+      "description": "Try another keyword or remove some filters."
+    },
+    "empty": {
+      "title": "No novels yet",
+      "description": "Novels appear here after the first crawl."
+    },
+    "cover": "Cover",
+    "statusColumn": "Publication",
+    "unknownAuthor": "Unknown author",
+    "crawledAt": "crawled {{time}}"
+  },
+  "crawl": {
+    "scopes": {
+      "all": "All chapters",
+      "range": "Chapter range",
+      "info": "Novel details only"
+    },
+    "validation": {
+      "url": "Enter the full URL of the novel, e.g. https://truyenfull.live/ten-truyen/",
+      "range": "The last chapter must be greater than or equal to the first chapter"
+    },
+    "description": "Paste the URL of the novel (a chapter URL works too). However often you rerun it, only the missing parts are downloaded.",
+    "supported": "Supported: {{sources}}",
+    "autoDetect": "Detect from the URL",
+    "url": "Novel URL",
+    "scopeLabel": "Crawl scope",
+    "from": "From chapter",
+    "fromHint": "By position in the table of contents",
+    "to": "To chapter",
+    "toHint": "Leave empty = to the end of the novel",
+    "skipExisting": {
+      "label": "Skip chapters already downloaded",
+      "description": "Untick to download everything again; only chapters whose content changed are overwritten."
+    },
+    "retryFailed": "Retry chapters that failed",
+    "createFailed": "Could not create the job",
+    "created": "Created job #{{id}}",
+    "viewJob": "View job #{{id}}",
+    "compliance": "The crawler obeys robots.txt, spaces out its requests and stops when the website refuses. Only crawl content you are allowed to use.",
+    "start": "Start crawling"
+  },
+  "api": {
+    "timeout": "The server took too long to respond. Check the backend and try again.",
+    "network": "Could not connect to the server. Check that the backend (crawl-data-app serve) is running.",
+    "invalid": "The submitted data is invalid — {{details}}",
+    "unreachable": "Could not reach the backend (HTTP {{status}}). Check that crawl-data-app serve is running.",
+    "serverError": "The server ran into an error (HTTP {{status}}). Check the backend logs and try again.",
+    "failed": "The request could not be completed (HTTP {{status}}).",
+    "codes": {
+      "not_found": "The requested data was not found.",
+      "invalid_url": "The URL is not valid.",
+      "unsupported_source": "The source of this URL is not supported yet.",
+      "source_disabled": "This source is disabled.",
+      "duplicate_job": "A job is already running for this.",
+      "job_running": "The job is still running.",
+      "job_not_running": "The job is no longer running, so this action is not available.",
+      "cross_origin": "The request came from another website and was rejected.",
+      "owner_only": "Only the server owner can change the configuration."
+    }
+  },
+  "sources": {
+    "title": "Novel sources",
+    "description": "The websites the crawler can read. Add a new source by writing a crawler in the backend.",
+    "noDescription": "This crawler has no description yet.",
+    "domains": "Recognised domains",
+    "testPage": "Connection test page",
+    "delay": "Delay between requests",
+    "timeoutRetries": "Timeout / retries",
+    "timeoutRetriesValue": "{{timeout}} s / {{retries}} retries",
+    "robotsNote": "The crawler always reads robots.txt first and stops when the website refuses. Change the values above on the <settings>Settings</settings> page.",
+    "enabled": "Source {{name}} enabled",
+    "disabled": "Source {{name}} disabled",
+    "disableConfirm": {
+      "title": "Disable source {{name}}?",
+      "body": "No new jobs can be created for this source until it is enabled again. Running jobs and crawled data are not affected.",
+      "confirm": "Disable source",
+      "cancel": "Keep it on"
+    },
+    "on": "Enabled",
+    "off": "Disabled",
+    "allowCrawl": "Allow crawling",
+    "novelsCrawled": "Novels crawled",
+    "test": "Test connection",
+    "info": "Details and configuration",
+    "viewNovels": "View novels",
+    "testOk": "Connection works",
+    "testFail": "Connection failed",
+    "testElapsed": "{{seconds}} s (including the delay between requests)",
+    "testError": "Could not run the test",
+    "modalTitle": "Source {{name}}",
+    "empty": "The backend has no crawlers registered"
+  },
+  "job": {
+    "metrics": {
+      "ok": "Succeeded",
+      "failed": "Failed",
+      "remaining": "Remaining",
+      "skipped": "Skipped (already present)"
+    },
+    "rerun": {
+      "interrupted": "Resume",
+      "partial": "Retry failed chapters",
+      "completed": "Check for new chapters",
+      "cancelled": "Run again",
+      "sync": "Sync again"
+    },
+    "cancelConfirm": {
+      "title": "Cancel job #{{id}}?",
+      "novel": "The job will stop for good and will not restart on its own. Chapters already downloaded are kept; create a new job to continue.",
+      "sync": "The job will stop for good and will not restart on its own. Data from earlier syncs is not affected.",
+      "confirm": "Cancel job",
+      "cancel": "Keep running"
+    },
+    "cancelled": "Cancelled job #{{id}}",
+    "paused": "Paused job #{{id}}",
+    "pause": "Pause",
+    "rerunCreated": "Created a new job that reruns the same scope",
+    "cancel": "Cancel",
+    "viewData": "View data",
+    "logs": {
+      "title": "Job logs",
+      "open": "Open on the Logs page",
+      "empty": {
+        "title": "No log entries for this job yet",
+        "description": "Entries of old jobs may be in a log file that has been rotated."
+      }
+    },
+    "written": "Written:",
+    "lastChapter": "Just downloaded:",
+    "stopReason": "Reason it stopped",
+    "otherProcess": "This job is running in another process (for example the crawl-data-app crawl command), so it cannot be paused or cancelled from here.",
+    "started": "Started {{time}}",
+    "finished": "Finished {{time}} · Ran for {{duration}}"
+  },
+  "sync": {
+    "button": "Sync",
+    "started": "Syncing in job #{{id}}",
+    "createFailed": "Could not create the sync job",
+    "never": "Never synced",
+    "running": "Syncing in <job>job #{{id}}</job>…",
+    "last": "Last synced: {{time}} (<job>job #{{id}}</job>).",
+    "lastFailed": "The last sync (<job>job #{{id}}</job>) did not complete",
+    "firstTitle": "Syncing for the first time",
+    "firstDescription": "The data will appear here when the job finishes.",
+    "historyEmptyDescription": "The history appears after the first sync."
+  },
+  "aviation": {
+    "kinds": {
+      "airport": "airports",
+      "airline": "airlines",
+      "city": "cities",
+      "country": "countries"
+    },
+    "sourceNote": {
+      "world": "Open data: airports and countries from OurAirports (public domain), airlines from OpenFlights (ODbL licence, attribution required when reused).",
+      "vna": "Taken from vietnamairlines.com, for personal, non-commercial use only."
+    },
+    "kindNote": {
+      "world": {
+        "airport": "Only airports still in operation that have an IATA code.",
+        "city": "Cities are derived from airports; their codes are made up by this app because the open data has no city codes.",
+        "airline": "Only active airlines that have an IATA code; OpenFlights is rarely updated, so newer airlines may be missing."
+      },
+      "vna": {
+        "airport": "Only airports in the network of Vietnam Airlines and its partners.",
+        "airline": "Only airlines whose frequent flyer programme is linked with Vietnam Airlines."
+      }
+    },
+    "search": "Search {{kind}}",
+    "noMatch": "No matching {{kind}}",
+    "emptyDescription": "Press Sync to download the catalogue of this source (three requests, updating all four kinds of data).",
+    "vietnameseName": "Vietnamese name",
+    "city": "City",
+    "country": "Country",
+    "region": "Region",
+    "continent": "Continent",
+    "historyDescription": "Each sync is a job that downloads all four kinds of data of this source again. A failed or stopped job does not lose the existing data."
+  },
+  "provinces": {
+    "sourceNote": "Taken from the open dataset vietnamese-provinces-database (MIT licence), using the boundaries after the 2025 merger.",
+    "exportWithWards": "Export JSON with wards",
+    "search": "Search provinces",
+    "noMatch": "No matching provinces",
+    "emptyDescription": "Press Sync to download the provinces together with their wards (one request).",
+    "postalPrefix": "Postal code prefix",
+    "historyDescription": "Each sync is a job that downloads the whole catalogue (provinces and wards) again. A failed or stopped job does not lose the existing data."
+  },
+  "wards": {
+    "allProvinces": "Whole country",
+    "description": "Wards, communes and special zones — the level right below provinces.",
+    "search": "Search wards",
+    "filterProvince": "Filter by province",
+    "noMatch": {
+      "title": "No matching wards",
+      "description": "Try another code, name or province."
+    },
+    "province": "Province",
+    "postalCode": "Postal code"
+  },
+  "novel": {
+    "range": {
+      "title": "Download a chapter range",
+      "toEnd": "end of the novel",
+      "force": "Download existing chapters again (only chapters whose content changed are overwritten)",
+      "start": "Start downloading"
+    },
+    "export": {
+      "download": "Download JSON file",
+      "fromStart": "start of the novel",
+      "note": "The file contains the novel details and the text of the chapters <b>already downloaded</b> ({{done}} so far)",
+      "rangeNote": "; a range with no downloaded chapters produces no file"
+    },
+    "reload": {
+      "title": "Download chapter {{number}} again?",
+      "body": "The stored content of this chapter will be overwritten if the version on the source website has changed.",
+      "confirm": "Download again"
+    },
+    "chapters": {
+      "title": "Chapters",
+      "filter": "Filter chapters by status",
+      "noneInStatus": "No chapters in this status",
+      "noToc": {
+        "title": "No table of contents yet",
+        "description": "Only the details of this novel have been fetched. Press “Download missing chapters” to get the table of contents and the text."
+      },
+      "number": "No.",
+      "titleColumn": "Title",
+      "downloadedAt": "Downloaded",
+      "actions": "Actions",
+      "reloadThis": "Download this chapter again",
+      "reload": "Download chapter {{number}} again"
+    },
+    "author": "Author",
+    "unknownAuthor": "unknown",
+    "meta": "Last crawled: {{crawled}} · Published on the source: {{published}} · Pending chapters: {{pending}}",
+    "downloadMissing": "Download missing chapters",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "crawling": "Job #{{id}} is crawling this novel",
+    "followJob": "Follow the job",
+    "history": "Crawl history",
+    "noJobs": "No jobs for this novel yet"
+  }
+}

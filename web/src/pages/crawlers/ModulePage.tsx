@@ -1,4 +1,5 @@
 import { Button, SimpleGrid } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 import { Link, Navigate, useParams } from 'react-router'
 
 import { PageHeader } from '../../components/PageHeader'
@@ -9,17 +10,18 @@ import { CrawlerCard } from './CrawlerCard'
 
 /** Trang tổng quan của một crawler module: mỗi loại dữ liệu một thẻ. */
 export function ModulePage() {
+  const { t } = useTranslation()
   const { moduleId } = useParams()
   const crawler = CRAWLER_MODULES.find((item) => item.id === moduleId)
 
   if (!crawler) {
     return (
       <EmptyState
-        title="Không có crawler này"
-        description="Đường dẫn không đúng hoặc crawler đã được gỡ khỏi danh mục."
+        title={t('module.notFound.title')}
+        description={t('module.notFound.description')}
         action={
           <Button component={Link} to={CRAWLERS_PATH} variant="light">
-            Xem tất cả crawler
+            {t('module.notFound.action')}
           </Button>
         }
       />
@@ -33,17 +35,17 @@ export function ModulePage() {
   return (
     <>
       <PageHeader
-        title={crawler.name}
-        description={crawler.description}
-        crumbs={[{ label: 'Crawler', to: CRAWLERS_PATH }, { label: crawler.name }]}
+        title={t(crawler.name)}
+        description={t(crawler.description)}
+        crumbs={[{ label: t('common.crawlers'), to: CRAWLERS_PATH }, { label: t(crawler.name) }]}
       />
       <SimpleGrid cols={{ base: 1, sm: 2, xl: 4 }}>
         {crawler.categories.map((category) => (
           <CrawlerCard
             key={category.id}
             icon={category.icon}
-            title={category.name}
-            description={category.description}
+            title={t(category.name)}
+            description={t(category.description)}
             to={categoryPath(crawler.id, category.id)}
             ready={Boolean(category.sections)}
           >

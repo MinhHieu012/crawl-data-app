@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 Context cho Claude Code. Chi tiết đầy đủ (API, màn hình, khảo sát từng website, bảng lỗi thường gặp) nằm trong
-[README.md](README.md) — file này chỉ giữ phần ảnh hưởng trực tiếp tới việc sửa code. Làm việc, comment, README
-và chữ trên UI bằng **tiếng Việt**.
+[README.md](README.md) — file này chỉ giữ phần ảnh hưởng trực tiếp tới việc sửa code. Làm việc, comment và README
+bằng **tiếng Việt**; chữ trên UI có hai ngôn ngữ (tiếng Việt là bản gốc, kèm tiếng Anh — xem mục Frontend Architecture).
 
 ## Project Overview
 
@@ -39,7 +39,7 @@ repository không biết HTML; frontend không có logic crawl (nhận diện we
 
 - **Backend**: Python ≥ 3.12 (dev trên 3.14), `httpx` async, `beautifulsoup4`, `protego` (robots.txt), SQLAlchemy 2 + Alembic,
   Pydantic 2 / pydantic-settings, FastAPI + uvicorn, Rich, `argparse` (không Typer/Click). Build: hatchling.
-- **Frontend** (`web/`): React 19 + TypeScript (strict) + Vite, Mantine 8, TanStack Query, React Router 7. Không có thư viện store.
+- **Frontend** (`web/`): React 19 + TypeScript (strict) + Vite, Mantine 8, TanStack Query, React Router 7, i18next + react-i18next (đa ngôn ngữ). Không có thư viện store.
 - **Test/lint**: pytest (+ plugin `anyio`, `httpx.MockTransport`), ruff · Vitest + Testing Library, ESLint, Prettier.
 - Docker + CI/CD: `Dockerfile`, `compose.yaml`, `deploy.sh` (chạy trên VPS), `.github/workflows/deploy.yml`. Không dùng Scrapy/Playwright (có chủ đích — xem README mục "Quyết định kỹ thuật").
 
@@ -60,6 +60,7 @@ src/crawl_data_app/
 └── web/              app.py (endpoint, create_app) · jobs.py (JobManager) · schemas.py (JSON vào/ra)
 tests/                unit/ · integration/ · fixtures/ (HTML/JSON/CSV mẫu tự viết)
 web/src/              api/ (client, queries, types) · crawlers/registry.tsx · pages/ · components/ · layouts/ · hooks/ · theme.ts
+                      i18n.ts (i18next, chọn/nhớ ngôn ngữ) · locales/ (vi.json bản gốc, en.json)
 Dockerfile            build web (Node) → image Python; HEALTHCHECK gọi GET /api/stats
 compose.yaml          dịch vụ app (cổng 8000 chỉ bind IP Tailscale, volume state) + public (Caddy, profile tuỳ chọn)
 deploy.sh             chạy TRÊN VPS: pull → sao lưu SQLite → up → chờ healthy → tự rollback
@@ -86,11 +87,11 @@ Thêm website truyện mới (không phải sửa service/repository/CLI):
 3. `crawlers/<site>/crawler.py`: kế thừa `BaseCrawler`, khai `name`, `domains`, `parser`; chỉ override `novel_url`/`fetch_*` khi website có cơ chế riêng.
 4. Đăng ký vào `CRAWLERS` trong `crawlers/__init__.py`.
 5. Fixture HTML tự viết theo khung markup (đừng chép nội dung truyện thật) vào `tests/fixtures/<site>/`; test parser theo mẫu `tests/unit/test_truyenfull_parser.py`. `test_crawler_contract.py` tự kiểm tra giao diện chung.
-6. Nếu muốn có trong UI: thêm module vào `CRAWLER_MODULES` (`web/src/crawlers/registry.tsx`).
+6. Nếu muốn có trong UI: thêm module vào `CRAWLER_MODULES` (`web/src/crawlers/registry.tsx`); tên/mô tả/nhãn tab là khoá dịch, thêm chữ vào nhóm `registry` của `web/src/locales/vi.json` và `en.json`.
 
 Nguồn hàng không mới: thêm parser (hàm thuần trả `list[Record]`) + hàm `fetch_<nguồn>` (gọi `fetch` đúng `FILES_PER_SYNC` = 3 lần) vào `SOURCES`/`HOMES` trong `aviation.py`, rồi cập nhật `registry.tsx`.
 
-Danh mục kiểu "tải vài file rồi ghi đè" khác (mẫu: `provinces.py`): parser hàm thuần + repository riêng + `sync` gọi `aviation.run_sync`; thêm `JobManager.start_<tên>`, nhánh chạy lại trong `rerun_job` (`web/app.py`), tên job trong `web/src/utils/format.ts` và đường dẫn trong `jobDataPath` (`web/src/crawlers/paths.ts`).
+Danh mục kiểu "tải vài file rồi ghi đè" khác (mẫu: `provinces.py`): parser hàm thuần + repository riêng + `sync` gọi `aviation.run_sync`; thêm `JobManager.start_<tên>`, nhánh chạy lại trong `rerun_job` (`web/app.py`), tên job trong `JOB_TITLE` (`web/src/utils/format.ts`, ghép từ khoá dịch của registry) và đường dẫn trong `jobDataPath` (`web/src/crawlers/paths.ts`).
 
 ## Backend Architecture
 
@@ -118,9 +119,10 @@ Chi tiết: [docs/deploy-vps-tailscale.md](docs/deploy-vps-tailscale.md) và m�
 - **API layer**: `api/client.ts` (một cửa gọi backend, mọi lỗi thành `ApiError`), `api/queries.ts` (mỗi endpoint một hook, tự `invalidateQueries`), `api/types.ts` (**phản chiếu `web/schemas.py`** — đổi một bên phải đổi bên kia).
 - **State**: dữ liệu server chỉ ở cache TanStack Query; bộ lọc/số trang nằm trên URL (`useUrlState`); form dùng `@mantine/form`. Tiến độ job = polling 2 giây, chỉ khi có job chạy.
 - Giao tiếp: trình duyệt chỉ thấy một origin — backend phục vụ `web/dist` ở production; dev dùng Vite proxy `/api` → `127.0.0.1:8000`.
+- **Đa ngôn ngữ** (`i18n.ts`, i18next): mọi chữ hiển thị nằm trong `locales/vi.json` (bản gốc, kiểu của khoá lấy từ đây) và `locales/en.json` — thêm/sửa chữ phải sửa **cả hai** (`i18n.test.ts` đỏ nếu lệch khoá). Component gọi `useTranslation()`; hàm thuần ngoài component gọi `i18n.t`; câu có chèn thẻ dùng `<Trans>`. Hằng số cấp module (registry, `StatusBadge`, `JOB_TITLE`) chỉ giữ **khoá** kiểu `I18nKey` rồi dịch lúc hiển thị — không gọi `t()` ở cấp module (chữ sẽ không đổi theo nút ngôn ngữ). Ngôn ngữ ban đầu theo `navigator.language`, lựa chọn lưu ở `localStorage` (khoá `language`). Chữ do backend sinh ra (`detail` của lỗi, `job.error`, log) vẫn là tiếng Việt: giao diện tiếng Việt hiện nguyên `detail`, ngôn ngữ khác hiện câu chung theo `code` (`api.codes.*`) — thêm `code` lỗi mới ở backend thì thêm khoá đó.
 - Quy ước UI: màu/cỡ chữ lấy từ `theme.ts` (không hardcode); bảng không cuộn ngang (`useMatches`, `layout="fixed"`); mỗi trang một `h1` qua `PageHeader`; trạng thái tải/lỗi/trống qua `QueryState`; nút chỉ có icon phải có `aria-label`; không dựng màn hình cho dữ liệu chưa có backend.
 
-Thêm trang mới: (backend nếu thiếu) repository → `schemas.py` → endpoint → test `tests/integration/test_web_api.py`; rồi `api/types.ts` → hook trong `api/queries.ts` → `pages/<ten>/<Ten>Page.tsx` (`PageHeader` + `QueryState`) → khai báo `sections`/`pages` trong `registry.tsx` (trang chung thì `<Route>` trong `App.tsx` + `NAVIGATION` trong `layouts/AppLayout.tsx`) → test cạnh trang bằng `mockApi`/`renderPage` (`web/src/test/utils.tsx`).
+Thêm trang mới: (backend nếu thiếu) repository → `schemas.py` → endpoint → test `tests/integration/test_web_api.py`; rồi `api/types.ts` → hook trong `api/queries.ts` → `pages/<ten>/<Ten>Page.tsx` (`PageHeader` + `QueryState`, chữ vào `locales/vi.json` + `en.json`) → khai báo `sections`/`pages` trong `registry.tsx` (trang chung thì `<Route>` trong `App.tsx` + `navigation` trong `layouts/AppLayout.tsx`) → test cạnh trang bằng `mockApi`/`renderPage` (`web/src/test/utils.tsx`).
 
 ## Development Commands
 
@@ -140,7 +142,7 @@ cd web && npm run build          # tsc --noEmit rồi build ra web/dist (cần �
 
 pytest                           # backend (202 test, ~20s, không có request mạng thật)
 ruff check . && ruff format --check .
-cd web && npm test               # Vitest (40 test)
+cd web && npm test               # Vitest (43 test, giao diện chạy ở tiếng Việt)
 cd web && npm run lint && npm run typecheck && npm run format:check
 
 alembic revision --autogenerate -m "mo ta"   # sau khi sửa database/models.py
@@ -191,7 +193,7 @@ mặc định `crawl-data-app:local` khi build tại chỗ), `COMPOSE_PROFILES=p
 ## Coding Conventions
 
 - Python: ruff (`line-length = 100`, rule `E F W I UP B SIM`, `E501` bỏ qua), type hint đầy đủ, cú pháp Py3.12 (ví dụ `def _parse[T]`). Import tuyệt đối `from crawl_data_app....`.
-- Docstring/comment/thông báo lỗi/chữ UI bằng tiếng Việt; tên định danh bằng tiếng Anh. Thông báo lỗi người dùng nhìn thấy phải đọc được, không lộ stack trace.
+- Docstring/comment/thông báo lỗi của backend bằng tiếng Việt; tên định danh bằng tiếng Anh. Chữ UI không viết thẳng trong component mà nằm trong `web/src/locales/` (tiếng Việt + tiếng Anh). Thông báo lỗi người dùng nhìn thấy phải đọc được, không lộ stack trace.
 - Parser = hàm thuần, không gọi mạng/DB. Module đơn (`service.py`, `repository.py`, `cli.py`) — **không tạo** `utils/`, `pipelines/`, `scripts/` rỗng; chỉ tách package khi thật sự cần.
 - Chỗ cố tình đơn giản hoá được đánh dấu `# ponytail: <giới hạn + hướng nâng cấp>` — giữ nguyên kiểu này.
 - Frontend: Prettier + ESLint (`web/`), TypeScript strict, hook `useXxx`, trang `<Ten>Page.tsx`, test `*.test.ts(x)` cạnh file.

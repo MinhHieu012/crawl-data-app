@@ -1,13 +1,14 @@
 import { Button, Group, Paper, Skeleton, Stack, Text } from '@mantine/core'
 import { IconChevronLeft, IconChevronRight, IconDownload } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
 import { useChapter, useNovel } from '../../api/queries'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState, QueryState } from '../../components/QueryState'
 import { ChapterStatusBadge } from '../../components/StatusBadge'
-import { NOVEL_CRUMBS, novelPaths } from '../../crawlers/paths'
+import { novelCrumbs, novelPaths } from '../../crawlers/paths'
 import { useStartCrawl } from '../../hooks/useStartCrawl'
 import { formatDateTime } from '../../utils/format'
 
@@ -33,6 +34,7 @@ function StepButton({ to, disabled, children, ...sections }: StepButtonProps) {
 }
 
 export function ChapterPage() {
+  const { t } = useTranslation()
   const params = useParams()
   const novelId = Number(params.id)
   const number = Number(params.number)
@@ -49,14 +51,14 @@ export function ChapterPage() {
         disabled={number <= 1}
         leftSection={<IconChevronLeft size={16} />}
       >
-        Chương trước
+        {t('chapter.previous')}
       </StepButton>
       <StepButton
         to={linkTo(number + 1)}
         disabled={total !== null && number >= total}
         rightSection={<IconChevronRight size={16} />}
       >
-        Chương sau
+        {t('chapter.next')}
       </StepButton>
     </Group>
   )
@@ -64,11 +66,11 @@ export function ChapterPage() {
   return (
     <>
       <PageHeader
-        title={chapter.data?.title ?? `Chương ${number}`}
+        title={chapter.data?.title ?? t('chapter.numbered', { number })}
         crumbs={[
-          ...NOVEL_CRUMBS,
+          ...novelCrumbs(t),
           { label: novel.data?.title ?? `#${novelId}`, to: novelPaths.novel(novelId) },
-          { label: `Chương ${number}` },
+          { label: t('chapter.numbered', { number }) },
         ]}
       />
       <Stack maw={780} mx="auto" gap="md">
@@ -78,8 +80,8 @@ export function ChapterPage() {
             data.paragraphs.length === 0 ? (
               <Paper withBorder p="md">
                 <EmptyState
-                  title="Chương này chưa được tải"
-                  description={data.error ?? 'Nội dung chưa có trong database.'}
+                  title={t('chapter.notDownloaded.title')}
+                  description={data.error ?? t('chapter.notDownloaded.description')}
                   action={
                     <Button
                       leftSection={<IconDownload size={16} />}
@@ -90,7 +92,7 @@ export function ChapterPage() {
                         start({ url: novel.data.url, from_chapter: number, to_chapter: number })
                       }
                     >
-                      Tải chương này
+                      {t('chapter.download')}
                     </Button>
                   }
                 />
@@ -100,7 +102,7 @@ export function ChapterPage() {
                 <Group gap="xs" mb="md">
                   <ChapterStatusBadge status={data.status} />
                   <Text size="xs" c="dimmed">
-                    Tải lúc {formatDateTime(data.crawled_at)}
+                    {t('chapter.downloadedAt', { time: formatDateTime(data.crawled_at) })}
                   </Text>
                 </Group>
                 {data.paragraphs.map((paragraph, index) => (

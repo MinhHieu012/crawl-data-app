@@ -20,10 +20,12 @@ import {
   IconPlayerPlay,
   IconRefresh,
 } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import { useJob, useJobAction, useLogs } from '../../api/queries'
 import type { Job, JobAction } from '../../api/types'
+import type { I18nKey } from '../../i18n'
 import { JobProgress } from '../../components/JobProgress'
 import { LogList } from '../../components/LogList'
 import { PageHeader } from '../../components/PageHeader'
@@ -55,15 +57,16 @@ function Metric({ label, value, color }: { label: string; value: number; color?:
 }
 
 // Chạy lại một job cũ là cùng một thao tác ở backend; chỉ tên nút đổi theo lý do job đã dừng.
-const RERUN_LABEL: Partial<Record<Job['status'], string>> = {
-  interrupted: 'Tiếp tục',
-  partial: 'Thử lại chương lỗi',
-  failed: 'Thử lại',
-  completed: 'Kiểm tra chương mới',
-  cancelled: 'Chạy lại',
+const RERUN_LABEL: Partial<Record<Job['status'], I18nKey>> = {
+  interrupted: 'job.rerun.interrupted',
+  partial: 'job.rerun.partial',
+  failed: 'common.retry',
+  completed: 'job.rerun.completed',
+  cancelled: 'job.rerun.cancelled',
 }
 
 function JobControls({ job }: { job: Job }) {
+  const { t } = useTranslation()
   const action = useJobAction()
   const navigate = useNavigate()
 
@@ -81,24 +84,22 @@ function JobControls({ job }: { job: Job }) {
 
   const confirmCancel = () =>
     modals.openConfirmModal({
-      title: `Huỷ job #${job.id}?`,
+      title: t('job.cancelConfirm.title', { id: job.id }),
       children: (
         <Text size="sm">
-          {isNovelJob(job)
-            ? 'Job sẽ dừng hẳn và không tự chạy lại. Các chương đã tải vẫn được giữ; muốn tải tiếp thì tạo job mới.'
-            : 'Job sẽ dừng hẳn và không tự chạy lại. Dữ liệu đã có từ các lần đồng bộ trước không bị ảnh hưởng.'}
+          {isNovelJob(job) ? t('job.cancelConfirm.novel') : t('job.cancelConfirm.sync')}
         </Text>
       ),
-      labels: { confirm: 'Huỷ job', cancel: 'Không huỷ' },
+      labels: { confirm: t('job.cancelConfirm.confirm'), cancel: t('job.cancelConfirm.cancel') },
       confirmProps: { color: 'red' },
-      onConfirm: () => run('cancel', `Đã huỷ job #${job.id}`),
+      onConfirm: () => run('cancel', t('job.cancelled', { id: job.id })),
     })
 
   const novel = isNovelJob(job)
   const paused = job.status === 'interrupted'
   // Job hàng không luôn tải lại cả nguồn, nên không có "thử lại chương lỗi" hay "kiểm tra chương mới".
-  const rerunLabel =
-    novel || paused ? RERUN_LABEL[job.status] : job.status !== 'running' && 'Đồng bộ lại'
+  const rerunLabel: I18nKey | false | undefined =
+    novel || paused ? RERUN_LABEL[job.status] : job.status !== 'running' && 'job.rerun.sync'
 
   return (
     <Group gap="xs">
@@ -107,20 +108,18 @@ function JobControls({ job }: { job: Job }) {
           variant="default"
           leftSection={<IconPlayerPause size={16} />}
           loading={action.isPending}
-          onClick={() => run('pause', `Đã tạm dừng job #${job.id}`)}
+          onClick={() => run('pause', t('job.paused', { id: job.id }))}
         >
-          Tạm dừng
+          {t('job.pause')}
         </Button>
       )}
       {rerunLabel && (
         <Button
           leftSection={paused ? <IconPlayerPlay size={16} /> : <IconRefresh size={16} />}
           loading={action.isPending}
-          onClick={() =>
-            run(paused ? 'resume' : 'retry', 'Đã tạo job mới chạy lại đúng phạm vi cũ')
-          }
+          onClick={() => run(paused ? 'resume' : 'retry', t('job.rerunCreated'))}
         >
-          {rerunLabel}
+          {t(rerunLabel)}
         </Button>
       )}
       {(job.active || paused) && (
@@ -131,7 +130,7 @@ function JobControls({ job }: { job: Job }) {
           disabled={action.isPending}
           onClick={confirmCancel}
         >
-          Huỷ
+          {t('job.cancel')}
         </Button>
       )}
       {job.novel_id !== null && (
@@ -141,7 +140,7 @@ function JobControls({ job }: { job: Job }) {
           to={novelPaths.novel(job.novel_id)}
           leftSection={<IconBook size={16} />}
         >
-          Xem truyện
+          {t('common.viewNovel')}
         </Button>
       )}
       {!novel && (
@@ -151,7 +150,7 @@ function JobControls({ job }: { job: Job }) {
           to={jobDataPath(job.crawler)}
           leftSection={<IconDatabase size={16} />}
         >
-          Xem dữ liệu
+          {t('job.viewData')}
         </Button>
       )}
     </Group>
@@ -159,15 +158,16 @@ function JobControls({ job }: { job: Job }) {
 }
 
 function JobLogs({ job }: { job: Job }) {
+  const { t } = useTranslation()
   const logs = useLogs({ job_id: job.id, limit: 200 }, job.status === 'running')
   return (
     <Card withBorder>
       <Group justify="space-between" mb="sm">
         <Title order={2} size="h4">
-          Log của job
+          {t('job.logs.title')}
         </Title>
         <Button component={Link} to={`/logs?job=${job.id}`} variant="subtle" size="compact-sm">
-          Mở trong trang Log
+          {t('job.logs.open')}
         </Button>
       </Group>
       <QueryState
@@ -175,8 +175,8 @@ function JobLogs({ job }: { job: Job }) {
         isEmpty={(entries) => entries.length === 0}
         empty={
           <EmptyState
-            title="Chưa có dòng log nào của job này"
-            description="Job cũ có thể đã nằm trong file log đã xoay vòng."
+            title={t('job.logs.empty.title')}
+            description={t('job.logs.empty.description')}
           />
         }
       >
@@ -191,6 +191,7 @@ function JobLogs({ job }: { job: Job }) {
 }
 
 function JobView({ job }: { job: Job }) {
+  const { t } = useTranslation()
   const running = job.status === 'running'
   const remaining = Math.max(job.chapters_total - job.chapters_ok - job.chapters_failed, 0)
 
@@ -222,26 +223,26 @@ function JobView({ job }: { job: Job }) {
 
         {isNovelJob(job) ? (
           <SimpleGrid cols={{ base: 2, sm: 4 }} mt="md">
-            <Metric label="Thành công" value={job.chapters_ok} color="teal" />
-            <Metric label="Lỗi" value={job.chapters_failed} color="red" />
-            <Metric label="Còn lại" value={remaining} />
-            <Metric label="Bỏ qua (đã có sẵn)" value={job.chapters_skipped} />
+            <Metric label={t('job.metrics.ok')} value={job.chapters_ok} color="teal" />
+            <Metric label={t('job.metrics.failed')} value={job.chapters_failed} color="red" />
+            <Metric label={t('job.metrics.remaining')} value={remaining} />
+            <Metric label={t('job.metrics.skipped')} value={job.chapters_skipped} />
           </SimpleGrid>
         ) : (
           job.result && (
             <Text size="sm" mt="md">
-              Đã ghi: <b>{recordCounts(job.result)}</b>
+              {t('job.written')} <b>{recordCounts(job.result)}</b>
             </Text>
           )
         )}
 
         {job.last_chapter && (
           <Text size="sm" mt="md">
-            Vừa tải xong: <b>{job.last_chapter}</b>
+            {t('job.lastChapter')} <b>{job.last_chapter}</b>
           </Text>
         )}
         {job.error && (
-          <Alert color="red" title="Lý do dừng" mt="md">
+          <Alert color="red" title={t('job.stopReason')} mt="md">
             <Text size="sm" style={{ overflowWrap: 'anywhere' }}>
               {job.error}
             </Text>
@@ -249,14 +250,16 @@ function JobView({ job }: { job: Job }) {
         )}
         {running && !job.active && (
           <Alert color="yellow" mt="md">
-            Job này đang chạy ở một tiến trình khác (ví dụ lệnh crawl-data-app crawl) nên không tạm
-            dừng hay huỷ được từ đây.
+            {t('job.otherProcess')}
           </Alert>
         )}
         <Text size="xs" c="dimmed" mt="md">
-          Bắt đầu {formatDateTime(job.started_at)}
+          {t('job.started', { time: formatDateTime(job.started_at) })}
           {job.finished_at &&
-            ` · Kết thúc ${formatDateTime(job.finished_at)} · Chạy trong ${formatDuration(job.started_at, job.finished_at)}`}
+            ` · ${t('job.finished', {
+              time: formatDateTime(job.finished_at),
+              duration: formatDuration(job.started_at, job.finished_at),
+            })}`}
         </Text>
       </Card>
 
@@ -266,6 +269,7 @@ function JobView({ job }: { job: Job }) {
 }
 
 export function JobDetailPage() {
+  const { t } = useTranslation()
   const id = Number(useParams().id)
   const job = useJob(id)
 
@@ -273,7 +277,7 @@ export function JobDetailPage() {
     <>
       <PageHeader
         title={job.data ? jobTitle(job.data) : `Job #${id}`}
-        crumbs={[{ label: 'Job crawl', to: '/jobs' }, { label: `Job #${id}` }]}
+        crumbs={[{ label: t('jobs.title'), to: '/jobs' }, { label: `Job #${id}` }]}
       />
       <QueryState query={job} skeleton={<Skeleton height={260} radius="md" />}>
         {(data) => <JobView job={data} />}

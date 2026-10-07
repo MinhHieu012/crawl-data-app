@@ -1,4 +1,5 @@
 import { Anchor, Box, Group, Stack, Table, Text, useMatches } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import type { Job } from '../api/types'
@@ -12,6 +13,7 @@ import { JobStatusBadge } from './StatusBadge'
  * truyện, không bắt người dùng cuộn ngang mới thấy job chạy tới đâu.
  */
 export function JobsTable({ jobs }: { jobs: Job[] }) {
+  const { t } = useTranslation()
   const wide = useMatches({ base: false, lg: true }, { getInitialValueInEffect: false })
 
   return (
@@ -19,13 +21,13 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
       <Table.Thead>
         <Table.Tr>
           <Table.Th w={64}>Job</Table.Th>
-          <Table.Th>Nội dung</Table.Th>
+          <Table.Th>{t('jobsTable.content')}</Table.Th>
           {wide && (
             <>
-              <Table.Th w={140}>Phạm vi</Table.Th>
-              <Table.Th w={220}>Tiến độ</Table.Th>
-              <Table.Th w={150}>Trạng thái</Table.Th>
-              <Table.Th w={130}>Bắt đầu</Table.Th>
+              <Table.Th w={140}>{t('common.scope')}</Table.Th>
+              <Table.Th w={220}>{t('jobsTable.progress')}</Table.Th>
+              <Table.Th w={150}>{t('common.status')}</Table.Th>
+              <Table.Th w={130}>{t('jobsTable.started')}</Table.Th>
             </>
           )}
         </Table.Tr>

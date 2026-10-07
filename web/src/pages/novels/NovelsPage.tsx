@@ -11,6 +11,7 @@ import {
   useMatches,
 } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useNovels, useSources } from '../../api/queries'
@@ -27,15 +28,16 @@ import { formatDateTime } from '../../utils/format'
 const PAGE_SIZE = 20
 const DEFAULT_SORT = 'last_crawled_at:desc'
 const SORT_OPTIONS = [
-  { value: DEFAULT_SORT, label: 'Crawl gần nhất' },
-  { value: 'title:asc', label: 'Tên A → Z' },
-  { value: 'done:desc', label: 'Nhiều chương đã tải nhất' },
-  { value: 'total_chapters:desc', label: 'Truyện dài nhất' },
-]
+  { value: DEFAULT_SORT, label: 'novels.sort.recent' },
+  { value: 'title:asc', label: 'novels.sort.title' },
+  { value: 'done:desc', label: 'novels.sort.done' },
+  { value: 'total_chapters:desc', label: 'novels.sort.longest' },
+] as const
 // Dưới `md` (kể cả tablet có menu bên trái): các ô lọc giãn đều cho kín hàng thay vì mỗi ô một bề rộng.
 const FILTER_FLEX = { base: '1 1 130px', md: '0 0 auto' }
 
 export function NovelsPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useUrlState({
     search: '',
     source: '',
@@ -59,18 +61,18 @@ export function NovelsPage() {
   const wide = useMatches({ base: false, lg: true }, { getInitialValueInEffect: false })
   const filtering = Boolean(filters.search || filters.source || filters.status)
   const sourceOptions = [
-    { value: '', label: 'Mọi nguồn' },
+    { value: '', label: t('novels.allSources') },
     ...(sources.data ?? []).map((source) => ({ value: source.name, label: source.name })),
   ]
 
   return (
     <>
       <PageHeader
-        title="Truyện"
-        description="Tìm theo tên truyện hoặc tác giả, gõ không dấu cũng được."
+        title={t('novels.title')}
+        description={t('novels.description')}
         actions={
           <Button component={Link} to={novelPaths.crawl} leftSection={<IconPlus size={16} />}>
-            Crawl truyện
+            {t('common.crawlNovel')}
           </Button>
         }
       />
@@ -79,26 +81,26 @@ export function NovelsPage() {
           <SearchInput
             value={filters.search}
             onSearch={(search) => setFilters({ search })}
-            label="Tìm truyện"
-            placeholder="Tên truyện hoặc tác giả"
+            label={t('novels.search')}
+            placeholder={t('novels.searchPlaceholder')}
           />
           <NativeSelect
-            aria-label="Lọc theo nguồn"
+            aria-label={t('novels.filterSource')}
             data={sourceOptions}
             flex={FILTER_FLEX}
             value={filters.source}
             onChange={(event) => setFilters({ source: event.currentTarget.value })}
           />
           <NativeSelect
-            aria-label="Lọc theo tình trạng"
-            data={statusOptions(NOVEL_STATUS, 'Mọi tình trạng')}
+            aria-label={t('novels.filterStatus')}
+            data={statusOptions(NOVEL_STATUS, t('novels.allStatuses'))}
             flex={FILTER_FLEX}
             value={filters.status}
             onChange={(event) => setFilters({ status: event.currentTarget.value })}
           />
           <NativeSelect
-            aria-label="Sắp xếp"
-            data={SORT_OPTIONS}
+            aria-label={t('novels.sortLabel')}
+            data={SORT_OPTIONS.map(({ value, label }) => ({ value, label: t(label) }))}
             flex={FILTER_FLEX}
             value={filters.sort}
             onChange={(event) => setFilters({ sort: event.currentTarget.value })}
@@ -111,16 +113,16 @@ export function NovelsPage() {
           empty={
             filtering ? (
               <EmptyState
-                title="Không có truyện nào khớp bộ lọc"
-                description="Thử từ khoá khác hoặc bỏ bớt điều kiện lọc."
+                title={t('novels.noMatch.title')}
+                description={t('novels.noMatch.description')}
               />
             ) : (
               <EmptyState
-                title="Chưa có truyện nào"
-                description="Truyện sẽ xuất hiện ở đây sau lần crawl đầu tiên."
+                title={t('novels.empty.title')}
+                description={t('novels.empty.description')}
                 action={
                   <Button component={Link} to={novelPaths.crawl} variant="light">
-                    Crawl truyện đầu tiên
+                    {t('common.crawlFirstNovel')}
                   </Button>
                 }
               />
@@ -132,14 +134,14 @@ export function NovelsPage() {
               <Table verticalSpacing="sm" highlightOnHover layout="fixed">
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th w={60} aria-label="Ảnh bìa" />
-                    <Table.Th>Truyện</Table.Th>
+                    <Table.Th w={60} aria-label={t('novels.cover')} />
+                    <Table.Th>{t('novels.title')}</Table.Th>
                     {wide && (
                       <>
-                        <Table.Th w={120}>Nguồn</Table.Th>
-                        <Table.Th w={210}>Chương đã tải</Table.Th>
-                        <Table.Th w={130}>Tình trạng</Table.Th>
-                        <Table.Th w={140}>Crawl gần nhất</Table.Th>
+                        <Table.Th w={120}>{t('common.source')}</Table.Th>
+                        <Table.Th w={210}>{t('chapters.done')}</Table.Th>
+                        <Table.Th w={130}>{t('novels.statusColumn')}</Table.Th>
+                        <Table.Th w={140}>{t('novels.sort.recent')}</Table.Th>
                       </>
                     )}
                   </Table.Tr>
@@ -160,7 +162,7 @@ export function NovelsPage() {
                           {novel.title}
                         </Anchor>
                         <Text size="xs" c="dimmed">
-                          {novel.author ?? 'Chưa rõ tác giả'}
+                          {novel.author ?? t('novels.unknownAuthor')}
                         </Text>
                         {!wide && (
                           <Stack gap={6} mt={6}>
@@ -169,7 +171,7 @@ export function NovelsPage() {
                               <Text size="xs" c="dimmed">
                                 {novel.source}
                                 {novel.last_crawled_at &&
-                                  ` · crawl ${formatDateTime(novel.last_crawled_at)}`}
+                                  ` · ${t('novels.crawledAt', { time: formatDateTime(novel.last_crawled_at) })}`}
                               </Text>
                             </Group>
                             <Box maw={360}>

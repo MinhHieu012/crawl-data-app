@@ -12,6 +12,7 @@ import {
 import type { ComponentType, ReactNode } from 'react'
 
 import type { AviationKind, AviationSource } from '../api/types'
+import type { I18nKey } from '../i18n'
 import {
   AviationDataPage,
   AviationHistoryPage,
@@ -33,18 +34,21 @@ import {
 import { SourcesPage } from '../pages/sources/SourcesPage'
 import { NOVEL } from './paths'
 
+// Chữ hiển thị (`name`, `description`, `label`) khai báo bằng khoá dịch trong `locales/*.json`;
+// nơi hiển thị gọi `t(khoá)` nên đổi ngôn ngữ là đổi theo.
+
 /** Một tab trong khu vực quản lý của category. `path` nối sau đường dẫn của category. */
 export interface CrawlerSection {
   path: string
-  label: string
+  label: I18nKey
   element: ReactNode
 }
 
 /** Loại dữ liệu mà một crawler thu thập (truyện, sân bay, hãng bay…). */
 export interface CrawlerCategory {
   id: string
-  name: string
-  description: string
+  name: I18nKey
+  description: I18nKey
   icon: Icon
   /**
    * Các tab của khu vực quản lý. Bỏ trống khi backend chưa có crawler này: giao diện báo
@@ -62,37 +66,38 @@ export interface CrawlerCategory {
 /** Một crawler độc lập (thường ứng với một nhà cung cấp dữ liệu), gồm một hay nhiều category. */
 export interface CrawlerModule {
   id: string
-  name: string
-  description: string
+  name: I18nKey
+  description: I18nKey
   icon: Icon
   categories: CrawlerCategory[]
 }
 
-/** Một nguồn dữ liệu hàng không: bốn tab dữ liệu dùng chung trang (chỉ khác `kind`) và tab lịch sử. */
-function aviationCategory(
-  id: string,
-  source: AviationSource,
-  name: string,
-  description: string,
-  icon: Icon,
-): CrawlerCategory {
-  const data = (kind: AviationKind, label: string): CrawlerSection => ({
+/**
+ * Một nguồn dữ liệu hàng không: bốn tab dữ liệu dùng chung trang (chỉ khác `kind`) và tab lịch sử.
+ * Tên và mô tả nằm ở khoá `registry.aviation.<source>`.
+ */
+function aviationCategory(id: string, source: AviationSource, icon: Icon): CrawlerCategory {
+  const data = (kind: AviationKind): CrawlerSection => ({
     path: kind,
-    label,
+    label: `registry.tabs.${kind}`,
     element: <AviationDataPage source={source} kind={kind} />,
   })
   return {
     id,
-    name,
-    description,
+    name: `registry.aviation.${source}.name`,
+    description: `registry.aviation.${source}.description`,
     icon,
     Summary: () => <AviationSummaryLine source={source} />,
     sections: [
-      data('airport', 'Sân bay'),
-      data('airline', 'Hãng bay'),
-      data('city', 'Thành phố'),
-      data('country', 'Quốc gia'),
-      { path: 'history', label: 'Lịch sử', element: <AviationHistoryPage source={source} /> },
+      data('airport'),
+      data('airline'),
+      data('city'),
+      data('country'),
+      {
+        path: 'history',
+        label: 'common.history',
+        element: <AviationHistoryPage source={source} />,
+      },
     ],
   }
 }
@@ -100,24 +105,24 @@ function aviationCategory(
 export const CRAWLER_MODULES: CrawlerModule[] = [
   {
     id: NOVEL.moduleId,
-    name: NOVEL.name,
-    description: 'Crawl truyện chữ từ các website đọc truyện vào database.',
+    name: 'registry.novel.name',
+    description: 'registry.novel.description',
     icon: IconBook2,
     categories: [
       {
         id: NOVEL.categoryId,
-        name: 'Truyện',
-        description: 'Thông tin truyện, mục lục và nội dung từng chương.',
+        name: 'registry.novel.stories.name',
+        description: 'registry.novel.stories.description',
         icon: IconBook2,
         Summary: NovelSummary,
         crawlPath: 'crawl',
         sections: [
-          { path: 'overview', label: 'Tổng quan', element: <NovelOverview /> },
-          { path: 'crawl', label: 'Crawl', element: <CrawlPage /> },
-          { path: 'novels', label: 'Truyện', element: <NovelsPage /> },
-          { path: 'jobs', label: 'Job', element: <JobsPage crawler="novel" /> },
-          { path: 'sources', label: 'Nguồn', element: <SourcesPage /> },
-          { path: 'logs', label: 'Log', element: <LogsPage /> },
+          { path: 'overview', label: 'common.overview', element: <NovelOverview /> },
+          { path: 'crawl', label: 'registry.tabs.crawl', element: <CrawlPage /> },
+          { path: 'novels', label: 'novels.title', element: <NovelsPage /> },
+          { path: 'jobs', label: 'common.jobs', element: <JobsPage crawler="novel" /> },
+          { path: 'sources', label: 'registry.tabs.sources', element: <SourcesPage /> },
+          { path: 'logs', label: 'logs.title', element: <LogsPage /> },
         ],
         pages: [
           { path: 'novels/:id', element: <NovelDetailPage /> },
@@ -128,42 +133,30 @@ export const CRAWLER_MODULES: CrawlerModule[] = [
   },
   {
     id: 'aviation',
-    name: 'Hàng không',
-    description: 'Danh mục sân bay, hãng bay, thành phố và quốc gia, theo từng nguồn dữ liệu.',
+    name: 'registry.aviation.name',
+    description: 'registry.aviation.description',
     icon: IconPlane,
     categories: [
-      aviationCategory(
-        'world',
-        'world',
-        'Toàn thế giới',
-        'Dữ liệu mở toàn cầu từ OurAirports và OpenFlights.',
-        IconWorld,
-      ),
-      aviationCategory(
-        'vietnam-airlines',
-        'vna',
-        'Vietnam Airlines',
-        'Điểm đến và hãng bay đối tác công bố trên vietnamairlines.com.',
-        IconPlaneDeparture,
-      ),
+      aviationCategory('world', 'world', IconWorld),
+      aviationCategory('vietnam-airlines', 'vna', IconPlaneDeparture),
     ],
   },
   {
     id: 'provinces',
-    name: 'Tỉnh thành Việt Nam',
-    description: 'Danh mục 34 tỉnh, thành phố của Việt Nam sau sáp nhập năm 2025, kèm phường/xã.',
+    name: 'registry.provinces.name',
+    description: 'registry.provinces.description',
     icon: IconMapPin,
     categories: [
       {
         id: 'vietnam',
-        name: 'Tỉnh thành',
-        description: 'Mã, tên, loại đơn vị của từng tỉnh, thành phố và các phường/xã trực thuộc.',
+        name: 'registry.provinces.vietnam.name',
+        description: 'registry.provinces.vietnam.description',
         icon: IconMapPin,
         Summary: ProvinceSummaryLine,
         sections: [
-          { path: 'list', label: 'Tỉnh thành', element: <ProvincesPage /> },
-          { path: 'wards', label: 'Phường/xã', element: <WardsPage /> },
-          { path: 'history', label: 'Lịch sử', element: <ProvinceHistoryPage /> },
+          { path: 'list', label: 'registry.tabs.provinces', element: <ProvincesPage /> },
+          { path: 'wards', label: 'registry.tabs.wards', element: <WardsPage /> },
+          { path: 'history', label: 'common.history', element: <ProvinceHistoryPage /> },
         ],
       },
     ],

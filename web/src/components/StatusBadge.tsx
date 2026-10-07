@@ -1,43 +1,47 @@
 import { Badge } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 
 import type { ChapterStatus, JobStatus, LogLevel, NovelStatus } from '../api/types'
+import i18n, { type I18nKey } from '../i18n'
 
-type Look = { label: string; color: string }
+/** `label` là khoá dịch; bỏ trống thì hiện nguyên giá trị (mức log không dịch). */
+type Look = { label?: I18nKey; color: string }
 
-// Nhãn tiếng Việt và màu cho từng trạng thái — nguồn duy nhất, các ô chọn bộ lọc cũng lấy từ đây.
+// Nhãn và màu cho từng trạng thái — nguồn duy nhất, các ô chọn bộ lọc cũng lấy từ đây.
 export const JOB_STATUS: Record<JobStatus, Look> = {
-  running: { label: 'Đang chạy', color: 'blue' },
-  completed: { label: 'Hoàn tất', color: 'teal' },
-  partial: { label: 'Còn chương lỗi', color: 'yellow' },
-  failed: { label: 'Thất bại', color: 'red' },
-  interrupted: { label: 'Tạm dừng', color: 'orange' },
-  cancelled: { label: 'Đã huỷ', color: 'gray' },
+  running: { label: 'status.job.running', color: 'blue' },
+  completed: { label: 'status.job.completed', color: 'teal' },
+  partial: { label: 'status.job.partial', color: 'yellow' },
+  failed: { label: 'status.job.failed', color: 'red' },
+  interrupted: { label: 'status.job.interrupted', color: 'orange' },
+  cancelled: { label: 'status.job.cancelled', color: 'gray' },
 }
 
 export const CHAPTER_STATUS: Record<ChapterStatus, Look> = {
-  done: { label: 'Đã tải', color: 'teal' },
-  pending: { label: 'Chờ tải', color: 'gray' },
-  failed: { label: 'Lỗi', color: 'red' },
+  done: { label: 'status.chapter.done', color: 'teal' },
+  pending: { label: 'status.chapter.pending', color: 'gray' },
+  failed: { label: 'status.chapter.failed', color: 'red' },
 }
 
 export const NOVEL_STATUS: Record<NovelStatus, Look> = {
-  ongoing: { label: 'Đang ra', color: 'blue' },
-  completed: { label: 'Hoàn thành', color: 'teal' },
-  paused: { label: 'Tạm ngưng', color: 'yellow' },
-  unknown: { label: 'Không rõ', color: 'gray' },
+  ongoing: { label: 'status.novel.ongoing', color: 'blue' },
+  completed: { label: 'status.novel.completed', color: 'teal' },
+  paused: { label: 'status.novel.paused', color: 'yellow' },
+  unknown: { label: 'status.novel.unknown', color: 'gray' },
 }
 
 const LOG_LEVEL: Record<LogLevel, Look> = {
-  DEBUG: { label: 'DEBUG', color: 'gray' },
-  INFO: { label: 'INFO', color: 'blue' },
-  WARNING: { label: 'WARNING', color: 'yellow' },
-  ERROR: { label: 'ERROR', color: 'red' },
+  DEBUG: { color: 'gray' },
+  INFO: { color: 'blue' },
+  WARNING: { color: 'yellow' },
+  ERROR: { color: 'red' },
 }
 
 function StatusBadge({ look, fallback }: { look: Look | undefined; fallback: string }) {
+  const { t } = useTranslation()
   return (
     <Badge color={look?.color ?? 'gray'} variant="light" style={{ flexShrink: 0 }}>
-      {look?.label ?? fallback}
+      {look?.label ? t(look.label) : fallback}
     </Badge>
   )
 }
@@ -62,6 +66,9 @@ export function LogLevelBadge({ level }: { level: LogLevel }) {
 export function statusOptions(looks: Record<string, Look>, allLabel: string) {
   return [
     { value: '', label: allLabel },
-    ...Object.entries(looks).map(([value, look]) => ({ value, label: look.label })),
+    ...Object.entries(looks).map(([value, look]) => ({
+      value,
+      label: look.label ? i18n.t(look.label) : value,
+    })),
   ]
 }

@@ -2,6 +2,7 @@ import { Group, Pagination, Text, TextInput } from '@mantine/core'
 import { useDebouncedCallback } from '@mantine/hooks'
 import { IconSearch } from '@tabler/icons-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { formatNumber } from '../utils/format'
 
@@ -41,16 +42,9 @@ interface PagerProps {
   onChange: (page: number) => void
 }
 
-// Hai nút mũi tên của phân trang chỉ có icon nên cần tên cho trình đọc màn hình.
-const PAGE_CONTROL_LABEL = {
-  first: 'Trang đầu',
-  previous: 'Trang trước',
-  next: 'Trang sau',
-  last: 'Trang cuối',
-}
-
 /** Dòng "1–20 trong 1.245" kèm nút chuyển trang (ẩn khi chỉ có một trang). */
 export function Pager({ total, page, pageSize, onChange }: PagerProps) {
+  const { t } = useTranslation()
   const pages = Math.ceil(total / pageSize)
   const first = (page - 1) * pageSize + 1
   const last = Math.min(page * pageSize, total)
@@ -59,8 +53,12 @@ export function Pager({ total, page, pageSize, onChange }: PagerProps) {
     <Group justify="space-between" mt="md" gap="sm">
       <Text size="sm" c="dimmed">
         {total === 0
-          ? 'Không có dòng nào'
-          : `${formatNumber(first)}–${formatNumber(last)} trong ${formatNumber(total)}`}
+          ? t('pager.empty')
+          : t('pager.range', {
+              first: formatNumber(first),
+              last: formatNumber(last),
+              total: formatNumber(total),
+            })}
       </Text>
       {pages > 1 && (
         <Pagination
@@ -68,7 +66,8 @@ export function Pager({ total, page, pageSize, onChange }: PagerProps) {
           value={page}
           onChange={onChange}
           size="sm"
-          getControlProps={(control) => ({ 'aria-label': PAGE_CONTROL_LABEL[control] })}
+          // Các nút mũi tên của phân trang chỉ có icon nên cần tên cho trình đọc màn hình.
+          getControlProps={(control) => ({ 'aria-label': t(`pager.${control}`) })}
         />
       )}
     </Group>

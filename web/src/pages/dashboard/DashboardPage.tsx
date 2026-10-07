@@ -1,5 +1,6 @@
 import { Button, SimpleGrid, Skeleton } from '@mantine/core'
 import { IconSpider } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useStats } from '../../api/queries'
@@ -19,16 +20,17 @@ const READY = CATEGORIES.filter((category) => category.sections).length
  * crawler (số truyện, số chương…) nằm ở tab Tổng quan của crawler đó.
  */
 export function DashboardPage() {
+  const { t } = useTranslation()
   const stats = useStats()
 
   return (
     <>
       <PageHeader
-        title="Tổng quan"
-        description="Hoạt động của mọi crawler trong hệ thống."
+        title={t('dashboard.title')}
+        description={t('dashboard.description')}
         actions={
           <Button component={Link} to={CRAWLERS_PATH} leftSection={<IconSpider size={16} />}>
-            Mở crawler
+            {t('dashboard.openCrawlers')}
           </Button>
         }
       />
@@ -46,29 +48,32 @@ export function DashboardPage() {
         {(data) => (
           <SimpleGrid cols={GRID} mb="lg">
             <StatCard
-              label="Crawler"
+              label={t('common.crawlers')}
               value={CRAWLER_MODULES.length}
               to={CRAWLERS_PATH}
-              hint={`${READY} / ${CATEGORIES.length} loại dữ liệu đã sẵn sàng`}
+              hint={t('dashboard.readyHint', { ready: READY, total: CATEGORIES.length })}
             />
             <StatCard
-              label="Job đang chạy"
+              label={t('dashboard.running')}
               value={data.jobs.running}
               color="blue"
               to="/jobs?status=running"
             />
             <StatCard
-              label="Job hoàn tất"
+              label={t('dashboard.completed')}
               value={data.jobs.completed}
               color="teal"
               to="/jobs?status=completed"
             />
             <StatCard
-              label="Job lỗi"
+              label={t('dashboard.failed')}
               value={data.jobs.failed + data.jobs.partial}
               color="red"
               to="/jobs?status=failed"
-              hint={`${data.jobs.failed} thất bại · ${data.jobs.partial} còn chương lỗi`}
+              hint={t('dashboard.failedHint', {
+                failed: data.jobs.failed,
+                partial: data.jobs.partial,
+              })}
             />
           </SimpleGrid>
         )}
