@@ -241,11 +241,52 @@ lỗi, hoặc chấp nhận quay về dữ liệu lúc trước deploy bằng c�
 `docker compose up -d --build` tạo lại container nên job đang chạy được ghi là `interrupted`; mở giao
 diện và bấm **Tiếp tục**. Schema database tự được nâng cấp mỗi lần container khởi động.
 
+### Bật quản trị góp ý (`ADMIN_TOKEN`)
+
+Trang **Quản lý góp ý** (`/admin/feedback`) chỉ mở khi máy chủ có `ADMIN_TOKEN`. Trên VPS có **hai**
+file `.env`, và biến này phải nằm ở file của app:
+
+| File | Của ai | Chứa gì |
+|---|---|---|
+| `~/crawl-data-app/.env` (cạnh `compose.yaml`) | Docker Compose | `TAILSCALE_IP`, `APP_IMAGE`, `COMPOSE_PROFILES`, `PUBLIC_SITE`, `PUBLIC_BIND` |
+| `/srv/state/.env` (trong volume `crawl-data-app_state`) | app | `ADMIN_TOKEN` và mọi biến ở trang Cài đặt |
+
+Đặt `ADMIN_TOKEN` vào file cạnh `compose.yaml` thì **không có tác dụng** — Compose không chuyển biến
+đó vào container, giao diện vẫn báo "Chưa bật quản trị".
+
+```bash
+# Tự tạo mã (43 ký tự), ghi vào /srv/state/.env và in ra MỘT lần — chép lại, giữ kín:
+docker compose run --rm --no-deps app python -c "import secrets; from dotenv import set_key; t = secrets.token_urlsafe(32); set_key('.env', 'ADMIN_TOKEN', t); print(t)"
+docker compose restart app   # app chỉ đọc mã lúc khởi động; job đang chạy sẽ thành `interrupted`
+docker compose ps            # sau ~30 giây: STATUS của app phải là `Up ... (healthy)`
+```
+
+Kiểm tra mà không lộ mã: `docker compose exec app grep -c "^ADMIN_TOKEN=" /srv/state/.env` in ra `1`.
+
+**Đổi mã**: chạy lại đúng hai lệnh trên — lệnh ghi sẽ thay mã cũ chứ không thêm dòng mới. Mã cũ còn
+dùng được tới lúc khởi động lại; sau đó trình duyệt nào đang nhớ mã cũ phải nhập mã mới ở
+`/admin/feedback`.
+
+**Tắt quản trị**: gỡ dòng đó (hoặc để `ADMIN_TOKEN=` trống) rồi khởi động lại:
+
+```bash
+docker compose run --rm --no-deps app sed -i '/^ADMIN_TOKEN=/d' .env
+docker compose restart app
+```
+
+**Container lặp `Restarting (2)`** sau khi đặt mã (`docker compose ps`): mã ngắn hơn 16 ký tự nên
+app từ chối cấu hình. `docker compose logs --tail 15 app` ghi `Value should have at least 16 items`
+(log này có thể in nguyên giá trị mã, che đi trước khi gửi cho ai). Các lệnh ở mục này dùng `run` chứ
+không dùng `exec` nên vẫn chạy được lúc đó: ghi lại mã bằng lệnh đầu tiên, hoặc gỡ dòng đó, rồi khởi
+động lại.
+
 ## Khi không vào được
 
 - `docker compose up` báo thiếu `TAILSCALE_IP`: chưa tạo file `.env` ở bước 3.
 - Báo `cannot assign requested address`: Tailscale chưa lên. Kiểm tra `tailscale status`, rồi
   `docker compose up -d`.
 - Trình duyệt treo: máy bạn chưa bật Tailscale, hoặc đăng nhập khác tài khoản.
+- Trang Quản lý góp ý báo "Chưa bật quản trị" dù đã đặt `ADMIN_TOKEN`: đặt nhầm vào `.env` cạnh
+  `compose.yaml`, hoặc chưa khởi động lại — xem [Bật quản trị góp ý](#bật-quản-trị-góp-ý-admin_token).
 - Địa chỉ Tailscale của VPS đổi (hiếm, khi xoá và thêm lại máy): sửa `TAILSCALE_IP` trong `.env` rồi
   `docker compose up -d`.

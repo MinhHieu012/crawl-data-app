@@ -142,7 +142,7 @@ crawl-data-app serve             # API + UI đã build tại http://127.0.0.1:80
 cd web && npm run dev            # dev UI http://localhost:5173 (chạy kèm `serve`)
 cd web && npm run build          # tsc --noEmit rồi build ra web/dist (cần để serve phục vụ UI)
 
-pytest                           # backend (227 test, ~25s, không có request mạng thật)
+pytest                           # backend (231 test, ~25s, không có request mạng thật)
 ruff check . && ruff format --check .
 cd web && npm test               # Vitest (55 test, giao diện chạy ở tiếng Việt)
 cd web && npm run lint && npm run typecheck && npm run format:check

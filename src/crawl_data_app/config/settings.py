@@ -67,7 +67,8 @@ class LogSettings(BaseSettings):
 class AdminSettings(BaseSettings):
     """Quản trị — biến môi trường `ADMIN_*`. Không hiện và không sửa được trên trang Cài đặt."""
 
-    model_config = _env("ADMIN_")
+    # `ADMIN_TOKEN=` (trống) cũng là "chưa đặt" — không thì một dòng trống làm app không khởi động được.
+    model_config = SettingsConfigDict(**_env("ADMIN_"), env_parse_none_str="")
 
     # Mã quản trị: ai gửi đúng mã này (header `Authorization: Bearer <mã>`) mới xem và quản lý được
     # góp ý. Bỏ trống = tắt toàn bộ API quản trị. Tối thiểu 16 ký tự vì cửa công khai cũng gọi được.
