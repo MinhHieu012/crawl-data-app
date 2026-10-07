@@ -23,8 +23,9 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"
-      - "80:80"
-      - "443:443"
+      # Funnel (tailscaled) cũng giữ cổng 443 trên IP Tailscale → dùng Funnel thì đặt PUBLIC_BIND=127.0.0.1.
+      - "${PUBLIC_BIND:-0.0.0.0}:80:80"
+      - "${PUBLIC_BIND:-0.0.0.0}:443:443"
     volumes:
       - caddy_data:/data   # chứng chỉ Let's Encrypt — mất là phải xin lại, dễ chạm giới hạn cấp
     configs:

@@ -92,6 +92,7 @@ Bật (một lần, trên VPS):
 
 ```bash
 echo "COMPOSE_PROFILES=public" >> ~/crawl-data-app/.env
+echo "PUBLIC_BIND=127.0.0.1" >> ~/crawl-data-app/.env   # nhường cổng 443 cho Funnel, không thì container không lên
 cd ~/crawl-data-app && docker compose up -d --no-build
 tailscale funnel --bg 8080        # lần đầu sẽ in đường dẫn để bật Funnel/HTTPS cho tailnet
 tailscale funnel status           # xem địa chỉ công khai
@@ -105,12 +106,14 @@ Tắt: `tailscale funnel --https=443 off`, xoá dòng `COMPOSE_PROFILES` khỏi 
 Funnel chỉ phục vụ tên `*.ts.net`. Có tên miền riêng thì để Caddy nhận thẳng (tự xin chứng chỉ Let's Encrypt):
 
 1. Tạo bản ghi DNS `A` của tên miền trỏ về IP công khai của VPS; mở cổng 80 và 443 ở firewall của nhà cung cấp VPS.
-2. Trên VPS (sau khi DNS đã trỏ đúng — `nslookup <tên miền>` ra IP của VPS):
+2. Trên VPS (sau khi DNS đã trỏ đúng — `nslookup <tên miền>` ra IP của VPS). Tắt Funnel **trước**: Funnel và
+   Caddy không cùng giữ được cổng 443 (`address already in use`, deploy sẽ rollback).
 
 ```bash
+tailscale funnel --https=443 off                                # bỏ lối vào ts.net, trả cổng 443
+sed -i '/^PUBLIC_BIND=/d' ~/crawl-data-app/.env                 # nếu trước đó đã đặt cho Funnel
 echo "PUBLIC_SITE=crawl.example.com" >> ~/crawl-data-app/.env   # cần cả COMPOSE_PROFILES=public
 cd ~/crawl-data-app && docker compose up -d --no-build
-tailscale funnel --https=443 off                                # bỏ lối vào ts.net cũ
 ```
 
 Quyền của khách qua tên miền giống hệt qua Funnel. Bỏ tên miền: xoá dòng `PUBLIC_SITE` rồi `docker compose up -d --no-build`.
