@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import set_key
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from crawl_data_app import __version__
@@ -64,12 +64,23 @@ class LogSettings(BaseSettings):
     dir: str = "logs"
 
 
+class AdminSettings(BaseSettings):
+    """Quản trị — biến môi trường `ADMIN_*`. Không hiện và không sửa được trên trang Cài đặt."""
+
+    model_config = _env("ADMIN_")
+
+    # Mã quản trị: ai gửi đúng mã này (header `Authorization: Bearer <mã>`) mới xem và quản lý được
+    # góp ý. Bỏ trống = tắt toàn bộ API quản trị. Tối thiểu 16 ký tự vì cửa công khai cũng gọi được.
+    token: SecretStr | None = Field(None, min_length=16)
+
+
 @dataclass(frozen=True)
 class Settings:
     http: HttpSettings = field(default_factory=HttpSettings)
     crawler: CrawlerSettings = field(default_factory=CrawlerSettings)
     database: DatabaseSettings = field(default_factory=DatabaseSettings)
     log: LogSettings = field(default_factory=LogSettings)
+    admin: AdminSettings = field(default_factory=AdminSettings)
 
 
 @lru_cache
@@ -84,6 +95,7 @@ def load_settings(env_file: str | Path) -> Settings:
         crawler=CrawlerSettings(_env_file=env_file),
         database=DatabaseSettings(_env_file=env_file),
         log=LogSettings(_env_file=env_file),
+        admin=AdminSettings(_env_file=env_file),
     )
 
 

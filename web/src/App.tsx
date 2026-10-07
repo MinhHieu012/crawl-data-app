@@ -10,7 +10,18 @@ import { CategoryLayout } from './layouts/CategoryLayout'
 import { CrawlMenu } from './pages/crawlers/CrawlMenu'
 import { CrawlersPage } from './pages/crawlers/CrawlersPage'
 import { ModulePage } from './pages/crawlers/ModulePage'
+import { AdminFeedbackDetailPage } from './pages/admin/AdminFeedbackDetailPage'
+import { AdminFeedbackPage } from './pages/admin/AdminFeedbackPage'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
+import { BugReportPage } from './pages/feedback/BugReportPage'
+import { CrawlerRequestPage } from './pages/feedback/CrawlerRequestPage'
+import { FeedbackPage } from './pages/feedback/FeedbackPage'
+import {
+  ADMIN_FEEDBACK_PATH,
+  BUG_REPORT_PATH,
+  CRAWLER_REQUEST_PATH,
+  FEEDBACK_PATH,
+} from './pages/feedback/paths'
 import { JobDetailPage } from './pages/jobs/JobDetailPage'
 import { JobsPage } from './pages/jobs/JobsPage'
 import { LogsPage } from './pages/logs/LogsPage'
@@ -69,6 +80,11 @@ export function App() {
         <Route path="jobs/:id" element={<JobDetailPage />} />
         <Route path="logs" element={<LogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path={FEEDBACK_PATH} element={<FeedbackPage />} />
+        <Route path={BUG_REPORT_PATH} element={<BugReportPage />} />
+        <Route path={CRAWLER_REQUEST_PATH} element={<CrawlerRequestPage />} />
+        <Route path={ADMIN_FEEDBACK_PATH} element={<AdminFeedbackPage />} />
+        <Route path={`${ADMIN_FEEDBACK_PATH}/:id`} element={<AdminFeedbackDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

@@ -51,7 +51,7 @@ def gate(clock) -> Gate:
 def env_file(tmp_path, monkeypatch) -> Path:
     """File `.env` riêng của test; biến môi trường thật của máy không được lọt vào."""
     for name in list(os.environ):
-        if name.startswith(("HTTP_", "CRAWLER_", "DATABASE_", "LOG_")):
+        if name.startswith(("HTTP_", "CRAWLER_", "DATABASE_", "LOG_", "ADMIN_")):
             monkeypatch.delenv(name)
     path = tmp_path / ".env"
     path.write_text(

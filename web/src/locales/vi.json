@@ -103,6 +103,12 @@
       "completed": "Hoàn thành",
       "paused": "Tạm ngưng",
       "unknown": "Không rõ"
+    },
+    "feedback": {
+      "open": "Mới",
+      "in_progress": "Đang xử lý",
+      "resolved": "Đã xử lý",
+      "rejected": "Từ chối"
     }
   },
   "chapters": {
@@ -386,7 +392,10 @@
       "job_running": "Job vẫn đang chạy.",
       "job_not_running": "Job không còn chạy nên không thao tác được.",
       "cross_origin": "Yêu cầu được gửi từ một trang web khác nên bị từ chối.",
-      "owner_only": "Chỉ chủ máy chủ mới đổi được cấu hình."
+      "owner_only": "Chỉ chủ máy chủ mới đổi được cấu hình.",
+      "admin_only": "Chỉ quản trị viên mới xem và quản lý được góp ý.",
+      "admin_disabled": "Chưa bật quản trị: đặt ADMIN_TOKEN trong file .env của máy chủ.",
+      "invalid_status": "Trạng thái không hợp lệ."
     }
   },
   "sources": {
@@ -571,5 +580,137 @@
     "followJob": "Theo dõi job",
     "history": "Lịch sử crawl",
     "noJobs": "Chưa có job nào cho truyện này"
+  },
+  "feedback": {
+    "title": "Góp ý",
+    "description": "Báo lỗi của hệ thống hoặc đề xuất nguồn dữ liệu mới cho crawler. Chỉ quản trị viên xem được góp ý.",
+    "types": {
+      "bug_report": "Báo lỗi",
+      "crawler_request": "Gợi ý crawler"
+    },
+    "bug": {
+      "title": "Báo lỗi",
+      "cardDescription": "Báo cáo lỗi của hệ thống.",
+      "button": "Báo lỗi",
+      "description": "Bạn đang làm gì, mong đợi điều gì và điều gì đã xảy ra: càng cụ thể càng dễ sửa.",
+      "submit": "Gửi báo lỗi",
+      "sent": "Đã gửi báo lỗi #{{id}}. Cảm ơn bạn!"
+    },
+    "crawler": {
+      "title": "Gợi ý crawler",
+      "cardDescription": "Đề xuất nguồn dữ liệu crawler mới.",
+      "button": "Gợi ý crawler",
+      "description": "Website hoặc bộ dữ liệu nào bạn muốn hệ thống thu thập, và để làm gì.",
+      "submit": "Gửi đề xuất",
+      "sent": "Đã gửi đề xuất #{{id}}. Cảm ơn bạn!"
+    },
+    "fields": {
+      "title": "Tiêu đề",
+      "titlePlaceholder": "Ví dụ: Crawl truyện báo lỗi máy chủ",
+      "area": "Trang / chức năng",
+      "areaPlaceholder": "Ví dụ: Crawl truyện, Danh mục hàng không",
+      "severity": "Mức độ",
+      "description": "Mô tả",
+      "bugPlaceholder": "Các bước để gặp lại lỗi, thông báo lỗi hiện ra, URL đang mở...",
+      "sourceName": "Tên nguồn / website",
+      "sourceNamePlaceholder": "Ví dụ: OpenStreetMap",
+      "url": "Website URL",
+      "dataType": "Loại dữ liệu",
+      "needPlaceholder": "Cần những dữ liệu nào, dùng để làm gì, cập nhật bao lâu một lần...",
+      "contact": "Liên hệ (tuỳ chọn)",
+      "contactHint": "Tên hoặc email nếu muốn quản trị viên liên hệ lại. Chỉ quản trị viên thấy."
+    },
+    "severity": {
+      "low": "Thấp",
+      "medium": "Trung bình",
+      "high": "Cao",
+      "critical": "Nghiêm trọng"
+    },
+    "dataTypes": {
+      "novel": "Truyện, sách",
+      "aviation": "Hàng không (sân bay, hãng bay, thành phố, quốc gia)",
+      "geography": "Địa lý, hành chính",
+      "other": "Khác (ghi rõ trong mô tả)"
+    },
+    "validation": {
+      "title": "Tiêu đề cần từ 3 đến 200 ký tự",
+      "sourceName": "Tên nguồn cần từ 3 đến 200 ký tự",
+      "description": "Mô tả cần từ 10 đến 5.000 ký tự",
+      "url": "Nhập URL đầy đủ, ví dụ https://example.com"
+    },
+    "sendFailed": "Không gửi được góp ý",
+    "attachmentNote": "Chưa hỗ trợ đính kèm tệp: dán link ảnh chụp màn hình vào mô tả nếu cần.",
+    "back": "Quay lại Góp ý",
+    "mine": {
+      "title": "Góp ý bạn đã gửi",
+      "description": "Góp ý gửi từ trình duyệt này, kèm trạng thái xử lý.",
+      "empty": {
+        "title": "Chưa gửi góp ý nào",
+        "description": "Góp ý bạn gửi từ trình duyệt này sẽ hiện ở đây kèm trạng thái xử lý."
+      },
+      "response": "Phản hồi của quản trị viên",
+      "sentAt": "Gửi lúc {{time}}"
+    },
+    "adminLink": "Quản trị viên? Mở trang quản lý góp ý"
+  },
+  "admin": {
+    "title": "Quản lý góp ý",
+    "description": "Mọi góp ý người dùng đã gửi. Chỉ quản trị viên xem được trang này.",
+    "login": {
+      "title": "Đăng nhập quản trị",
+      "description": "Nhập mã quản trị (biến ADMIN_TOKEN trong file .env của máy chủ) để xem và quản lý góp ý.",
+      "token": "Mã quản trị",
+      "submit": "Đăng nhập",
+      "required": "Nhập mã quản trị",
+      "failed": "Không đăng nhập được"
+    },
+    "logout": "Đăng xuất quản trị",
+    "loggedOut": "Đã đăng xuất khỏi quản trị",
+    "tabsLabel": "Loại góp ý",
+    "search": "Tìm góp ý",
+    "searchPlaceholder": "Tiêu đề, mô tả, liên hệ, URL... gõ không dấu cũng được",
+    "filterStatus": "Lọc theo trạng thái",
+    "allStatuses": "Mọi trạng thái",
+    "columns": {
+      "type": "Loại",
+      "title": "Tiêu đề",
+      "reporter": "Người gửi",
+      "created": "Gửi lúc"
+    },
+    "anonymous": "Ẩn danh",
+    "noMatch": {
+      "title": "Không có góp ý nào khớp",
+      "description": "Thử bỏ bớt bộ lọc hoặc từ khoá khác."
+    },
+    "empty": {
+      "title": "Chưa có góp ý nào",
+      "description": "Góp ý người dùng gửi ở trang Góp ý sẽ hiện ở đây."
+    },
+    "detail": {
+      "title": "Góp ý #{{id}}",
+      "info": "Nội dung",
+      "contact": "Liên hệ",
+      "reporter": "Mã người gửi",
+      "reporterHint": "Các góp ý cùng mã được gửi từ cùng một trình duyệt.",
+      "created": "Gửi lúc",
+      "updated": "Cập nhật lúc",
+      "none": "Không có",
+      "handle": "Xử lý",
+      "response": "Phản hồi gửi người góp ý",
+      "responseHint": "Người gửi thấy phản hồi này cùng trạng thái ở trang Góp ý.",
+      "save": "Lưu",
+      "saved": "Đã lưu góp ý #{{id}}",
+      "saveFailed": "Không lưu được góp ý",
+      "unsaved": "Có thay đổi chưa lưu",
+      "delete": "Xoá góp ý",
+      "deleteConfirm": {
+        "title": "Xoá góp ý #{{id}}?",
+        "body": "Góp ý bị xoá vĩnh viễn, người gửi cũng không còn thấy nó. Không hoàn tác được.",
+        "confirm": "Xoá",
+        "cancel": "Giữ lại"
+      },
+      "deleted": "Đã xoá góp ý #{{id}}",
+      "deleteFailed": "Không xoá được góp ý"
+    }
   }
 }

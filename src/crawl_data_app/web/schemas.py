@@ -1,9 +1,10 @@
 """Hình dạng dữ liệu vào/ra của API (JSON)."""
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field
 
 from crawl_data_app.config.settings import CrawlerSettings, HttpSettings, LogSettings
 from crawl_data_app.core.models import CrawlRequest
@@ -186,3 +187,90 @@ class SettingsUpdate(BaseModel):
 class SettingsOut(SettingsUpdate):
     database_url: str  # mật khẩu (nếu có) đã được che
     env_file: str  # tên file mà cấu hình được ghi vào (không kèm đường dẫn)
+
+
+# --- Góp ý ------------------------------------------------------------------------------------
+
+FeedbackType = Literal["bug_report", "crawler_request"]
+FeedbackStatus = Literal["open", "in_progress", "resolved", "rejected"]
+BugSeverity = Literal["low", "medium", "high", "critical"]
+# Loại dữ liệu muốn crawl — để chung chung, không gắn với nguồn nào; "other" kèm mô tả cho phần còn lại.
+CrawlerDataType = Literal["novel", "aviation", "geography", "other"]
+
+
+def _blank_to_none(value: object) -> object:
+    if isinstance(value, str):
+        value = value.strip()
+        return value or None
+    return value
+
+
+def _http_url(value: str) -> str:
+    parts = urlsplit(value)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ValueError("URL không hợp lệ — cần dạng https://ten-mien/...")
+    return value
+
+
+OptionalText = Annotated[str | None, BeforeValidator(_blank_to_none)]
+
+
+class _FeedbackCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    title: str = Field(min_length=3, max_length=200)
+    description: str = Field(min_length=10, max_length=5000)
+    contact: OptionalText = Field(None, max_length=200)  # tên/email để quản trị viên liên hệ lại
+
+
+class BugReportCreate(_FeedbackCreate):
+    type: Literal["bug_report"]
+    area: OptionalText = Field(None, max_length=200)  # trang/chức năng xảy ra lỗi
+    severity: BugSeverity = "medium"
+
+
+class CrawlerRequestCreate(_FeedbackCreate):
+    """`title` là tên nguồn/website được đề xuất."""
+
+    type: Literal["crawler_request"]
+    url: Annotated[str, AfterValidator(_http_url)] = Field(max_length=1000)
+    data_type: CrawlerDataType
+
+
+FeedbackCreate = Annotated[BugReportCreate | CrawlerRequestCreate, Field(discriminator="type")]
+
+
+class FeedbackOut(BaseModel):
+    """Góp ý như người gửi thấy (`GET /feedback/mine`)."""
+
+    id: int
+    type: FeedbackType
+    title: str
+    description: str
+    # Trường riêng theo loại — báo lỗi: area, severity; gợi ý crawler: url, data_type.
+    details: dict[str, str]
+    status: FeedbackStatus
+    response: str | None  # phản hồi của quản trị viên
+    created_at: UtcDatetime
+    updated_at: UtcDatetime
+
+
+class FeedbackAdminOut(FeedbackOut):
+    """Góp ý như quản trị viên thấy: thêm liên hệ và mã người gửi."""
+
+    contact: str | None
+    # 8 ký tự đầu của hash mã người gửi: nhận ra các góp ý cùng một trình duyệt, không lộ mã gốc.
+    reporter: str | None
+
+
+class FeedbackUpdate(BaseModel):
+    """Chỉ những trường có trong body mới được ghi; `response: null` xoá phản hồi."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: FeedbackStatus | None = None
+    response: OptionalText = Field(None, max_length=5000)
+
+
+class AdminSession(BaseModel):
+    role: Literal["admin"]

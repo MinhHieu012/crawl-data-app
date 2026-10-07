@@ -220,3 +220,60 @@ export interface Settings {
   /** Tên file cấu hình, không kèm đường dẫn. */
   env_file: string
 }
+
+// --- Góp ý -------------------------------------------------------------------------------------
+
+export type FeedbackType = 'bug_report' | 'crawler_request'
+export type FeedbackStatus = 'open' | 'in_progress' | 'resolved' | 'rejected'
+export type BugSeverity = 'low' | 'medium' | 'high' | 'critical'
+/** Loại dữ liệu muốn crawl — để chung chung, không gắn với nguồn nào. */
+export type CrawlerDataType = 'novel' | 'aviation' | 'geography' | 'other'
+
+interface FeedbackCreateBase {
+  title: string
+  description: string
+  /** Tên/email để quản trị viên liên hệ lại (tuỳ chọn). */
+  contact: string | null
+}
+
+export interface BugReportCreate extends FeedbackCreateBase {
+  type: 'bug_report'
+  /** Trang/chức năng xảy ra lỗi. */
+  area: string | null
+  severity: BugSeverity
+}
+
+export interface CrawlerRequestCreate extends FeedbackCreateBase {
+  /** `title` là tên nguồn/website được đề xuất. */
+  type: 'crawler_request'
+  url: string
+  data_type: CrawlerDataType
+}
+
+export type FeedbackCreate = BugReportCreate | CrawlerRequestCreate
+
+/** Góp ý như người gửi thấy. */
+export interface Feedback {
+  id: number
+  type: FeedbackType
+  title: string
+  description: string
+  /** Báo lỗi: `area`, `severity`; gợi ý crawler: `url`, `data_type`. */
+  details: Partial<Record<'area' | 'severity' | 'url' | 'data_type', string>>
+  status: FeedbackStatus
+  /** Phản hồi của quản trị viên. */
+  response: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Góp ý như quản trị viên thấy: thêm liên hệ và mã người gửi (8 ký tự đầu của hash). */
+export interface AdminFeedback extends Feedback {
+  contact: string | null
+  reporter: string | null
+}
+
+export interface FeedbackUpdate {
+  status?: FeedbackStatus
+  response?: string | null
+}
