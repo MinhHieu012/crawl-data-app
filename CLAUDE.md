@@ -178,7 +178,7 @@ gh workflow run deploy.yml --ref main -f rollback=true   # quay về image chạ
 Frontend (`web/.env.local`, tuỳ chọn): `VITE_API_BASE_URL`, `VITE_DEV_PROXY_TARGET`, `VITE_POLL_INTERVAL_MS`.
 
 Docker Compose (file `.env` cạnh `compose.yaml`, **không** phải cấu hình app): `TAILSCALE_IP` (bắt buộc), `APP_IMAGE` (do `deploy.sh` ghi;
-mặc định `crawl-data-app:local` khi build tại chỗ), `COMPOSE_PROFILES=public` (bật cửa công khai), `PUBLIC_SITE=<tên miền>` (cửa công khai nhận thẳng tên miền ở cổng 80/443 thay cho Funnel).
+mặc định `crawl-data-app:local` khi build tại chỗ), `COMPOSE_PROFILES=public` (bật cửa công khai), `PUBLIC_SITE=<tên miền>` (cửa công khai nhận thẳng tên miền ở cổng 80/443 thay cho Funnel), `PUBLIC_BIND=127.0.0.1` (bắt buộc khi còn dùng Funnel — tailscaled giữ cổng 443).
 
 ## Testing
 
