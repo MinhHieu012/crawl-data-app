@@ -1,4 +1,5 @@
 import { Button, Card, Tabs } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { PageHeader } from '../components/PageHeader'
@@ -16,23 +17,24 @@ interface CategoryLayoutProps {
  * một route con nên tải lại trang hay gửi link vẫn mở đúng tab.
  */
 export function CategoryLayout({ crawler, category }: CategoryLayoutProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const base = categoryPath(crawler.id, category.id)
   // Module chỉ có một category thì không có trang tổng quan riêng: khu vực này đại diện cho cả module.
   const single = crawler.categories.length === 1
-  const title = single ? crawler.name : category.name
+  const title = t(single ? crawler.name : category.name)
   const { sections } = category
   const active = sections?.find((section) => `${pathname}/`.startsWith(`${base}/${section.path}/`))
 
   const header = (
     <PageHeader
       title={title}
-      documentTitle={active && `${active.label} · ${title}`}
-      description={category.description}
+      documentTitle={active && `${t(active.label)} · ${title}`}
+      description={t(category.description)}
       crumbs={[
-        { label: 'Crawler', to: CRAWLERS_PATH },
-        ...(single ? [] : [{ label: crawler.name, to: modulePath(crawler.id) }]),
+        { label: t('common.crawlers'), to: CRAWLERS_PATH },
+        ...(single ? [] : [{ label: t(crawler.name), to: modulePath(crawler.id) }]),
         { label: title },
       ]}
     />
@@ -44,11 +46,11 @@ export function CategoryLayout({ crawler, category }: CategoryLayoutProps) {
         {header}
         <Card withBorder>
           <EmptyState
-            title="Crawler này chưa được triển khai"
-            description={`Backend chưa có crawler và bảng dữ liệu cho “${category.name}”, nên chưa có job, dữ liệu hay log nào để hiển thị. Khi có, khu vực này sẽ gồm các tab: cấu hình crawl, job, dữ liệu, lịch sử và log.`}
+            title={t('category.notReady.title')}
+            description={t('category.notReady.description', { name: t(category.name) })}
             action={
               <Button component={Link} to={modulePath(crawler.id)} variant="light">
-                Về {crawler.name}
+                {t('category.backTo', { name: t(crawler.name) })}
               </Button>
             }
           />
@@ -65,10 +67,10 @@ export function CategoryLayout({ crawler, category }: CategoryLayoutProps) {
         onChange={(path) => path && navigate(`${base}/${path}`)}
         keepMounted={false}
       >
-        <Tabs.List mb="md" aria-label={`Các mục của ${title}`}>
+        <Tabs.List mb="md" aria-label={t('category.tabsLabel', { title })}>
           {sections.map((section) => (
             <Tabs.Tab key={section.path} value={section.path}>
-              {section.label}
+              {t(section.label)}
             </Tabs.Tab>
           ))}
         </Tabs.List>

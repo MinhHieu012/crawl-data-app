@@ -319,4 +319,24 @@ describe('App — khu vực Crawler', () => {
     expect(jobQueries().at(-1)).toEqual({ crawler: 'novel', page: '1', page_size: '20' })
     expect(screen.queryByRole('combobox', { name: 'Lọc theo crawler' })).not.toBeInTheDocument()
   })
+
+  it('nút đổi ngôn ngữ đổi chữ của cả giao diện ngay tại chỗ và nhớ lựa chọn', async () => {
+    const user = userEvent.setup()
+    backend()
+    open('/crawlers')
+
+    expect(await screen.findByRole('heading', { name: 'Truyện chữ' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ngôn ngữ' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'English' }))
+
+    // Chữ lấy từ registry, từ hàm định dạng dùng chung và từ khung trang đều đổi theo.
+    expect(await screen.findByRole('heading', { name: 'Web novels' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open Aviation' })).toBeInTheDocument()
+    expect(
+      await screen.findAllByText('2 airports · 2 cities · 1 country · 1 airline'),
+    ).toHaveLength(2)
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('en')
+    expect(localStorage.getItem('language')).toBe('en')
+  })
 })

@@ -8,6 +8,7 @@ import {
   Text,
 } from '@mantine/core'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { useLogs } from '../../api/queries'
 import type { LogKind, LogLevel } from '../../api/types'
@@ -18,20 +19,11 @@ import { EmptyState, QueryState } from '../../components/QueryState'
 import { useUrlState } from '../../hooks/useUrlState'
 
 const LIMIT = 300
-const LEVELS = [
-  { value: '', label: 'Tất cả' },
-  { value: 'INFO', label: 'INFO' },
-  { value: 'WARNING', label: 'WARNING' },
-  { value: 'ERROR', label: 'ERROR' },
-]
-const KINDS = [
-  { value: '', label: 'Mọi loại dòng' },
-  { value: 'request', label: 'Lỗi request (mạng, HTTP, bị chặn)' },
-  { value: 'parse', label: 'Lỗi parser (HTML đổi cấu trúc)' },
-  { value: 'other', label: 'Lỗi khác' },
-]
+const LEVELS = ['INFO', 'WARNING', 'ERROR']
+const KINDS = ['request', 'parse', 'other'] as const
 
 export function LogsPage() {
+  const { t } = useTranslation()
   const [filters, setFilters] = useUrlState({ level: '', kind: '', job: '', search: '' })
   const [live, setLive] = useState(false)
   const logs = useLogs(
@@ -48,21 +40,18 @@ export function LogsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Log"
-        description="Nhật ký của crawler, mới nhất ở trên. Đặt mức log DEBUG ở trang Cài đặt để thấy từng request."
-      />
+      <PageHeader title={t('logs.title')} description={t('logs.description')} />
       <Card withBorder>
         {/* Màn hẹp: ô tìm một hàng, ô job và loại lỗi chia nhau một hàng, mức log trải hết bề ngang. */}
         <Group mb="md" align="center">
           <SearchInput
             value={filters.search}
             onSearch={(search) => setFilters({ search })}
-            label="Tìm trong log"
-            placeholder="URL, chương, thông báo…"
+            label={t('logs.search')}
+            placeholder={t('logs.searchPlaceholder')}
           />
           <NumberInput
-            aria-label="Lọc theo job"
+            aria-label={t('logs.filterJob')}
             placeholder="Job #"
             flex={{ base: '1 1 90px', md: '0 0 110px' }}
             min={1}
@@ -71,21 +60,24 @@ export function LogsPage() {
             onChange={(job) => setFilters({ job: typeof job === 'number' ? String(job) : '' })}
           />
           <NativeSelect
-            aria-label="Loại lỗi"
-            data={KINDS}
+            aria-label={t('logs.kindLabel')}
+            data={[
+              { value: '', label: t('logs.kinds.all') },
+              ...KINDS.map((kind) => ({ value: kind, label: t(`logs.kinds.${kind}`) })),
+            ]}
             flex={{ base: '3 1 180px', md: '0 0 auto' }}
             value={filters.kind}
             onChange={(event) => setFilters({ kind: event.currentTarget.value })}
           />
           <SegmentedControl
-            aria-label="Mức log"
-            data={LEVELS}
+            aria-label={t('logs.level')}
+            data={[{ value: '', label: t('common.all') }, ...LEVELS]}
             w={{ base: '100%', md: 'auto' }}
             value={filters.level}
             onChange={(level) => setFilters({ level })}
           />
           <Switch
-            label="Tự làm mới"
+            label={t('logs.autoRefresh')}
             checked={live}
             onChange={(event) => setLive(event.currentTarget.checked)}
           />
@@ -96,9 +88,9 @@ export function LogsPage() {
           isEmpty={(entries) => entries.length === 0}
           empty={
             filtering ? (
-              <EmptyState title="Không có dòng log nào khớp bộ lọc" />
+              <EmptyState title={t('logs.noMatch')} />
             ) : (
-              <EmptyState title="Chưa có log" description="Log xuất hiện sau lần crawl đầu tiên." />
+              <EmptyState title={t('logs.empty.title')} description={t('logs.empty.description')} />
             )
           }
         >
@@ -107,8 +99,8 @@ export function LogsPage() {
               <LogList entries={entries} />
               <Text size="xs" c="dimmed" mt="sm">
                 {entries.length === LIMIT
-                  ? `Đang hiện ${LIMIT} dòng mới nhất khớp bộ lọc — thu hẹp bộ lọc để xem các dòng cũ hơn.`
-                  : `${entries.length} dòng`}
+                  ? t('logs.limited', { limit: LIMIT })
+                  : t('logs.count', { count: entries.length })}
               </Text>
             </>
           )}

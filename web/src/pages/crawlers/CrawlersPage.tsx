@@ -1,6 +1,7 @@
 import { Card, Code, Group, SimpleGrid, Stack, Text, ThemeIcon } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 
 import { SearchInput } from '../../components/ListControls'
 import { PageHeader } from '../../components/PageHeader'
@@ -15,34 +16,32 @@ const fold = (text: string) =>
 
 /** Trang "Tất cả crawler": mỗi module trong registry một thẻ. */
 export function CrawlersPage() {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const needle = fold(search)
   const crawlers = CRAWLER_MODULES.filter((crawler) =>
     [crawler.name, crawler.description, ...crawler.categories.map((category) => category.name)]
-      .map(fold)
+      .map((key) => fold(t(key)))
       .some((text) => text.includes(needle)),
   )
 
   return (
     <>
-      <PageHeader
-        title="Crawler"
-        description="Mỗi crawler là một module độc lập, gồm một hay nhiều loại dữ liệu."
-      />
+      <PageHeader title={t('common.crawlers')} description={t('crawlers.description')} />
       <Group mb="md" maw={420}>
         <SearchInput
           value={search}
           onSearch={setSearch}
-          label="Tìm crawler"
-          placeholder="Tên crawler hoặc loại dữ liệu"
+          label={t('crawlers.search')}
+          placeholder={t('crawlers.searchPlaceholder')}
         />
       </Group>
 
       {crawlers.length === 0 ? (
         <Card withBorder>
           <EmptyState
-            title="Không có crawler nào khớp"
-            description="Thử từ khoá khác, ví dụ tên một loại dữ liệu."
+            title={t('crawlers.noMatch.title')}
+            description={t('crawlers.noMatch.description')}
           />
         </Card>
       ) : (
@@ -51,8 +50,8 @@ export function CrawlersPage() {
             <CrawlerCard
               key={crawler.id}
               icon={crawler.icon}
-              title={crawler.name}
-              description={crawler.description}
+              title={t(crawler.name)}
+              description={t(crawler.description)}
               to={modulePath(crawler.id)}
               ready={crawler.categories.some((category) => category.sections)}
             >
@@ -61,7 +60,7 @@ export function CrawlersPage() {
                 crawler.categories.length > 1 ? (
                   <div key={category.id}>
                     <Text size="sm" fw={600}>
-                      {category.name}
+                      {t(category.name)}
                     </Text>
                     {category.Summary && <category.Summary />}
                   </div>
@@ -77,10 +76,9 @@ export function CrawlersPage() {
                 <ThemeIcon size={40} radius="xl" variant="light" color="gray" aria-hidden>
                   <IconPlus size={22} stroke={1.6} />
                 </ThemeIcon>
-                <Text fw={600}>Crawler khác</Text>
+                <Text fw={600}>{t('crawlers.more.title')}</Text>
                 <Text size="sm" c="dimmed" ta="center">
-                  Khai báo thêm một module trong <Code>web/src/crawlers/registry.tsx</Code> là có
-                  thẻ, menu và route ở đây.
+                  <Trans i18nKey="crawlers.more.description" components={{ code: <Code /> }} />
                 </Text>
               </Stack>
             </Card>

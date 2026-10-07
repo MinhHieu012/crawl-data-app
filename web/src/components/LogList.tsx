@@ -1,4 +1,5 @@
 import { Anchor, Code, Group, Table, Text, useMatches } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import type { LogEntry } from '../api/types'
@@ -16,10 +17,11 @@ interface LogListProps {
  * giờ và mức log nằm trên nội dung thay vì chiếm hai cột — nội dung log là thứ cần chỗ nhất.
  */
 export function LogList({ entries, showJob = true }: LogListProps) {
+  const { t } = useTranslation()
   const wide = useMatches({ base: false, md: true }, { getInitialValueInEffect: false })
 
   return (
-    <Table verticalSpacing={6} striped layout="fixed" aria-label="Nhật ký">
+    <Table verticalSpacing={6} striped layout="fixed" aria-label={t('logs.tableLabel')}>
       <Table.Tbody>
         {entries.map((entry, index) => {
           const time = (

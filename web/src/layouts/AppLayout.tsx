@@ -6,6 +6,7 @@ import {
   Burger,
   Container,
   Group,
+  Menu,
   NavLink,
   Text,
   UnstyledButton,
@@ -14,7 +15,9 @@ import {
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
+  IconCheck,
   IconFileText,
+  IconLanguage,
   IconLayoutDashboard,
   IconListCheck,
   IconMoon,
@@ -24,12 +27,15 @@ import {
   IconSun,
   type Icon,
 } from '@tabler/icons-react'
+import type { TFunction } from 'i18next'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigationType } from 'react-router'
 
 import { useJobActivity } from '../api/queries'
 import { categoryPath, CRAWLERS_PATH, modulePath } from '../crawlers/paths'
 import { CRAWLER_MODULES } from '../crawlers/registry'
+import { LANGUAGES, setLanguage, type Language } from '../i18n'
 
 interface NavItem {
   /** Đích của mục; với nhóm (có `children`) là tiền tố đường dẫn của cả nhóm. */
@@ -45,35 +51,35 @@ interface NavItem {
 
 // Trang chung của hệ thống khai báo ở đây (kèm route trong App.tsx). Phần crawler sinh từ registry:
 // thêm crawler mới không phải sửa menu. Module nhiều loại dữ liệu thành một nhóm con.
-const NAVIGATION: NavItem[] = [
-  { path: '/', label: 'Tổng quan', icon: IconLayoutDashboard, exact: true },
+const navigation = (t: TFunction): NavItem[] => [
+  { path: '/', label: t('dashboard.title'), icon: IconLayoutDashboard, exact: true },
   {
     path: CRAWLERS_PATH,
-    label: 'Crawler',
+    label: t('common.crawlers'),
     icon: IconSpider,
     defaultOpened: true,
     children: [
-      { path: CRAWLERS_PATH, label: 'Tất cả crawler', icon: IconStack2, exact: true },
+      { path: CRAWLERS_PATH, label: t('layout.allCrawlers'), icon: IconStack2, exact: true },
       ...CRAWLER_MODULES.map((crawler) => ({
         path: modulePath(crawler.id),
-        label: crawler.name,
+        label: t(crawler.name),
         icon: crawler.icon,
         children:
           crawler.categories.length > 1
             ? [
-                { path: modulePath(crawler.id), label: 'Tổng quan', exact: true },
+                { path: modulePath(crawler.id), label: t('common.overview'), exact: true },
                 ...crawler.categories.map((category) => ({
                   path: categoryPath(crawler.id, category.id),
-                  label: category.name,
+                  label: t(category.name),
                 })),
               ]
             : undefined,
       })),
     ],
   },
-  { path: '/jobs', label: 'Job', icon: IconListCheck },
-  { path: '/logs', label: 'Log', icon: IconFileText },
-  { path: '/settings', label: 'Cài đặt', icon: IconSettings },
+  { path: '/jobs', label: t('common.jobs'), icon: IconListCheck },
+  { path: '/logs', label: t('logs.title'), icon: IconFileText },
+  { path: '/settings', label: t('settings.title'), icon: IconSettings },
 ]
 
 const NAVBAR_ID = 'app-navbar'
@@ -119,14 +125,41 @@ function NavItems({ items, pathname }: { items: NavItem[]; pathname: string }) {
   })
 }
 
+/** Nút đổi ngôn ngữ: lựa chọn được nhớ lại; chưa chọn lần nào thì giao diện theo ngôn ngữ của máy. */
+function LanguageMenu() {
+  const { t, i18n } = useTranslation()
+  return (
+    <Menu position="bottom-end" withinPortal>
+      <Menu.Target>
+        <ActionIcon variant="default" size="lg" aria-label={t('layout.language')}>
+          <IconLanguage size={18} />
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown>
+        {(Object.keys(LANGUAGES) as Language[]).map((code) => (
+          <Menu.Item
+            key={code}
+            lang={code}
+            rightSection={code === i18n.language && <IconCheck size={14} />}
+            onClick={() => setLanguage(code)}
+          >
+            {LANGUAGES[code]}
+          </Menu.Item>
+        ))}
+      </Menu.Dropdown>
+    </Menu>
+  )
+}
+
 function ColorSchemeToggle() {
+  const { t } = useTranslation()
   const { setColorScheme } = useMantineColorScheme()
   const current = useComputedColorScheme('light')
   return (
     <ActionIcon
       variant="default"
       size="lg"
-      aria-label={current === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+      aria-label={current === 'dark' ? t('layout.toLight') : t('layout.toDark')}
       onClick={() => setColorScheme(current === 'dark' ? 'light' : 'dark')}
     >
       {current === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
@@ -136,6 +169,7 @@ function ColorSchemeToggle() {
 
 /** Khung chung của mọi trang: thanh trên cùng, menu bên trái (thu gọn trên màn hình hẹp), nội dung. */
 export function AppLayout() {
+  const { t } = useTranslation()
   const [menuOpened, { toggle, close }] = useDisclosure()
   const { pathname } = useLocation()
   const navigationType = useNavigationType()
@@ -163,16 +197,11 @@ export function AppLayout() {
               onClick={toggle}
               hiddenFrom="sm"
               size="md"
-              aria-label={menuOpened ? 'Đóng menu' : 'Mở menu'}
+              aria-label={menuOpened ? t('layout.closeMenu') : t('layout.openMenu')}
               aria-expanded={menuOpened}
               aria-controls={NAVBAR_ID}
             />
-            <UnstyledButton
-              component={Link}
-              to="/"
-              p={4}
-              aria-label="Crawl Data App, về trang Tổng quan"
-            >
+            <UnstyledButton component={Link} to="/" p={4} aria-label={t('layout.home')}>
               <Group gap="sm" wrap="nowrap">
                 <IconSpider size={24} color="var(--mantine-primary-color-filled)" aria-hidden />
                 {/* Màn hình điện thoại chỉ đủ chỗ cho logo, nút menu và số job đang chạy. */}
@@ -190,23 +219,30 @@ export function AppLayout() {
                 variant="light"
                 size="lg"
                 fz="sm"
-                aria-label={`${running} job đang chạy`}
+                aria-label={t('common.runningJobs', { count: running })}
                 style={{ cursor: 'pointer', flexShrink: 0 }}
               >
-                {running}{' '}
                 <Box component="span" visibleFrom="xs">
-                  job{' '}
+                  {t('common.runningJobs', { count: running })}
                 </Box>
-                đang chạy
+                <Box component="span" hiddenFrom="xs">
+                  {t('layout.runningShort', { count: running })}
+                </Box>
               </Badge>
             )}
+            <LanguageMenu />
             <ColorSchemeToggle />
           </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs" id={NAVBAR_ID} aria-label="Menu chính" style={{ overflowY: 'auto' }}>
-        <NavItems items={NAVIGATION} pathname={pathname} />
+      <AppShell.Navbar
+        p="xs"
+        id={NAVBAR_ID}
+        aria-label={t('layout.mainMenu')}
+        style={{ overflowY: 'auto' }}
+      >
+        <NavItems items={navigation(t)} pathname={pathname} />
       </AppShell.Navbar>
 
       <AppShell.Main>

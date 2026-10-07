@@ -1,0 +1,575 @@
+{
+  "common": {
+    "crawlers": "Crawler",
+    "jobs": "Job",
+    "overview": "Tổng quan",
+    "history": "Lịch sử",
+    "all": "Tất cả",
+    "retry": "Thử lại",
+    "dismiss": "Thôi",
+    "loading": "Đang tải",
+    "noData": "Chưa có dữ liệu",
+    "statsError": "Không tải được số liệu",
+    "unknownError": "Đã có lỗi không xác định.",
+    "actionFailed": "Không thực hiện được",
+    "crawlNovel": "Crawl truyện",
+    "crawlFirstNovel": "Crawl truyện đầu tiên",
+    "viewNovel": "Xem truyện",
+    "exportJson": "Xuất JSON",
+    "source": "Nguồn",
+    "scope": "Phạm vi",
+    "status": "Trạng thái",
+    "code": "Mã",
+    "name": "Tên",
+    "englishName": "Tên tiếng Anh",
+    "updated": "Cập nhật",
+    "seconds": "{{value}} giây",
+    "runningJobs": "{{count}} job đang chạy",
+    "searchByCodeOrName": "Mã hoặc tên, gõ không dấu cũng được",
+    "tryOtherCodeOrName": "Thử mã hoặc tên khác."
+  },
+  "notFound": {
+    "title": "Không có trang này",
+    "description": "Đường dẫn không đúng hoặc trang đã được chuyển đi.",
+    "action": "Về trang Tổng quan"
+  },
+  "layout": {
+    "allCrawlers": "Tất cả crawler",
+    "toLight": "Chuyển sang giao diện sáng",
+    "toDark": "Chuyển sang giao diện tối",
+    "closeMenu": "Đóng menu",
+    "openMenu": "Mở menu",
+    "home": "Crawl Data App, về trang Tổng quan",
+    "runningShort": "{{count}} đang chạy",
+    "mainMenu": "Menu chính",
+    "language": "Ngôn ngữ"
+  },
+  "registry": {
+    "novel": {
+      "name": "Truyện chữ",
+      "description": "Crawl truyện chữ từ các website đọc truyện vào database.",
+      "stories": {
+        "name": "Truyện",
+        "description": "Thông tin truyện, mục lục và nội dung từng chương."
+      }
+    },
+    "aviation": {
+      "name": "Hàng không",
+      "description": "Danh mục sân bay, hãng bay, thành phố và quốc gia, theo từng nguồn dữ liệu.",
+      "world": {
+        "name": "Toàn thế giới",
+        "description": "Dữ liệu mở toàn cầu từ OurAirports và OpenFlights."
+      },
+      "vna": {
+        "name": "Vietnam Airlines",
+        "description": "Điểm đến và hãng bay đối tác công bố trên vietnamairlines.com."
+      }
+    },
+    "provinces": {
+      "name": "Tỉnh thành Việt Nam",
+      "description": "Danh mục 34 tỉnh, thành phố của Việt Nam sau sáp nhập năm 2025, kèm phường/xã.",
+      "vietnam": {
+        "name": "Tỉnh thành",
+        "description": "Mã, tên, loại đơn vị của từng tỉnh, thành phố và các phường/xã trực thuộc."
+      }
+    },
+    "tabs": {
+      "crawl": "Crawl",
+      "sources": "Nguồn",
+      "airport": "Sân bay",
+      "airline": "Hãng bay",
+      "city": "Thành phố",
+      "country": "Quốc gia",
+      "provinces": "Tỉnh thành",
+      "wards": "Phường/xã"
+    }
+  },
+  "status": {
+    "job": {
+      "running": "Đang chạy",
+      "completed": "Hoàn tất",
+      "partial": "Còn chương lỗi",
+      "failed": "Thất bại",
+      "interrupted": "Tạm dừng",
+      "cancelled": "Đã huỷ"
+    },
+    "chapter": {
+      "done": "Đã tải",
+      "pending": "Chờ tải",
+      "failed": "Lỗi"
+    },
+    "novel": {
+      "ongoing": "Đang ra",
+      "completed": "Hoàn thành",
+      "paused": "Tạm ngưng",
+      "unknown": "Không rõ"
+    }
+  },
+  "chapters": {
+    "done": "Chương đã tải",
+    "failed": "Chương lỗi",
+    "pending": "Chương chờ tải"
+  },
+  "pager": {
+    "first": "Trang đầu",
+    "previous": "Trang trước",
+    "next": "Trang sau",
+    "last": "Trang cuối",
+    "empty": "Không có dòng nào",
+    "range": "{{first}}–{{last}} trong {{total}}"
+  },
+  "progress": {
+    "preparing": "Đang chuẩn bị",
+    "preparingNovel": "Đang lấy thông tin truyện và mục lục…",
+    "preparingSync": "Đang chuẩn bị…",
+    "stoppedBeforeToc": "Dừng trước khi lấy được mục lục",
+    "stoppedBeforeAny": "Dừng trước khi tải được gì",
+    "infoOnly": "Chỉ lấy thông tin truyện",
+    "nothingToDownload": "Không có chương nào cần tải",
+    "filesDone": "File đã tải",
+    "filesFailed": "File lỗi",
+    "chapters": "{{done}} / {{total}} chương · {{percent}}%",
+    "files": "{{done}} / {{total}} file · {{percent}}%"
+  },
+  "novelProgress": {
+    "noToc": "Chưa crawl mục lục",
+    "count": "{{done}} / {{total}} chương",
+    "failed": "{{failed}} lỗi"
+  },
+  "duration": {
+    "seconds": "{{seconds}} giây",
+    "minutes": "{{minutes}} phút {{seconds}} giây",
+    "hours": "{{hours}} giờ {{minutes}} phút"
+  },
+  "records": {
+    "airport": "{{count, number}} sân bay",
+    "airline": "{{count, number}} hãng bay",
+    "city": "{{count, number}} thành phố",
+    "country": "{{count, number}} quốc gia",
+    "province": "{{count, number}} tỉnh thành",
+    "ward": "{{count, number}} phường/xã"
+  },
+  "jobScope": {
+    "catalog": "Toàn bộ danh mục",
+    "allChapters": "Mọi chương",
+    "range": "Chương {{from}}–{{to}}",
+    "end": "cuối"
+  },
+  "jobsTable": {
+    "content": "Nội dung",
+    "progress": "Tiến độ",
+    "started": "Bắt đầu"
+  },
+  "query": {
+    "loadFailed": "Không tải được dữ liệu",
+    "stale": "Không cập nhật được dữ liệu mới, đang hiển thị dữ liệu cũ."
+  },
+  "category": {
+    "notReady": {
+      "title": "Crawler này chưa được triển khai",
+      "description": "Backend chưa có crawler và bảng dữ liệu cho “{{name}}”, nên chưa có job, dữ liệu hay log nào để hiển thị. Khi có, khu vực này sẽ gồm các tab: cấu hình crawl, job, dữ liệu, lịch sử và log."
+    },
+    "backTo": "Về {{name}}",
+    "tabsLabel": "Các mục của {{title}}"
+  },
+  "module": {
+    "notFound": {
+      "title": "Không có crawler này",
+      "description": "Đường dẫn không đúng hoặc crawler đã được gỡ khỏi danh mục.",
+      "action": "Xem tất cả crawler"
+    }
+  },
+  "card": {
+    "ready": "Sẵn sàng",
+    "notReady": "Chưa triển khai",
+    "open": "Mở",
+    "openNamed": "Mở {{title}}"
+  },
+  "crawlers": {
+    "description": "Mỗi crawler là một module độc lập, gồm một hay nhiều loại dữ liệu.",
+    "search": "Tìm crawler",
+    "searchPlaceholder": "Tên crawler hoặc loại dữ liệu",
+    "noMatch": {
+      "title": "Không có crawler nào khớp",
+      "description": "Thử từ khoá khác, ví dụ tên một loại dữ liệu."
+    },
+    "more": {
+      "title": "Crawler khác",
+      "description": "Khai báo thêm một module trong <code>web/src/crawlers/registry.tsx</code> là có thẻ, menu và route ở đây."
+    }
+  },
+  "dashboard": {
+    "title": "Tổng quan",
+    "description": "Hoạt động của mọi crawler trong hệ thống.",
+    "openCrawlers": "Mở crawler",
+    "readyHint": "{{ready}} / {{total}} loại dữ liệu đã sẵn sàng",
+    "running": "Job đang chạy",
+    "completed": "Job hoàn tất",
+    "failed": "Job lỗi",
+    "failedHint": "{{failed}} thất bại · {{partial}} còn chương lỗi"
+  },
+  "novelOverview": {
+    "summary": "{{novels}} truyện · {{chapters}} chương đã tải",
+    "description": "Dữ liệu truyện đã thu thập và các lần crawl gần đây."
+  },
+  "recentJobs": {
+    "title": "Job gần đây",
+    "viewAll": "Xem tất cả"
+  },
+  "jobs": {
+    "title": "Job crawl",
+    "description": "Mỗi lần crawl một truyện hay đồng bộ một nguồn dữ liệu là một job. Lịch sử được giữ lại, kể cả những lần thất bại.",
+    "filterCrawler": "Lọc theo crawler",
+    "allCrawlers": "Mọi crawler",
+    "filterStatus": "Lọc theo trạng thái",
+    "allStatuses": "Mọi trạng thái",
+    "noMatch": {
+      "title": "Không có job nào khớp bộ lọc",
+      "description": "Thử trạng thái hoặc crawler khác."
+    },
+    "empty": {
+      "title": "Chưa có job nào",
+      "description": "Dán URL của một truyện để bắt đầu crawl."
+    }
+  },
+  "logs": {
+    "title": "Log",
+    "description": "Nhật ký của crawler, mới nhất ở trên. Đặt mức log DEBUG ở trang Cài đặt để thấy từng request.",
+    "tableLabel": "Nhật ký",
+    "kinds": {
+      "all": "Mọi loại dòng",
+      "request": "Lỗi request (mạng, HTTP, bị chặn)",
+      "parse": "Lỗi parser (HTML đổi cấu trúc)",
+      "other": "Lỗi khác"
+    },
+    "search": "Tìm trong log",
+    "searchPlaceholder": "URL, chương, thông báo…",
+    "filterJob": "Lọc theo job",
+    "kindLabel": "Loại lỗi",
+    "level": "Mức log",
+    "autoRefresh": "Tự làm mới",
+    "noMatch": "Không có dòng log nào khớp bộ lọc",
+    "empty": {
+      "title": "Chưa có log",
+      "description": "Log xuất hiện sau lần crawl đầu tiên."
+    },
+    "limited": "Đang hiện {{limit}} dòng mới nhất khớp bộ lọc — thu hẹp bộ lọc để xem các dòng cũ hơn.",
+    "count": "{{count}} dòng"
+  },
+  "chapter": {
+    "previous": "Chương trước",
+    "next": "Chương sau",
+    "numbered": "Chương {{number}}",
+    "notDownloaded": {
+      "title": "Chương này chưa được tải",
+      "description": "Nội dung chưa có trong database."
+    },
+    "download": "Tải chương này",
+    "downloadedAt": "Tải lúc {{time}}"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "description": "Các thông số của crawler. Giới hạn về tốc độ là có chủ đích để không gây quá tải cho website nguồn.",
+    "validation": {
+      "required": "Không được để trống",
+      "timeout": "Nhập số giây lớn hơn 0",
+      "retries": "Từ 0 đến 10 lần",
+      "concurrency": "Từ 1 đến 8 request",
+      "delay": "Tối thiểu 0.5 giây — để không gây quá tải cho website nguồn"
+    },
+    "saved": "Đã lưu cấu hình",
+    "saveFailed": "Không lưu được cấu hình",
+    "envNote": "Cấu hình được ghi vào file <b>{{file}}</b> trong thư mục chạy server và áp dụng cho các job bắt đầu sau khi mọi job đang chạy đã kết thúc. Biến môi trường của hệ điều hành (nếu có) vẫn được ưu tiên hơn file này.",
+    "userAgentHint": "Nên tự nhận là bot và để lại cách liên hệ, ví dụ: crawl-data-app/0.1 (+mailto:ban@example.com)",
+    "delay": {
+      "label": "Khoảng nghỉ giữa hai request (giây)",
+      "description": "Tối thiểu 0.5. Tốc độ tối đa của crawler là 1 request mỗi khoảng nghỉ."
+    },
+    "concurrency": {
+      "label": "Request đồng thời tối đa",
+      "description": "Từ 1 đến 8. Chỉ có tác dụng khi website trả lời chậm hơn khoảng nghỉ."
+    },
+    "timeout": "Timeout mỗi request (giây)",
+    "retries": {
+      "label": "Số lần thử lại",
+      "description": "Khi lỗi tạm thời (timeout, HTTP 429/5xx); thời gian chờ tăng gấp đôi mỗi lần."
+    },
+    "crawlerAndLog": "Crawler và log",
+    "contentFormat": {
+      "label": "Định dạng lưu nội dung chương",
+      "description": "Chỉ áp dụng cho chương tải từ nay về sau.",
+      "html": "HTML (mỗi đoạn một thẻ <p>)"
+    },
+    "logLevelHint": "DEBUG ghi lại từng request.",
+    "readOnly": {
+      "legend": "Chỉ xem",
+      "note": "Muốn đổi hai mục này thì sửa trong file .env rồi khởi động lại server.",
+      "passwordHidden": "Mật khẩu (nếu có) đã được che.",
+      "logDir": "Thư mục log"
+    },
+    "unsaved": "Có thay đổi chưa lưu",
+    "undo": "Hoàn tác",
+    "save": "Lưu cấu hình"
+  },
+  "novels": {
+    "title": "Truyện",
+    "description": "Tìm theo tên truyện hoặc tác giả, gõ không dấu cũng được.",
+    "sort": {
+      "recent": "Crawl gần nhất",
+      "title": "Tên A → Z",
+      "done": "Nhiều chương đã tải nhất",
+      "longest": "Truyện dài nhất"
+    },
+    "allSources": "Mọi nguồn",
+    "search": "Tìm truyện",
+    "searchPlaceholder": "Tên truyện hoặc tác giả",
+    "filterSource": "Lọc theo nguồn",
+    "filterStatus": "Lọc theo tình trạng",
+    "allStatuses": "Mọi tình trạng",
+    "sortLabel": "Sắp xếp",
+    "noMatch": {
+      "title": "Không có truyện nào khớp bộ lọc",
+      "description": "Thử từ khoá khác hoặc bỏ bớt điều kiện lọc."
+    },
+    "empty": {
+      "title": "Chưa có truyện nào",
+      "description": "Truyện sẽ xuất hiện ở đây sau lần crawl đầu tiên."
+    },
+    "cover": "Ảnh bìa",
+    "statusColumn": "Tình trạng",
+    "unknownAuthor": "Chưa rõ tác giả",
+    "crawledAt": "crawl {{time}}"
+  },
+  "crawl": {
+    "scopes": {
+      "all": "Toàn bộ chương",
+      "range": "Khoảng chương",
+      "info": "Chỉ thông tin truyện"
+    },
+    "validation": {
+      "url": "Nhập URL đầy đủ của truyện, ví dụ https://truyenfull.live/ten-truyen/",
+      "range": "Chương kết thúc phải lớn hơn hoặc bằng chương bắt đầu"
+    },
+    "description": "Dán URL của truyện (URL một chương cũng được). Chạy lại bao nhiêu lần cũng chỉ tải phần còn thiếu.",
+    "supported": "Đang hỗ trợ: {{sources}}",
+    "autoDetect": "Tự nhận diện theo URL",
+    "url": "URL truyện",
+    "scopeLabel": "Phạm vi crawl",
+    "from": "Từ chương",
+    "fromHint": "Theo số thứ tự trong mục lục",
+    "to": "Đến chương",
+    "toHint": "Để trống = tới cuối truyện",
+    "skipExisting": {
+      "label": "Bỏ qua các chương đã tải",
+      "description": "Bỏ chọn để tải lại tất cả; chỉ chương có nội dung thay đổi mới bị ghi đè."
+    },
+    "retryFailed": "Thử lại các chương đang lỗi",
+    "createFailed": "Không tạo được job",
+    "created": "Đã tạo job #{{id}}",
+    "viewJob": "Xem job #{{id}}",
+    "compliance": "Crawler tuân thủ robots.txt, giãn cách request và dừng khi bị website từ chối. Chỉ crawl nội dung bạn được phép sử dụng.",
+    "start": "Bắt đầu crawl"
+  },
+  "api": {
+    "timeout": "Máy chủ phản hồi quá lâu. Kiểm tra backend rồi thử lại.",
+    "network": "Không kết nối được tới máy chủ. Kiểm tra backend (crawl-data-app serve) có đang chạy không.",
+    "invalid": "Dữ liệu gửi lên không hợp lệ — {{details}}",
+    "unreachable": "Không liên lạc được với backend (HTTP {{status}}). Kiểm tra crawl-data-app serve có đang chạy không.",
+    "serverError": "Máy chủ gặp lỗi (HTTP {{status}}). Xem log của backend rồi thử lại.",
+    "failed": "Yêu cầu không thực hiện được (HTTP {{status}}).",
+    "codes": {
+      "not_found": "Không tìm thấy dữ liệu được yêu cầu.",
+      "invalid_url": "URL không hợp lệ.",
+      "unsupported_source": "Chưa hỗ trợ nguồn của URL này.",
+      "source_disabled": "Nguồn này đang bị tắt.",
+      "duplicate_job": "Đã có một job đang chạy cho việc này.",
+      "job_running": "Job vẫn đang chạy.",
+      "job_not_running": "Job không còn chạy nên không thao tác được.",
+      "cross_origin": "Yêu cầu được gửi từ một trang web khác nên bị từ chối.",
+      "owner_only": "Chỉ chủ máy chủ mới đổi được cấu hình."
+    }
+  },
+  "sources": {
+    "title": "Nguồn truyện",
+    "description": "Các website mà crawler đọc được. Thêm nguồn mới bằng cách viết crawler ở backend.",
+    "noDescription": "Crawler này chưa có mô tả.",
+    "domains": "Tên miền nhận diện",
+    "testPage": "Trang kiểm tra kết nối",
+    "delay": "Khoảng nghỉ giữa hai request",
+    "timeoutRetries": "Timeout / số lần thử lại",
+    "timeoutRetriesValue": "{{timeout}} giây / {{retries}} lần",
+    "robotsNote": "Crawler luôn đọc robots.txt trước và dừng khi bị website từ chối. Sửa các thông số trên ở trang <settings>Cài đặt</settings>.",
+    "enabled": "Đã bật nguồn {{name}}",
+    "disabled": "Đã tắt nguồn {{name}}",
+    "disableConfirm": {
+      "title": "Tắt nguồn {{name}}?",
+      "body": "Sẽ không tạo được job mới cho nguồn này cho tới khi bật lại. Job đang chạy và dữ liệu đã crawl không bị ảnh hưởng.",
+      "confirm": "Tắt nguồn",
+      "cancel": "Giữ nguyên"
+    },
+    "on": "Đang bật",
+    "off": "Đang tắt",
+    "allowCrawl": "Cho phép crawl",
+    "novelsCrawled": "Truyện đã crawl",
+    "test": "Kiểm tra kết nối",
+    "info": "Thông tin và cấu hình",
+    "viewNovels": "Xem truyện",
+    "testOk": "Kết nối được",
+    "testFail": "Không kết nối được",
+    "testElapsed": "{{seconds}} giây (gồm cả thời gian giãn cách request)",
+    "testError": "Không kiểm tra được",
+    "modalTitle": "Nguồn {{name}}",
+    "empty": "Backend chưa đăng ký crawler nào"
+  },
+  "job": {
+    "metrics": {
+      "ok": "Thành công",
+      "failed": "Lỗi",
+      "remaining": "Còn lại",
+      "skipped": "Bỏ qua (đã có sẵn)"
+    },
+    "rerun": {
+      "interrupted": "Tiếp tục",
+      "partial": "Thử lại chương lỗi",
+      "completed": "Kiểm tra chương mới",
+      "cancelled": "Chạy lại",
+      "sync": "Đồng bộ lại"
+    },
+    "cancelConfirm": {
+      "title": "Huỷ job #{{id}}?",
+      "novel": "Job sẽ dừng hẳn và không tự chạy lại. Các chương đã tải vẫn được giữ; muốn tải tiếp thì tạo job mới.",
+      "sync": "Job sẽ dừng hẳn và không tự chạy lại. Dữ liệu đã có từ các lần đồng bộ trước không bị ảnh hưởng.",
+      "confirm": "Huỷ job",
+      "cancel": "Không huỷ"
+    },
+    "cancelled": "Đã huỷ job #{{id}}",
+    "paused": "Đã tạm dừng job #{{id}}",
+    "pause": "Tạm dừng",
+    "rerunCreated": "Đã tạo job mới chạy lại đúng phạm vi cũ",
+    "cancel": "Huỷ",
+    "viewData": "Xem dữ liệu",
+    "logs": {
+      "title": "Log của job",
+      "open": "Mở trong trang Log",
+      "empty": {
+        "title": "Chưa có dòng log nào của job này",
+        "description": "Job cũ có thể đã nằm trong file log đã xoay vòng."
+      }
+    },
+    "written": "Đã ghi:",
+    "lastChapter": "Vừa tải xong:",
+    "stopReason": "Lý do dừng",
+    "otherProcess": "Job này đang chạy ở một tiến trình khác (ví dụ lệnh crawl-data-app crawl) nên không tạm dừng hay huỷ được từ đây.",
+    "started": "Bắt đầu {{time}}",
+    "finished": "Kết thúc {{time}} · Chạy trong {{duration}}"
+  },
+  "sync": {
+    "button": "Đồng bộ",
+    "started": "Đang đồng bộ ở job #{{id}}",
+    "createFailed": "Không tạo được job đồng bộ",
+    "never": "Chưa đồng bộ lần nào",
+    "running": "Đang đồng bộ ở <job>job #{{id}}</job>…",
+    "last": "Đồng bộ gần nhất: {{time}} (<job>job #{{id}}</job>).",
+    "lastFailed": "Lần đồng bộ gần nhất (<job>job #{{id}}</job>) không hoàn tất",
+    "firstTitle": "Đang đồng bộ lần đầu",
+    "firstDescription": "Dữ liệu sẽ hiện ở đây khi job chạy xong.",
+    "historyEmptyDescription": "Lịch sử xuất hiện sau lần đồng bộ đầu tiên."
+  },
+  "aviation": {
+    "kinds": {
+      "airport": "sân bay",
+      "airline": "hãng bay",
+      "city": "thành phố",
+      "country": "quốc gia"
+    },
+    "sourceNote": {
+      "world": "Dữ liệu mở: sân bay và quốc gia từ OurAirports (phạm vi công cộng), hãng bay từ OpenFlights (giấy phép ODbL, dùng lại phải ghi nguồn).",
+      "vna": "Lấy từ vietnamairlines.com, chỉ dùng cho mục đích cá nhân, phi thương mại."
+    },
+    "kindNote": {
+      "world": {
+        "airport": "Chỉ gồm sân bay còn hoạt động có mã IATA.",
+        "city": "Thành phố suy ra từ sân bay; mã do ứng dụng tự đặt vì dữ liệu mở không có mã thành phố.",
+        "airline": "Chỉ gồm hãng đang hoạt động có mã IATA; OpenFlights ít được cập nhật nên có thể thiếu hãng mới."
+      },
+      "vna": {
+        "airport": "Chỉ gồm sân bay trong mạng bay của Vietnam Airlines và đối tác.",
+        "airline": "Chỉ gồm hãng có chương trình khách hàng thường xuyên liên kết với Vietnam Airlines."
+      }
+    },
+    "search": "Tìm {{kind}}",
+    "noMatch": "Không có {{kind}} nào khớp",
+    "emptyDescription": "Bấm Đồng bộ để tải danh mục của nguồn này (ba request, cập nhật cả bốn loại dữ liệu).",
+    "vietnameseName": "Tên tiếng Việt",
+    "city": "Thành phố",
+    "country": "Quốc gia",
+    "region": "Vùng",
+    "continent": "Châu lục",
+    "historyDescription": "Mỗi lần đồng bộ là một job tải lại cả bốn loại dữ liệu của nguồn này. Job thất bại hay bị dừng không làm mất dữ liệu đã có."
+  },
+  "provinces": {
+    "sourceNote": "Lấy từ bộ dữ liệu mở vietnamese-provinces-database (giấy phép MIT), theo địa giới sau sáp nhập năm 2025.",
+    "exportWithWards": "Xuất JSON kèm phường/xã",
+    "search": "Tìm tỉnh thành",
+    "noMatch": "Không có tỉnh thành nào khớp",
+    "emptyDescription": "Bấm Đồng bộ để tải danh mục tỉnh thành kèm phường/xã (một request).",
+    "postalPrefix": "Đầu mã bưu chính",
+    "historyDescription": "Mỗi lần đồng bộ là một job tải lại cả danh mục (tỉnh thành và phường/xã). Job thất bại hay bị dừng không làm mất dữ liệu đã có."
+  },
+  "wards": {
+    "allProvinces": "Cả nước",
+    "description": "Phường, xã và đặc khu — cấp ngay dưới tỉnh thành.",
+    "search": "Tìm phường/xã",
+    "filterProvince": "Lọc theo tỉnh thành",
+    "noMatch": {
+      "title": "Không có phường/xã nào khớp",
+      "description": "Thử mã, tên hoặc tỉnh thành khác."
+    },
+    "province": "Tỉnh thành",
+    "postalCode": "Mã bưu chính"
+  },
+  "novel": {
+    "range": {
+      "title": "Tải theo khoảng chương",
+      "toEnd": "cuối truyện",
+      "force": "Tải lại cả chương đã có (chỉ ghi đè chương có nội dung thay đổi)",
+      "start": "Bắt đầu tải"
+    },
+    "export": {
+      "download": "Tải file JSON",
+      "fromStart": "đầu truyện",
+      "note": "File gồm thông tin truyện và nội dung các chương <b>đã tải</b> (hiện có {{done}} chương)",
+      "rangeNote": "; khoảng không có chương nào đã tải thì không có file"
+    },
+    "reload": {
+      "title": "Tải lại chương {{number}}?",
+      "body": "Nội dung đang lưu của chương này sẽ bị ghi đè nếu bản trên website nguồn đã thay đổi.",
+      "confirm": "Tải lại"
+    },
+    "chapters": {
+      "title": "Danh sách chương",
+      "filter": "Lọc chương theo trạng thái",
+      "noneInStatus": "Không có chương nào ở trạng thái này",
+      "noToc": {
+        "title": "Chưa có mục lục",
+        "description": "Truyện này mới chỉ được lấy thông tin. Bấm “Tải các chương còn thiếu” để lấy mục lục và nội dung."
+      },
+      "number": "Số",
+      "titleColumn": "Tiêu đề",
+      "downloadedAt": "Tải lúc",
+      "actions": "Hành động",
+      "reloadThis": "Tải lại chương này",
+      "reload": "Tải lại chương {{number}}"
+    },
+    "author": "Tác giả",
+    "unknownAuthor": "chưa rõ",
+    "meta": "Crawl gần nhất: {{crawled}} · Đăng trên nguồn: {{published}} · Chờ tải: {{pending}} chương",
+    "downloadMissing": "Tải các chương còn thiếu",
+    "showMore": "Xem thêm",
+    "showLess": "Thu gọn",
+    "crawling": "Job #{{id}} đang crawl truyện này",
+    "followJob": "Theo dõi job",
+    "history": "Lịch sử crawl",
+    "noJobs": "Chưa có job nào cho truyện này"
+  }
+}

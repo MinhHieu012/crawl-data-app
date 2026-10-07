@@ -1,4 +1,5 @@
 import { Button, Card, Group, Title } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useJobs } from '../api/queries'
@@ -14,16 +15,17 @@ interface RecentJobsProps {
 
 /** Khối "Job gần đây" của các trang tổng quan. */
 export function RecentJobs({ limit, allTo }: RecentJobsProps) {
+  const { t } = useTranslation()
   const jobs = useJobs({ page_size: limit })
 
   return (
     <Card withBorder>
       <Group justify="space-between" mb="sm">
         <Title order={2} size="h4">
-          Job gần đây
+          {t('recentJobs.title')}
         </Title>
         <Button component={Link} to={allTo} variant="subtle" size="compact-sm">
-          Xem tất cả
+          {t('recentJobs.viewAll')}
         </Button>
       </Group>
       <QueryState
@@ -31,11 +33,11 @@ export function RecentJobs({ limit, allTo }: RecentJobsProps) {
         isEmpty={(data) => data.items.length === 0}
         empty={
           <EmptyState
-            title="Chưa có job nào"
-            description="Dán URL của một truyện để bắt đầu crawl."
+            title={t('jobs.empty.title')}
+            description={t('jobs.empty.description')}
             action={
               <Button component={Link} to={novelPaths.crawl} variant="light">
-                Crawl truyện đầu tiên
+                {t('common.crawlFirstNovel')}
               </Button>
             }
           />

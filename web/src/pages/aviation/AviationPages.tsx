@@ -2,11 +2,13 @@ import { Anchor, Button, Card, Group, Skeleton, Table, Text, useMatches } from '
 import { IconDownload, IconRefresh } from '@tabler/icons-react'
 import type { UseMutationResult } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { BASE_URL } from '../../api/client'
 import { useAviationRecords, useAviationSummary, useJobs, useSyncAviation } from '../../api/queries'
 import type { AviationKind, AviationSource, Job } from '../../api/types'
+import type { I18nKey } from '../../i18n'
 import { JobsTable } from '../../components/JobsTable'
 import { Pager, SearchInput } from '../../components/ListControls'
 import { PageHeader } from '../../components/PageHeader'
@@ -16,31 +18,18 @@ import { recordCounts, formatDateTime } from '../../utils/format'
 import { notifyError, notifySuccess } from '../../utils/notify'
 
 const PAGE_SIZE = 50
-const LABEL: Record<AviationKind, string> = {
-  airport: 'sân bay',
-  airline: 'hãng bay',
-  city: 'thành phố',
-  country: 'quốc gia',
-}
-
-/** Dữ liệu của từng nguồn lấy từ đâu và được dùng thế nào — hiện ở đầu mỗi tab dữ liệu. */
-const SOURCE_NOTE: Record<AviationSource, string> = {
-  world:
-    'Dữ liệu mở: sân bay và quốc gia từ OurAirports (phạm vi công cộng), hãng bay từ OpenFlights (giấy phép ODbL, dùng lại phải ghi nguồn).',
-  vna: 'Lấy từ vietnamairlines.com, chỉ dùng cho mục đích cá nhân, phi thương mại.',
-}
-
-/** Điều cần biết về phạm vi của một loại dữ liệu ở một nguồn, để không ai tưởng danh sách là đầy đủ. */
-const KIND_NOTE: Record<AviationSource, Partial<Record<AviationKind, string>>> = {
+// Dữ liệu của từng nguồn lấy từ đâu và được dùng thế nào (khoá `aviation.sourceNote.<nguồn>`) hiện ở
+// đầu mỗi tab dữ liệu, kèm điều cần biết về phạm vi của loại dữ liệu đó ở nguồn đó — để không ai
+// tưởng danh sách là đầy đủ.
+const KIND_NOTE: Record<AviationSource, Partial<Record<AviationKind, I18nKey>>> = {
   world: {
-    airport: 'Chỉ gồm sân bay còn hoạt động có mã IATA.',
-    city: 'Thành phố suy ra từ sân bay; mã do ứng dụng tự đặt vì dữ liệu mở không có mã thành phố.',
-    airline:
-      'Chỉ gồm hãng đang hoạt động có mã IATA; OpenFlights ít được cập nhật nên có thể thiếu hãng mới.',
+    airport: 'aviation.kindNote.world.airport',
+    city: 'aviation.kindNote.world.city',
+    airline: 'aviation.kindNote.world.airline',
   },
   vna: {
-    airport: 'Chỉ gồm sân bay trong mạng bay của Vietnam Airlines và đối tác.',
-    airline: 'Chỉ gồm hãng có chương trình khách hàng thường xuyên liên kết với Vietnam Airlines.',
+    airport: 'aviation.kindNote.vna.airport',
+    airline: 'aviation.kindNote.vna.airline',
   },
 }
 
@@ -64,6 +53,7 @@ interface SyncJobButtonProps {
 
 /** Nút "Đồng bộ" dùng chung cho mọi crawler kiểu danh mục (hàng không, tỉnh thành). */
 export function SyncJobButton({ sync, running, variant }: SyncJobButtonProps) {
+  const { t } = useTranslation()
   return (
     <Button
       variant={variant}
@@ -71,54 +61,52 @@ export function SyncJobButton({ sync, running, variant }: SyncJobButtonProps) {
       loading={sync.isPending || running}
       onClick={() =>
         sync.mutate(undefined, {
-          onSuccess: (job) => notifySuccess(`Đang đồng bộ ở job #${job.id}`),
-          onError: (error) => notifyError(error, 'Không tạo được job đồng bộ'),
+          onSuccess: (job) => notifySuccess(t('sync.started', { id: job.id })),
+          onError: (error) => notifyError(error, t('sync.createFailed')),
         })
       }
     >
-      Đồng bộ
+      {t('sync.button')}
     </Button>
   )
 }
 
 /** Câu nói về job đồng bộ gần nhất của nguồn, kèm link tới job đó. */
 export function LastJobNote({ job }: { job: Job | null | undefined }) {
-  if (!job) return 'Chưa đồng bộ lần nào.'
-  const link = (
-    <Anchor component={Link} to={`/jobs/${job.id}`} inherit>
-      job #{job.id}
-    </Anchor>
-  )
-  if (job.status === 'running') return <>Đang đồng bộ ở {link}…</>
+  const { t } = useTranslation()
+  if (!job) return `${t('sync.never')}.`
+  const values = { id: job.id, time: formatDateTime(job.finished_at) }
+  const components = { job: <Anchor component={Link} to={`/jobs/${job.id}`} inherit /> }
+  if (job.status === 'running') {
+    return <Trans i18nKey="sync.running" values={values} components={components} />
+  }
   if (job.status === 'completed') {
-    return (
-      <>
-        Đồng bộ gần nhất: {formatDateTime(job.finished_at)} ({link}).
-      </>
-    )
+    return <Trans i18nKey="sync.last" values={values} components={components} />
   }
   return (
     <Text span c="red" inherit>
-      Lần đồng bộ gần nhất ({link}) không hoàn tất{job.error ? `: ${job.error}` : '.'}
+      <Trans i18nKey="sync.lastFailed" values={values} components={components} />
+      {job.error ? `: ${job.error}` : '.'}
     </Text>
   )
 }
 
 /** Dòng số liệu trên thẻ của một nguồn ở các trang tổng quan. */
 export function AviationSummaryLine({ source }: { source: AviationSource }) {
+  const { t } = useTranslation()
   const { data, isError } = useAviationSummary(source)
 
   if (!data) {
     return isError ? (
       <Text size="sm" c="red">
-        Không tải được số liệu
+        {t('common.statsError')}
       </Text>
     ) : (
       <Skeleton height={20} width={220} />
     )
   }
   const total = Object.values(data.counts).reduce((sum, count) => sum + count, 0)
-  return <Text size="sm">{total > 0 ? recordCounts(data.counts) : 'Chưa đồng bộ lần nào'}</Text>
+  return <Text size="sm">{total > 0 ? recordCounts(data.counts) : t('sync.never')}</Text>
 }
 
 interface DataPageProps {
@@ -128,6 +116,9 @@ interface DataPageProps {
 
 /** Tab dữ liệu của một loại danh mục (sân bay, hãng bay, thành phố, quốc gia) ở một nguồn. */
 export function AviationDataPage({ source, kind }: DataPageProps) {
+  const { t } = useTranslation()
+  const kindName = t(`aviation.kinds.${kind}`)
+  const kindNote = KIND_NOTE[source][kind]
   const [filters, setFilters] = useUrlState({ search: '', page: '1' })
   const page = Number(filters.page) || 1
   const records = useAviationRecords(source, {
@@ -150,10 +141,11 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
   return (
     <>
       <PageHeader
-        title={LABEL[kind]}
+        title={kindName}
         description={
           <>
-            {SOURCE_NOTE[source]} {KIND_NOTE[source][kind]} <LastJobNote job={lastJob} />
+            {t(`aviation.sourceNote.${source}`)} {kindNote && t(kindNote)}{' '}
+            <LastJobNote job={lastJob} />
           </>
         }
         actions={
@@ -167,7 +159,7 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
                 variant="default"
                 leftSection={<IconDownload size={16} />}
               >
-                Xuất JSON
+                {t('common.exportJson')}
               </Button>
             )}
             <SyncButton source={source} />
@@ -179,8 +171,8 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
           <SearchInput
             value={filters.search}
             onSearch={(search) => setFilters({ search })}
-            label={`Tìm ${LABEL[kind]}`}
-            placeholder="Mã hoặc tên, gõ không dấu cũng được"
+            label={t('aviation.search', { kind: kindName })}
+            placeholder={t('common.searchByCodeOrName')}
           />
         </Group>
         <QueryState
@@ -189,18 +181,15 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
           empty={
             filters.search ? (
               <EmptyState
-                title={`Không có ${LABEL[kind]} nào khớp`}
-                description="Thử mã hoặc tên khác."
+                title={t('aviation.noMatch', { kind: kindName })}
+                description={t('common.tryOtherCodeOrName')}
               />
             ) : syncing ? (
-              <EmptyState
-                title="Đang đồng bộ lần đầu"
-                description="Dữ liệu sẽ hiện ở đây khi job chạy xong."
-              />
+              <EmptyState title={t('sync.firstTitle')} description={t('sync.firstDescription')} />
             ) : (
               <EmptyState
-                title="Chưa có dữ liệu"
-                description="Bấm Đồng bộ để tải danh mục của nguồn này (ba request, cập nhật cả bốn loại dữ liệu)."
+                title={t('common.noData')}
+                description={t('aviation.emptyDescription')}
                 action={<SyncButton source={source} variant="light" />}
               />
             )
@@ -211,15 +200,17 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
               <Table verticalSpacing="sm" highlightOnHover layout="fixed">
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th w={longCode ? '34%' : 72}>Mã</Table.Th>
-                    <Table.Th>Tên</Table.Th>
-                    {wide && hasVietnamese && <Table.Th>Tên tiếng Việt</Table.Th>}
-                    {wide && hasCity && <Table.Th>Thành phố</Table.Th>}
-                    {wide && hasCountry && <Table.Th>Quốc gia</Table.Th>}
+                    <Table.Th w={longCode ? '34%' : 72}>{t('common.code')}</Table.Th>
+                    <Table.Th>{t('common.name')}</Table.Th>
+                    {wide && hasVietnamese && <Table.Th>{t('aviation.vietnameseName')}</Table.Th>}
+                    {wide && hasCity && <Table.Th>{t('aviation.city')}</Table.Th>}
+                    {wide && hasCountry && <Table.Th>{t('aviation.country')}</Table.Th>}
                     {wide && hasPlace && (
-                      <Table.Th>{source === 'vna' ? 'Vùng' : 'Châu lục'}</Table.Th>
+                      <Table.Th>
+                        {source === 'vna' ? t('aviation.region') : t('aviation.continent')}
+                      </Table.Th>
                     )}
-                    {wide && <Table.Th w={150}>Cập nhật</Table.Th>}
+                    {wide && <Table.Th w={150}>{t('common.updated')}</Table.Th>}
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -288,10 +279,11 @@ export function AviationDataPage({ source, kind }: DataPageProps) {
 
 /** Tab "Lịch sử": các job đồng bộ của một nguồn, mới nhất ở trên. */
 export function AviationHistoryPage({ source }: { source: AviationSource }) {
+  const { t } = useTranslation()
   return (
     <SyncHistoryPage
       crawler={`aviation:${source}`}
-      description="Mỗi lần đồng bộ là một job tải lại cả bốn loại dữ liệu của nguồn này. Job thất bại hay bị dừng không làm mất dữ liệu đã có."
+      description={t('aviation.historyDescription')}
       actions={<SyncButton source={source} />}
     />
   )
@@ -306,22 +298,20 @@ interface SyncHistoryPageProps {
 
 /** Tab "Lịch sử" dùng chung cho mọi crawler kiểu danh mục: các job đồng bộ của một `crawler`. */
 export function SyncHistoryPage({ crawler, description, actions }: SyncHistoryPageProps) {
+  const { t } = useTranslation()
   const [filters, setFilters] = useUrlState({ page: '1' })
   const page = Number(filters.page) || 1
   const jobs = useJobs({ crawler, page, page_size: 20 })
 
   return (
     <>
-      <PageHeader title="Lịch sử" description={description} actions={actions} />
+      <PageHeader title={t('common.history')} description={description} actions={actions} />
       <Card withBorder>
         <QueryState
           query={jobs}
           isEmpty={(data) => data.total === 0}
           empty={
-            <EmptyState
-              title="Chưa đồng bộ lần nào"
-              description="Lịch sử xuất hiện sau lần đồng bộ đầu tiên."
-            />
+            <EmptyState title={t('sync.never')} description={t('sync.historyEmptyDescription')} />
           }
         >
           {(data) => (

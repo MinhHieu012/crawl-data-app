@@ -1,4 +1,5 @@
 import { Button } from '@mantine/core'
+import { useTranslation } from 'react-i18next'
 import { Link, Navigate, Route, Routes } from 'react-router'
 
 import { EmptyState } from './components/QueryState'
@@ -16,13 +17,14 @@ import { LogsPage } from './pages/logs/LogsPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
 
 function NotFoundPage() {
+  const { t } = useTranslation()
   return (
     <EmptyState
-      title="Không có trang này"
-      description="Đường dẫn không đúng hoặc trang đã được chuyển đi."
+      title={t('notFound.title')}
+      description={t('notFound.description')}
       action={
         <Button component={Link} to="/" variant="light">
-          Về trang Tổng quan
+          {t('notFound.action')}
         </Button>
       }
     />

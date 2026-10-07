@@ -14,6 +14,7 @@ import {
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { IconAlertTriangle, IconPlayerPlay } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 
 import { ApiError } from '../../api/client'
@@ -33,16 +34,13 @@ interface CrawlForm {
   retryFailed: boolean
 }
 
-const SCOPES: { value: Scope; label: string }[] = [
-  { value: 'all', label: 'Toàn bộ chương' },
-  { value: 'range', label: 'Khoảng chương' },
-  { value: 'info', label: 'Chỉ thông tin truyện' },
-]
+const SCOPES: Scope[] = ['all', 'range', 'info']
 
 // Những lỗi của backend nói về chính URL → hiện ngay dưới ô URL thay vì ở cuối form.
 const URL_ERROR_CODES = new Set(['invalid_url', 'unsupported_source', 'source_disabled'])
 
 export function CrawlPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const sources = useSources()
@@ -59,13 +57,10 @@ export function CrawlPage() {
       retryFailed: true,
     },
     validate: {
-      url: (url) =>
-        isHttpUrl(url.trim())
-          ? null
-          : 'Nhập URL đầy đủ của truyện, ví dụ https://truyenfull.live/ten-truyen/',
+      url: (url) => (isHttpUrl(url.trim()) ? null : t('crawl.validation.url')),
       to: (to, { from, scope }) =>
         scope === 'range' && typeof to === 'number' && typeof from === 'number' && to < from
-          ? 'Chương kết thúc phải lớn hơn hoặc bằng chương bắt đầu'
+          ? t('crawl.validation.range')
           : null,
     },
   })
@@ -107,28 +102,29 @@ export function CrawlPage() {
 
   return (
     <>
-      <PageHeader
-        title="Crawl truyện"
-        description="Dán URL của truyện (URL một chương cũng được). Chạy lại bao nhiêu lần cũng chỉ tải phần còn thiếu."
-      />
+      <PageHeader title={t('common.crawlNovel')} description={t('crawl.description')} />
       <Card withBorder maw={720}>
         <form onSubmit={submit} noValidate>
           <Stack gap="md">
             <NativeSelect
-              label="Nguồn"
+              label={t('common.source')}
               description={
                 enabledSources.length > 0
-                  ? `Đang hỗ trợ: ${enabledSources.map((source) => `${source.name} (${source.domains[0]})`).join(', ')}`
+                  ? t('crawl.supported', {
+                      sources: enabledSources
+                        .map((source) => `${source.name} (${source.domains[0]})`)
+                        .join(', '),
+                    })
                   : undefined
               }
               data={[
-                { value: '', label: 'Tự nhận diện theo URL' },
+                { value: '', label: t('crawl.autoDetect') },
                 ...enabledSources.map((source) => ({ value: source.name, label: source.name })),
               ]}
               {...form.getInputProps('source')}
             />
             <TextInput
-              label="URL truyện"
+              label={t('crawl.url')}
               placeholder="https://truyenfull.live/ten-truyen/"
               type="url"
               required
@@ -137,11 +133,11 @@ export function CrawlPage() {
 
             <div>
               <Text size="sm" fw={500} mb={4}>
-                Phạm vi
+                {t('common.scope')}
               </Text>
               <SegmentedControl
-                aria-label="Phạm vi crawl"
-                data={SCOPES}
+                aria-label={t('crawl.scopeLabel')}
+                data={SCOPES.map((value) => ({ value, label: t(`crawl.scopes.${value}`) }))}
                 orientation={stackScopes ? 'vertical' : 'horizontal'}
                 fullWidth={stackScopes}
                 {...form.getInputProps('scope')}
@@ -150,15 +146,15 @@ export function CrawlPage() {
             {scope === 'range' && (
               <Group grow align="flex-start">
                 <NumberInput
-                  label="Từ chương"
-                  description="Theo số thứ tự trong mục lục"
+                  label={t('crawl.from')}
+                  description={t('crawl.fromHint')}
                   min={1}
                   allowDecimal={false}
                   {...form.getInputProps('from')}
                 />
                 <NumberInput
-                  label="Đến chương"
-                  description="Để trống = tới cuối truyện"
+                  label={t('crawl.to')}
+                  description={t('crawl.toHint')}
                   min={1}
                   allowDecimal={false}
                   {...form.getInputProps('to')}
@@ -169,12 +165,12 @@ export function CrawlPage() {
             {scope !== 'info' && (
               <Stack gap="xs">
                 <Checkbox
-                  label="Bỏ qua các chương đã tải"
-                  description="Bỏ chọn để tải lại tất cả; chỉ chương có nội dung thay đổi mới bị ghi đè."
+                  label={t('crawl.skipExisting.label')}
+                  description={t('crawl.skipExisting.description')}
                   {...form.getInputProps('skipExisting', { type: 'checkbox' })}
                 />
                 <Checkbox
-                  label="Thử lại các chương đang lỗi"
+                  label={t('crawl.retryFailed')}
                   {...form.getInputProps('retryFailed', { type: 'checkbox' })}
                 />
               </Stack>
@@ -184,7 +180,7 @@ export function CrawlPage() {
               <Alert
                 color="red"
                 icon={<IconAlertTriangle size={18} />}
-                title="Không tạo được job"
+                title={t('crawl.createFailed')}
                 role="alert"
               >
                 <Text size="sm">{error.message}</Text>
@@ -197,7 +193,7 @@ export function CrawlPage() {
                     color="red"
                     mt="sm"
                   >
-                    Xem job #{duplicateJobId}
+                    {t('crawl.viewJob', { id: duplicateJobId })}
                   </Button>
                 )}
               </Alert>
@@ -205,15 +201,14 @@ export function CrawlPage() {
 
             <Group justify="space-between" align="center">
               <Text size="xs" c="dimmed" maw={420}>
-                Crawler tuân thủ robots.txt, giãn cách request và dừng khi bị website từ chối. Chỉ
-                crawl nội dung bạn được phép sử dụng.
+                {t('crawl.compliance')}
               </Text>
               <Button
                 type="submit"
                 loading={createJob.isPending}
                 leftSection={<IconPlayerPlay size={16} />}
               >
-                Bắt đầu crawl
+                {t('crawl.start')}
               </Button>
             </Group>
           </Stack>

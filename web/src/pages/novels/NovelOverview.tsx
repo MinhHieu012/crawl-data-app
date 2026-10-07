@@ -1,5 +1,6 @@
 import { Badge, Button, Group, SimpleGrid, Skeleton, Text } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useStats } from '../../api/queries'
@@ -12,12 +13,13 @@ import { formatNumber } from '../../utils/format'
 
 /** Dòng số liệu trên thẻ của crawler truyện ở các trang tổng quan. */
 export function NovelSummary() {
+  const { t } = useTranslation()
   const { data, isError } = useStats()
 
   if (!data) {
     return isError ? (
       <Text size="sm" c="red">
-        Không tải được số liệu
+        {t('common.statsError')}
       </Text>
     ) : (
       <Skeleton height={20} width={200} />
@@ -26,9 +28,14 @@ export function NovelSummary() {
   return (
     <Group gap="xs">
       <Text size="sm">
-        {formatNumber(data.novels)} truyện · {formatNumber(data.chapters.done)} chương đã tải
+        {t('novelOverview.summary', {
+          novels: formatNumber(data.novels),
+          chapters: formatNumber(data.chapters.done),
+        })}
       </Text>
-      {data.jobs.running > 0 && <Badge variant="light">{data.jobs.running} job đang chạy</Badge>}
+      {data.jobs.running > 0 && (
+        <Badge variant="light">{t('common.runningJobs', { count: data.jobs.running })}</Badge>
+      )}
     </Group>
   )
 }
@@ -37,16 +44,17 @@ const GRID = { base: 2, sm: 4 }
 
 /** Tab "Tổng quan" của crawler truyện: dữ liệu đã thu thập và các job gần đây. */
 export function NovelOverview() {
+  const { t } = useTranslation()
   const stats = useStats()
 
   return (
     <>
       <PageHeader
-        title="Tổng quan"
-        description="Dữ liệu truyện đã thu thập và các lần crawl gần đây."
+        title={t('common.overview')}
+        description={t('novelOverview.description')}
         actions={
           <Button component={Link} to={novelPaths.crawl} leftSection={<IconPlus size={16} />}>
-            Crawl truyện
+            {t('common.crawlNovel')}
           </Button>
         }
       />
@@ -62,10 +70,10 @@ export function NovelOverview() {
       >
         {(data) => (
           <SimpleGrid cols={GRID} mb="lg">
-            <StatCard label="Truyện" value={data.novels} to={novelPaths.novels} />
-            <StatCard label="Chương đã tải" value={data.chapters.done} color="teal" />
-            <StatCard label="Chương chờ tải" value={data.chapters.pending} />
-            <StatCard label="Chương lỗi" value={data.chapters.failed} color="red" />
+            <StatCard label={t('novels.title')} value={data.novels} to={novelPaths.novels} />
+            <StatCard label={t('chapters.done')} value={data.chapters.done} color="teal" />
+            <StatCard label={t('chapters.pending')} value={data.chapters.pending} />
+            <StatCard label={t('chapters.failed')} value={data.chapters.failed} color="red" />
           </SimpleGrid>
         )}
       </QueryState>

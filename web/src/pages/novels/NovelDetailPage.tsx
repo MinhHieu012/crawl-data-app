@@ -25,6 +25,7 @@ import { useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import { IconDownload, IconFileExport, IconReload } from '@tabler/icons-react'
 import { useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
 import { BASE_URL } from '../../api/client'
@@ -43,9 +44,10 @@ import {
   NovelStatusBadge,
   statusOptions,
 } from '../../components/StatusBadge'
-import { NOVEL_CRUMBS, novelPaths } from '../../crawlers/paths'
+import { novelCrumbs, novelPaths } from '../../crawlers/paths'
 import { useStartCrawl } from '../../hooks/useStartCrawl'
 import { useUrlState } from '../../hooks/useUrlState'
+import i18n from '../../i18n'
 import { formatDateTime, toChapterNumber } from '../../utils/format'
 
 const CHAPTERS_PER_PAGE = 50
@@ -58,10 +60,11 @@ interface RangeModalProps {
 
 const validateTo = (to: number | string, { from }: { from: number | string }) =>
   typeof to === 'number' && typeof from === 'number' && to < from
-    ? 'Chương kết thúc phải lớn hơn hoặc bằng chương bắt đầu'
+    ? i18n.t('crawl.validation.range')
     : null
 
 function RangeModal({ novel, opened, onClose }: RangeModalProps) {
+  const { t } = useTranslation()
   const { start, isPending } = useStartCrawl()
   const form = useForm<{ from: number | string; to: number | string; force: boolean }>({
     initialValues: { from: 1, to: novel.total_chapters ?? '', force: false },
@@ -78,18 +81,18 @@ function RangeModal({ novel, opened, onClose }: RangeModalProps) {
   )
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Tải theo khoảng chương">
+    <Modal opened={opened} onClose={onClose} title={t('novel.range.title')}>
       <form onSubmit={submit}>
         <Group grow align="flex-start">
           <NumberInput
-            label="Từ chương"
+            label={t('crawl.from')}
             min={1}
             allowDecimal={false}
             {...form.getInputProps('from')}
           />
           <NumberInput
-            label="Đến chương"
-            placeholder="cuối truyện"
+            label={t('crawl.to')}
+            placeholder={t('novel.range.toEnd')}
             min={1}
             allowDecimal={false}
             {...form.getInputProps('to')}
@@ -97,15 +100,15 @@ function RangeModal({ novel, opened, onClose }: RangeModalProps) {
         </Group>
         <Checkbox
           mt="md"
-          label="Tải lại cả chương đã có (chỉ ghi đè chương có nội dung thay đổi)"
+          label={t('novel.range.force')}
           {...form.getInputProps('force', { type: 'checkbox' })}
         />
         <Group justify="flex-end" mt="lg">
           <Button variant="default" onClick={onClose}>
-            Thôi
+            {t('common.dismiss')}
           </Button>
           <Button type="submit" loading={isPending}>
-            Bắt đầu tải
+            {t('novel.range.start')}
           </Button>
         </Group>
       </form>
@@ -115,6 +118,7 @@ function RangeModal({ novel, opened, onClose }: RangeModalProps) {
 
 /** Xuất JSON theo hai kiểu: toàn bộ chương đã tải, hoặc một khoảng chương. File do backend dựng. */
 function ExportModal({ novel, opened, onClose }: RangeModalProps) {
+  const { t } = useTranslation()
   const [scope, setScope] = useState<'all' | 'range'>('all')
   const form = useForm<{ from: number | string; to: number | string }>({
     initialValues: { from: 1, to: novel.total_chapters ?? '' },
@@ -131,31 +135,34 @@ function ExportModal({ novel, opened, onClose }: RangeModalProps) {
   }
   const query = params.toString()
   const href = `${BASE_URL}/novels/${novel.id}/export${query && `?${query}`}`
-  const download = { leftSection: <IconFileExport size={16} />, children: 'Tải file JSON' }
+  const download = {
+    leftSection: <IconFileExport size={16} />,
+    children: t('novel.export.download'),
+  }
 
   return (
-    <Modal opened={opened} onClose={onClose} title="Xuất JSON">
+    <Modal opened={opened} onClose={onClose} title={t('common.exportJson')}>
       <SegmentedControl
         fullWidth
         value={scope}
         onChange={(value) => setScope(value as 'all' | 'range')}
         data={[
-          { value: 'all', label: 'Toàn bộ chương' },
-          { value: 'range', label: 'Khoảng chương' },
+          { value: 'all', label: t('crawl.scopes.all') },
+          { value: 'range', label: t('crawl.scopes.range') },
         ]}
       />
       {ranged && (
         <Group grow align="flex-start" mt="md">
           <NumberInput
-            label="Từ chương"
-            placeholder="đầu truyện"
+            label={t('crawl.from')}
+            placeholder={t('novel.export.fromStart')}
             min={1}
             allowDecimal={false}
             {...form.getInputProps('from')}
           />
           <NumberInput
-            label="Đến chương"
-            placeholder="cuối truyện"
+            label={t('crawl.to')}
+            placeholder={t('novel.range.toEnd')}
             min={1}
             allowDecimal={false}
             {...form.getInputProps('to')}
@@ -163,13 +170,16 @@ function ExportModal({ novel, opened, onClose }: RangeModalProps) {
         </Group>
       )}
       <Text size="sm" c="dimmed" mt="md">
-        File gồm thông tin truyện và nội dung các chương <b>đã tải</b> (hiện có{' '}
-        {novel.chapters_done} chương)
-        {ranged && '; khoảng không có chương nào đã tải thì không có file'}.
+        <Trans
+          i18nKey="novel.export.note"
+          values={{ done: novel.chapters_done }}
+          components={{ b: <b /> }}
+        />
+        {ranged && t('novel.export.rangeNote')}.
       </Text>
       <Group justify="flex-end" mt="lg">
         <Button variant="default" onClick={onClose}>
-          Thôi
+          {t('common.dismiss')}
         </Button>
         {/* Link tải thẳng như trang hàng không; khoảng không hợp lệ thì không có link để bấm. */}
         {ranged && !form.isValid() ? (
@@ -189,6 +199,7 @@ interface ChapterListProps {
 }
 
 function ChapterList({ novel, crawling }: ChapterListProps) {
+  const { t } = useTranslation()
   const [filters, setFilters] = useUrlState({ status: '', page: '1' })
   const page = Number(filters.page) || 1
   const chapters = useChapters(
@@ -209,13 +220,9 @@ function ChapterList({ novel, crawling }: ChapterListProps) {
     }
     if (chapter.status !== 'done') return start(request)
     modals.openConfirmModal({
-      title: `Tải lại chương ${chapter.number}?`,
-      children: (
-        <Text size="sm">
-          Nội dung đang lưu của chương này sẽ bị ghi đè nếu bản trên website nguồn đã thay đổi.
-        </Text>
-      ),
-      labels: { confirm: 'Tải lại', cancel: 'Thôi' },
+      title: t('novel.reload.title', { number: chapter.number }),
+      children: <Text size="sm">{t('novel.reload.body')}</Text>,
+      labels: { confirm: t('novel.reload.confirm'), cancel: t('common.dismiss') },
       onConfirm: () => start(request),
     })
   }
@@ -224,12 +231,12 @@ function ChapterList({ novel, crawling }: ChapterListProps) {
     <Card withBorder>
       <Group justify="space-between" mb="sm">
         <Title order={2} size="h4">
-          Danh sách chương
+          {t('novel.chapters.title')}
         </Title>
         <SegmentedControl
           size="xs"
-          aria-label="Lọc chương theo trạng thái"
-          data={statusOptions(CHAPTER_STATUS, 'Tất cả')}
+          aria-label={t('novel.chapters.filter')}
+          data={statusOptions(CHAPTER_STATUS, t('common.all'))}
           value={filters.status}
           onChange={(status) => setFilters({ status })}
         />
@@ -239,11 +246,11 @@ function ChapterList({ novel, crawling }: ChapterListProps) {
         isEmpty={(data) => data.total === 0}
         empty={
           filters.status ? (
-            <EmptyState title="Không có chương nào ở trạng thái này" />
+            <EmptyState title={t('novel.chapters.noneInStatus')} />
           ) : (
             <EmptyState
-              title="Chưa có mục lục"
-              description="Truyện này mới chỉ được lấy thông tin. Bấm “Tải các chương còn thiếu” để lấy mục lục và nội dung."
+              title={t('novel.chapters.noToc.title')}
+              description={t('novel.chapters.noToc.description')}
             />
           )
         }
@@ -253,15 +260,15 @@ function ChapterList({ novel, crawling }: ChapterListProps) {
             <Table verticalSpacing="xs" highlightOnHover layout="fixed">
               <Table.Thead>
                 <Table.Tr>
-                  <Table.Th w={wide ? 70 : 48}>Số</Table.Th>
-                  <Table.Th>Tiêu đề</Table.Th>
+                  <Table.Th w={wide ? 70 : 48}>{t('novel.chapters.number')}</Table.Th>
+                  <Table.Th>{t('novel.chapters.titleColumn')}</Table.Th>
                   {wide && (
                     <>
-                      <Table.Th w={110}>Trạng thái</Table.Th>
-                      <Table.Th w={140}>Tải lúc</Table.Th>
+                      <Table.Th w={110}>{t('common.status')}</Table.Th>
+                      <Table.Th w={140}>{t('novel.chapters.downloadedAt')}</Table.Th>
                     </>
                   )}
-                  <Table.Th w={56} aria-label="Hành động" />
+                  <Table.Th w={56} aria-label={t('novel.chapters.actions')} />
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -315,12 +322,16 @@ function ChapterList({ novel, crawling }: ChapterListProps) {
                     )}
                     <Table.Td>
                       <Tooltip
-                        label={chapter.status === 'done' ? 'Tải lại chương này' : 'Tải chương này'}
+                        label={
+                          chapter.status === 'done'
+                            ? t('novel.chapters.reloadThis')
+                            : t('chapter.download')
+                        }
                       >
                         <ActionIcon
                           variant="subtle"
                           size={wide ? 'md' : 'lg'}
-                          aria-label={`Tải lại chương ${chapter.number}`}
+                          aria-label={t('novel.chapters.reload', { number: chapter.number })}
                           disabled={isPending || crawling}
                           onClick={() => recrawl(chapter)}
                         >
@@ -346,6 +357,7 @@ function ChapterList({ novel, crawling }: ChapterListProps) {
 }
 
 function NovelView({ novel }: { novel: Novel }) {
+  const { t } = useTranslation()
   const jobs = useJobs({ novel_id: novel.id, page_size: 5 })
   const runningJob = jobs.data?.items.find((job) => job.status === 'running')
   const crawling = runningJob !== undefined
@@ -370,7 +382,8 @@ function NovelView({ novel }: { novel: Novel }) {
               ))}
             </Group>
             <Text size="sm">
-              Tác giả: <b>{novel.author ?? 'chưa rõ'}</b> · Nguồn: <b>{novel.source}</b>
+              {t('novel.author')}: <b>{novel.author ?? t('novel.unknownAuthor')}</b> ·{' '}
+              {t('common.source')}: <b>{novel.source}</b>
             </Text>
             <Anchor
               href={novel.url}
@@ -385,8 +398,11 @@ function NovelView({ novel }: { novel: Novel }) {
               <NovelProgress novel={novel} size="md" />
             </Box>
             <Text size="xs" c="dimmed">
-              Crawl gần nhất: {formatDateTime(novel.last_crawled_at)} · Đăng trên nguồn:{' '}
-              {formatDateTime(novel.published_at)} · Chờ tải: {novel.chapters_pending} chương
+              {t('novel.meta', {
+                crawled: formatDateTime(novel.last_crawled_at),
+                published: formatDateTime(novel.published_at),
+                pending: novel.chapters_pending,
+              })}
             </Text>
             <Group gap="xs" mt="xs">
               <Button
@@ -395,10 +411,10 @@ function NovelView({ novel }: { novel: Novel }) {
                 disabled={crawling}
                 onClick={() => start({ url: novel.url })}
               >
-                Tải các chương còn thiếu
+                {t('novel.downloadMissing')}
               </Button>
               <Button variant="default" disabled={crawling} onClick={range.open}>
-                Tải theo khoảng chương…
+                {t('novel.range.title')}…
               </Button>
               <Button
                 variant="default"
@@ -406,13 +422,18 @@ function NovelView({ novel }: { novel: Novel }) {
                 disabled={novel.chapters_done === 0}
                 onClick={exporting.open}
               >
-                Xuất JSON…
+                {t('common.exportJson')}…
               </Button>
             </Group>
           </Stack>
         </Group>
         {novel.description && (
-          <Spoiler maxHeight={96} showLabel="Xem thêm" hideLabel="Thu gọn" mt="md">
+          <Spoiler
+            maxHeight={96}
+            showLabel={t('novel.showMore')}
+            hideLabel={t('novel.showLess')}
+            mt="md"
+          >
             <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
               {novel.description}
             </Text>
@@ -421,10 +442,10 @@ function NovelView({ novel }: { novel: Novel }) {
       </Card>
 
       {runningJob && (
-        <Alert color="blue" title={`Job #${runningJob.id} đang crawl truyện này`}>
+        <Alert color="blue" title={t('novel.crawling', { id: runningJob.id })}>
           <JobProgress job={runningJob} />
           <Anchor component={Link} to={`/jobs/${runningJob.id}`} size="sm" mt="xs" display="block">
-            Theo dõi job
+            {t('novel.followJob')}
           </Anchor>
         </Alert>
       )}
@@ -433,12 +454,12 @@ function NovelView({ novel }: { novel: Novel }) {
 
       <Card withBorder>
         <Title order={2} size="h4" mb="sm">
-          Lịch sử crawl
+          {t('novel.history')}
         </Title>
         <QueryState
           query={jobs}
           isEmpty={(data) => data.items.length === 0}
-          empty={<EmptyState title="Chưa có job nào cho truyện này" />}
+          empty={<EmptyState title={t('novel.noJobs')} />}
         >
           {(data) => <JobsTable jobs={data.items} />}
         </QueryState>
@@ -451,6 +472,7 @@ function NovelView({ novel }: { novel: Novel }) {
 }
 
 export function NovelDetailPage() {
+  const { t } = useTranslation()
   const id = Number(useParams().id)
   // Cùng query với NovelView nên không tốn thêm request; chỉ để biết có cần hỏi lại định kỳ không.
   const jobs = useJobs({ novel_id: id, page_size: 5 })
@@ -460,8 +482,8 @@ export function NovelDetailPage() {
   return (
     <>
       <PageHeader
-        title={novel.data?.title ?? 'Truyện'}
-        crumbs={[...NOVEL_CRUMBS, { label: novel.data?.title ?? `#${id}` }]}
+        title={novel.data?.title ?? t('novels.title')}
+        crumbs={[...novelCrumbs(t), { label: novel.data?.title ?? `#${id}` }]}
       />
       <QueryState query={novel} skeleton={<Skeleton height={240} radius="md" />}>
         {(data) => <NovelView novel={data} />}

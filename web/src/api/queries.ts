@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 
+import i18n from '../i18n'
 import { api, ApiError } from './client'
 import type {
   ChapterContent,
@@ -42,7 +43,7 @@ import type {
 const POLL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS) || 2000
 
 export function createQueryClient(): QueryClient {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 5_000,
@@ -52,6 +53,12 @@ export function createQueryClient(): QueryClient {
       },
     },
   })
+  // Câu báo lỗi được dịch lúc lỗi xảy ra rồi nằm lại trong cache: đổi ngôn ngữ thì hỏi lại những
+  // query đang lỗi để câu báo lỗi trên màn hình theo ngôn ngữ mới.
+  i18n.on('languageChanged', () => {
+    void client.refetchQueries({ predicate: (query) => query.state.status === 'error' })
+  })
+  return client
 }
 
 export interface NovelListParams {

@@ -1,6 +1,7 @@
 import { Button, Menu } from '@mantine/core'
 import { IconChevronDown, IconPlus } from '@tabler/icons-react'
 import { Fragment } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { categoryPath } from '../../crawlers/paths'
@@ -11,6 +12,7 @@ import { CRAWLER_MODULES } from '../../crawlers/registry'
  * tab bắt đầu crawl của crawler đó. Loại dữ liệu chưa có backend (không khai báo `sections`) không hiện.
  */
 export function CrawlMenu() {
+  const { t } = useTranslation()
   return (
     <Menu position="bottom-end" withinPortal>
       <Menu.Target>
@@ -33,13 +35,13 @@ export function CrawlMenu() {
                   to={`${categoryPath(crawler.id, category.id)}/${tab}`}
                   leftSection={<ItemIcon size={16} stroke={1.6} />}
                 >
-                  {grouped ? category.name : crawler.name}
+                  {t(grouped ? category.name : crawler.name)}
                 </Menu.Item>
               )
             })
           return (
             <Fragment key={crawler.id}>
-              {grouped && items.length > 0 && <Menu.Label>{crawler.name}</Menu.Label>}
+              {grouped && items.length > 0 && <Menu.Label>{t(crawler.name)}</Menu.Label>}
               {items}
             </Fragment>
           )
