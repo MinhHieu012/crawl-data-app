@@ -20,14 +20,9 @@ function AdminLogin() {
     <Card withBorder maw={480}>
       <form onSubmit={form.onSubmit(({ token }) => login.mutate(token.trim()))} noValidate>
         <Stack gap="md">
-          <div>
-            <Title order={2} size="h4">
-              {t('admin.login.title')}
-            </Title>
-            <Text size="sm" c="dimmed" mt={4}>
-              {t('admin.login.description')}
-            </Text>
-          </div>
+          <Title order={2} size="h4">
+            {t('admin.login.title')}
+          </Title>
           <PasswordInput
             label={t('admin.login.token')}
             autoComplete="current-password"

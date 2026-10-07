@@ -666,7 +666,6 @@
     "description": "All feedback users have sent. Only administrators can see this page.",
     "login": {
       "title": "Administrator sign-in",
-      "description": "Enter the admin token (ADMIN_TOKEN in the server's .env file) to view and manage feedback.",
       "token": "Admin token",
       "submit": "Sign in",
       "required": "Enter the admin token",

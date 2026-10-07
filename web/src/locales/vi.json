@@ -658,7 +658,6 @@
     "description": "Mọi góp ý người dùng đã gửi. Chỉ quản trị viên xem được trang này.",
     "login": {
       "title": "Đăng nhập quản trị",
-      "description": "Nhập mã quản trị (biến ADMIN_TOKEN trong file .env của máy chủ) để xem và quản lý góp ý.",
       "token": "Mã quản trị",
       "submit": "Đăng nhập",
       "required": "Nhập mã quản trị",
