@@ -20,6 +20,8 @@ import {
   IconLanguage,
   IconLayoutDashboard,
   IconListCheck,
+  IconMessageReport,
+  IconMessages,
   IconMoon,
   IconSettings,
   IconSpider,
@@ -35,7 +37,9 @@ import { Link, Outlet, useLocation, useNavigationType } from 'react-router'
 import { useJobActivity } from '../api/queries'
 import { categoryPath, CRAWLERS_PATH, modulePath } from '../crawlers/paths'
 import { CRAWLER_MODULES } from '../crawlers/registry'
+import { useAdminToken } from '../hooks/useAdminToken'
 import { LANGUAGES, setLanguage, type Language } from '../i18n'
+import { ADMIN_FEEDBACK_PATH, FEEDBACK_PATH } from '../pages/feedback/paths'
 
 interface NavItem {
   /** Đích của mục; với nhóm (có `children`) là tiền tố đường dẫn của cả nhóm. */
@@ -51,7 +55,8 @@ interface NavItem {
 
 // Trang chung của hệ thống khai báo ở đây (kèm route trong App.tsx). Phần crawler sinh từ registry:
 // thêm crawler mới không phải sửa menu. Module nhiều loại dữ liệu thành một nhóm con.
-const navigation = (t: TFunction): NavItem[] => [
+// `admin`: đã nhập mã quản trị → hiện mục quản lý góp ý (chỉ cho gọn menu; backend mới kiểm tra quyền).
+const navigation = (t: TFunction, admin: boolean): NavItem[] => [
   { path: '/', label: t('dashboard.title'), icon: IconLayoutDashboard, exact: true },
   {
     path: CRAWLERS_PATH,
@@ -80,6 +85,8 @@ const navigation = (t: TFunction): NavItem[] => [
   { path: '/jobs', label: t('common.jobs'), icon: IconListCheck },
   { path: '/logs', label: t('logs.title'), icon: IconFileText },
   { path: '/settings', label: t('settings.title'), icon: IconSettings },
+  { path: FEEDBACK_PATH, label: t('feedback.title'), icon: IconMessageReport },
+  ...(admin ? [{ path: ADMIN_FEEDBACK_PATH, label: t('admin.title'), icon: IconMessages }] : []),
 ]
 
 const NAVBAR_ID = 'app-navbar'
@@ -174,6 +181,7 @@ export function AppLayout() {
   const { pathname } = useLocation()
   const navigationType = useNavigationType()
   const running = useJobActivity()
+  const admin = Boolean(useAdminToken())
 
   useEffect(close, [pathname, close]) // màn hình hẹp: chọn xong một mục thì đóng menu
 
@@ -242,7 +250,7 @@ export function AppLayout() {
         aria-label={t('layout.mainMenu')}
         style={{ overflowY: 'auto' }}
       >
-        <NavItems items={navigation(t)} pathname={pathname} />
+        <NavItems items={navigation(t, admin)} pathname={pathname} />
       </AppShell.Navbar>
 
       <AppShell.Main>

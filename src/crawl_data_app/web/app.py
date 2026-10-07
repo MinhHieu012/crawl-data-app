@@ -6,6 +6,7 @@ Không có logic crawl nào ở đây — mỗi endpoint chỉ đổi dữ liệ
 import asyncio
 import json
 import logging
+import secrets
 import sys
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from contextlib import asynccontextmanager
@@ -15,7 +16,7 @@ from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
 import httpx
-from fastapi import APIRouter, Depends, FastAPI, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, Header, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Row, make_url
@@ -35,16 +36,24 @@ from crawl_data_app.core.exceptions import (
 )
 from crawl_data_app.core.models import CrawlRequest
 from crawl_data_app.crawlers import CRAWLERS, crawler_class_for
-from crawl_data_app.database.models import ChapterStatus, CrawlRun, RunStatus
+from crawl_data_app.database.models import ChapterStatus, CrawlRun, Feedback, RunStatus
 from crawl_data_app.export import file_stem, novel_json, to_chapters
+from crawl_data_app.feedback import FeedbackRepository
 from crawl_data_app.repository import NovelRepository
 from crawl_data_app.web.jobs import DuplicateJobError, JobManager
 from crawl_data_app.web.schemas import (
+    AdminSession,
     AviationRecordOut,
     AviationSummary,
     ChapterContent,
     ChapterOut,
     ConnectionTest,
+    FeedbackAdminOut,
+    FeedbackCreate,
+    FeedbackOut,
+    FeedbackStatus,
+    FeedbackType,
+    FeedbackUpdate,
     JobCreate,
     JobOut,
     LogEntry,
@@ -71,6 +80,10 @@ AviationSource = Literal["world", "vna"]
 AviationKind = Literal["airport", "airline", "city", "country"]
 # Mã tỉnh thành để lọc phường/xã; chỉ chữ số vì giá trị này đi vào tên file xuất.
 ProvinceCode = Annotated[str, Query(pattern=r"^\d{0,10}$")]
+# Mã người gửi góp ý: chuỗi ngẫu nhiên trình duyệt tự sinh (UUID), gửi qua header `X-Feedback-Key`.
+_REPORTER_KEY = Header(alias="X-Feedback-Key", pattern=r"^[A-Za-z0-9_-]{16,128}$")
+ReporterKey = Annotated[str, _REPORTER_KEY]
+OptionalReporterKey = Annotated[str | None, _REPORTER_KEY]
 
 
 class ApiError(Exception):
@@ -113,6 +126,26 @@ def _novel_out(row: Row) -> NovelOut:
         chapters_pending=row.pending,
         published_at=novel.published_at,
         last_crawled_at=novel.last_crawled_at,
+    )
+
+
+def _feedback_out[T: FeedbackOut](model: type[T], row: Feedback) -> T:
+    extra = (
+        {"contact": row.contact, "reporter": row.reporter_hash and row.reporter_hash[:8]}
+        if model is FeedbackAdminOut
+        else {}
+    )
+    return model(
+        id=row.id,
+        type=row.type,
+        title=row.title,
+        description=row.description,
+        details=row.details,
+        status=row.status,
+        response=row.response,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+        **extra,
     )
 
 
@@ -609,6 +642,110 @@ def create_app(
         chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
         """
         return await launch_provinces()
+
+    # --- Góp ý --------------------------------------------------------------------------------
+
+    feedback = FeedbackRepository(repo.session_factory)
+
+    @api.post("/feedback", status_code=201)
+    async def create_feedback(
+        body: FeedbackCreate,
+        reporter_key: OptionalReporterKey = None,
+    ) -> FeedbackOut:
+        """Ai mở được giao diện cũng gửi được góp ý. Kèm `X-Feedback-Key` thì xem lại được qua
+        `GET /feedback/mine`.
+        """
+        fields = body.model_dump(exclude={"type", "title", "description", "contact"})
+        row = feedback.create(
+            type=body.type,
+            title=body.title,
+            description=body.description,
+            details={key: value for key, value in fields.items() if value is not None},
+            contact=body.contact,
+            reporter_key=reporter_key,
+        )
+        log.info("Nhận góp ý #%s (%s)", row.id, row.type)
+        return _feedback_out(FeedbackOut, row)
+
+    @api.get("/feedback/mine")
+    async def my_feedback(reporter_key: ReporterKey) -> list[FeedbackOut]:
+        """Góp ý đã gửi bằng đúng mã người gửi này — không bao giờ có góp ý của người khác."""
+        return [_feedback_out(FeedbackOut, row) for row in feedback.mine(reporter_key)]
+
+    # --- Quản trị -----------------------------------------------------------------------------
+
+    def require_admin(
+        authorization: Annotated[str | None, Header()] = None,
+    ) -> None:
+        """Mọi endpoint `/admin/*` đi qua đây: đúng mã quản trị (`ADMIN_TOKEN`) mới được vào.
+
+        Giao diện ẩn menu quản trị chỉ để gọn mắt — quyền thật sự được quyết định ở đây.
+        """
+        # ponytail: một mã quản trị chung, không có tài khoản/vai trò hay giới hạn số lần thử; mã
+        # dài ngẫu nhiên nên đoán mò không khả thi. Nâng cấp: tài khoản + phiên đăng nhập khi cần
+        # nhiều quản trị viên hoặc phân biệt từng người dùng.
+        token = settings.admin.token
+        if token is None:
+            raise ApiError(
+                403,
+                "admin_disabled",
+                "Chưa bật quản trị: đặt ADMIN_TOKEN trong file .env của máy chủ rồi khởi động lại",
+            )
+        scheme, _, given = (authorization or "").partition(" ")
+        if scheme.lower() != "bearer" or not secrets.compare_digest(
+            given.strip().encode(), token.get_secret_value().encode()
+        ):
+            raise ApiError(403, "admin_only", "Chỉ quản trị viên mới xem và quản lý được góp ý")
+
+    admin = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
+
+    def find_feedback(feedback_id: int) -> Feedback:
+        row = feedback.get(feedback_id)
+        if row is None:
+            raise ApiError(404, "not_found", f"Không có góp ý #{feedback_id}")
+        return row
+
+    @admin.get("/session")
+    async def admin_session() -> AdminSession:
+        """Kiểm tra mã quản trị (giao diện gọi khi đăng nhập)."""
+        return AdminSession(role="admin")
+
+    @admin.get("/feedback")
+    async def list_feedback(
+        type: FeedbackType | Literal[""] = "",
+        status: FeedbackStatus | Literal[""] = "",
+        search: str = "",
+        page: PageNumber = 1,
+        page_size: PageSize = 20,
+    ) -> Page[FeedbackAdminOut]:
+        rows, total = feedback.page(
+            type=type, status=status, search=search.strip(), **_window(page, page_size)
+        )
+        return Page(items=[_feedback_out(FeedbackAdminOut, row) for row in rows], total=total)
+
+    @admin.get("/feedback/{feedback_id}")
+    async def get_feedback(feedback_id: int) -> FeedbackAdminOut:
+        return _feedback_out(FeedbackAdminOut, find_feedback(feedback_id))
+
+    @admin.patch("/feedback/{feedback_id}")
+    async def update_feedback(feedback_id: int, body: FeedbackUpdate) -> FeedbackAdminOut:
+        """Đổi trạng thái và/hoặc phản hồi gửi người góp ý; trường không có trong body giữ nguyên."""
+        values = body.model_dump(include=body.model_fields_set)
+        if "status" in values and values["status"] is None:
+            raise ApiError(400, "invalid_status", "Trạng thái không được để trống")
+        row = feedback.update(feedback_id, **values)
+        if row is None:
+            raise ApiError(404, "not_found", f"Không có góp ý #{feedback_id}")
+        return _feedback_out(FeedbackAdminOut, row)
+
+    @admin.delete("/feedback/{feedback_id}", status_code=204)
+    async def delete_feedback(feedback_id: int) -> Response:
+        if not feedback.delete(feedback_id):
+            raise ApiError(404, "not_found", f"Không có góp ý #{feedback_id}")
+        log.info("Đã xoá góp ý #%s", feedback_id)
+        return Response(status_code=204)
+
+    api.include_router(admin)
 
     # --- Log và cấu hình ----------------------------------------------------------------------
 

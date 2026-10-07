@@ -16,9 +16,11 @@ export interface ApiRequest {
   path: string
   query: Record<string, string>
   body: unknown
+  headers: Record<string, string>
 }
 
-export function reply(status: number, body: unknown): Response {
+export function reply(status: number, body?: unknown): Response {
+  if (status === 204) return new Response(null, { status })
   const text = typeof body === 'string' ? body : JSON.stringify(body)
   return new Response(text, { status })
 }
@@ -36,6 +38,7 @@ export function mockApi(handler: (request: ApiRequest) => unknown): ApiRequest[]
       path: url.pathname.replace(/^\/api/, ''),
       query: Object.fromEntries(url.searchParams),
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      headers: Object.fromEntries(new Headers(init?.headers).entries()),
     }
     requests.push(request)
     const result = handler(request)

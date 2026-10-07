@@ -52,6 +52,7 @@ src/crawl_data_app/
 ├── repository.py     NovelRepository (mọi truy vấn truyện/chương/crawl_runs)
 ├── aviation.py       đồng bộ danh mục hàng không (+ `run_sync`: phần chạy job dùng chung cho mọi crawler kiểu danh mục)
 ├── provinces.py      đồng bộ danh mục 34 tỉnh thành Việt Nam kèm phường/xã (1 request)
+├── feedback.py       FeedbackRepository: góp ý (báo lỗi, gợi ý crawler); mã người gửi chỉ lưu SHA-256
 ├── export.py         xuất txt / epub / json
 ├── core/             http_client (giãn cách, retry, robots) · base_crawler (BaseParser/BaseCrawler) · models · content · exceptions
 ├── crawlers/         __init__.py (CRAWLERS + crawler_class_for) · truyenfull/{crawler,parser}.py
@@ -100,6 +101,7 @@ Danh mục kiểu "tải vài file rồi ghi đè" khác (mẫu: `provinces.py`)
 - **Service/Repository**: `CrawlService` quyết định dừng (bị chặn 401/403 → dừng cả loạt; `MAX_CONSECUTIVE_FAILURES = 5`). Repository dùng transaction ngắn, mỗi chương commit riêng. DB gọi **đồng bộ** trong vòng lặp async (có chủ đích).
 - **Lỗi domain**: `core/exceptions.py` (`CrawlerError` → `UnsupportedSiteError`, `SourceDisabledError`, `ParseError`, `FetchError` → `NotFoundError`/`RobotsDisallowedError`/`BlockedError`).
 - **Config**: `config/settings.py` — nhóm `HttpSettings`, `CrawlerSettings`, `DatabaseSettings`, `LogSettings`; trang Cài đặt của web ghi thẳng vào `.env` (`save_env`, giữ chú thích), biến môi trường OS ưu tiên hơn `.env`.
+- **Góp ý / quyền quản trị**: không có tài khoản. Người gửi = mã ngẫu nhiên trình duyệt tự sinh (header `X-Feedback-Key`); quản trị viên = biết `ADMIN_TOKEN` (header `Authorization: Bearer`). Mọi route quản trị gắn vào router `admin` (`/api/admin`, dependency `require_admin`) — endpoint quản trị mới phải nằm trong router đó; `test_every_admin_endpoint_is_forbidden_without_the_admin_token` tự quét OpenAPI để kiểm tra.
 - Thời gian lưu DB là UTC naive; API trả `...Z`.
 
 ## Deployment
@@ -140,9 +142,9 @@ crawl-data-app serve             # API + UI đã build tại http://127.0.0.1:80
 cd web && npm run dev            # dev UI http://localhost:5173 (chạy kèm `serve`)
 cd web && npm run build          # tsc --noEmit rồi build ra web/dist (cần để serve phục vụ UI)
 
-pytest                           # backend (202 test, ~20s, không có request mạng thật)
+pytest                           # backend (227 test, ~25s, không có request mạng thật)
 ruff check . && ruff format --check .
-cd web && npm test               # Vitest (43 test, giao diện chạy ở tiếng Việt)
+cd web && npm test               # Vitest (55 test, giao diện chạy ở tiếng Việt)
 cd web && npm run lint && npm run typecheck && npm run format:check
 
 alembic revision --autogenerate -m "mo ta"   # sau khi sửa database/models.py
@@ -176,6 +178,7 @@ gh workflow run deploy.yml --ref main -f rollback=true   # quay về image chạ
 | `HTTP_REQUEST_TIMEOUT` · `HTTP_MAX_RETRIES` · `HTTP_USER_AGENT` | `20` · `3` · `crawl-data-app/<version>` | |
 | `CRAWLER_CONTENT_FORMAT` · `CRAWLER_DISABLED_SOURCES` | `html` · `[]` (JSON) | |
 | `LOG_LEVEL` · `LOG_DIR` | `INFO` · `logs` | |
+| `ADMIN_TOKEN` | (trống = tắt) | mã quản trị góp ý (≥ 16 ký tự); không lộ ra `/api/settings` |
 
 Frontend (`web/.env.local`, tuỳ chọn): `VITE_API_BASE_URL`, `VITE_DEV_PROXY_TARGET`, `VITE_POLL_INTERVAL_MS`.
 

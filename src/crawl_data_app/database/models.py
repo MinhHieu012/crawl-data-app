@@ -193,3 +193,40 @@ class Ward(Base):
     unit: Mapped[str] = mapped_column(String(50))  # "Phường" | "Xã" | "Đặc khu"
     postal_code: Mapped[str | None] = mapped_column(String(20))
     crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn
+
+
+class FeedbackType(StrEnum):
+    BUG_REPORT = "bug_report"
+    CRAWLER_REQUEST = "crawler_request"
+
+
+class FeedbackStatus(StrEnum):
+    OPEN = "open"  # mới gửi, quản trị viên chưa xử lý
+    IN_PROGRESS = "in_progress"  # đã tiếp nhận, đang sửa lỗi / đang làm crawler
+    RESOLVED = "resolved"  # đã sửa xong / đã có crawler
+    REJECTED = "rejected"  # không làm (trùng, không tái hiện được, nguồn không cho phép crawl...)
+
+
+class Feedback(Base):
+    """Một góp ý người dùng gửi qua web UI: báo lỗi hoặc gợi ý crawler mới."""
+
+    # ponytail: mọi loại góp ý chung một bảng; các trường riêng của từng loại (mức độ, URL nguồn...)
+    # nằm trong `details` (JSON) nên thêm loại mới không cần migration. Tách cột khi cần lọc/thống kê
+    # theo một trường riêng.
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    type: Mapped[str] = mapped_column(String(30))  # FeedbackType
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text)
+    details: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(20), default=FeedbackStatus.OPEN.value)
+    # Tên/email người gửi tự ghi (tuỳ chọn) để quản trị viên liên hệ lại.
+    contact: Mapped[str | None] = mapped_column(String(200))
+    # SHA-256 của mã ngẫu nhiên mà trình duyệt người gửi tự sinh và giữ: chỉ ai giữ mã gốc mới xem
+    # lại được góp ý của mình. Không có tài khoản người dùng nên đây là "người gửi".
+    reporter_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    # Phản hồi của quản trị viên; người gửi xem được ở "Góp ý đã gửi".
+    response: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow)

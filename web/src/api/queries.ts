@@ -10,9 +10,17 @@ import {
 } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 
+import { adminHeaders, setAdminToken } from '../hooks/useAdminToken'
 import i18n from '../i18n'
+import { reporterHeaders } from '../utils/reporterKey'
 import { api, ApiError } from './client'
 import type {
+  AdminFeedback,
+  Feedback,
+  FeedbackCreate,
+  FeedbackStatus,
+  FeedbackType,
+  FeedbackUpdate,
   ChapterContent,
   ChapterStatus,
   Chapter,
@@ -330,5 +338,92 @@ export function useUpdateSettings() {
   return useMutation({
     mutationFn: (body: SettingsUpdate) => api<Settings>('/settings', { method: 'PUT', body }),
     onSuccess: (settings) => queryClient.setQueryData(['settings'], settings),
+  })
+}
+
+// --- Góp ý ------------------------------------------------------------------------------------
+
+export function useMyFeedback() {
+  return useQuery({
+    queryKey: ['feedback', 'mine'],
+    queryFn: () => api<Feedback[]>('/feedback/mine', { headers: reporterHeaders() }),
+  })
+}
+
+export function useCreateFeedback() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: FeedbackCreate) =>
+      api<Feedback>('/feedback', { method: 'POST', body, headers: reporterHeaders() }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['feedback'] }),
+  })
+}
+
+export interface AdminFeedbackParams {
+  type?: FeedbackType | ''
+  status?: FeedbackStatus | ''
+  search?: string
+  page?: number
+  page_size?: number
+}
+
+/**
+ * Gọi API quản trị kèm mã đã lưu. Backend từ chối mã (đổi `ADMIN_TOKEN`, nhập sai) thì quên mã đó
+ * để giao diện quay về màn hình nhập mã.
+ */
+async function adminApi<T>(path: string, options: Parameters<typeof api>[1] = {}): Promise<T> {
+  try {
+    return await api<T>(`/admin${path}`, { ...options, headers: adminHeaders() })
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'admin_only') setAdminToken(null)
+    throw error
+  }
+}
+
+/** Kiểm tra một mã quản trị vừa nhập; đúng thì lưu lại. */
+export function useAdminLogin() {
+  return useMutation({
+    mutationFn: async (token: string) => {
+      await api('/admin/session', { headers: { Authorization: `Bearer ${token}` } })
+      setAdminToken(token)
+    },
+  })
+}
+
+export function useAdminFeedbackList(params: AdminFeedbackParams) {
+  return useQuery({
+    queryKey: ['feedback', 'admin', 'list', params],
+    queryFn: () => adminApi<Page<AdminFeedback>>('/feedback', { params }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAdminFeedback(id: number) {
+  return useQuery({
+    queryKey: ['feedback', 'admin', id],
+    queryFn: () => adminApi<AdminFeedback>(`/feedback/${id}`),
+  })
+}
+
+export function useUpdateFeedback() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: FeedbackUpdate & { id: number }) =>
+      adminApi<AdminFeedback>(`/feedback/${id}`, { method: 'PATCH', body }),
+    onSuccess: (item) => {
+      queryClient.setQueryData(['feedback', 'admin', item.id], item)
+      void queryClient.invalidateQueries({ queryKey: ['feedback', 'admin', 'list'] })
+    },
+  })
+}
+
+export function useDeleteFeedback() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => adminApi<void>(`/feedback/${id}`, { method: 'DELETE' }),
+    onSuccess: (_result, id) => {
+      queryClient.removeQueries({ queryKey: ['feedback', 'admin', id] })
+      void queryClient.invalidateQueries({ queryKey: ['feedback', 'admin', 'list'] })
+    },
   })
 }

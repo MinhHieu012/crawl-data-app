@@ -39,15 +39,17 @@ export class ApiError extends Error {
 type QueryValue = string | number | boolean | null | undefined
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   /** Tham số trên URL; giá trị rỗng/null/undefined được bỏ qua. */
   params?: object
   body?: unknown
+  /** Header thêm: mã người gửi góp ý, mã quản trị. */
+  headers?: Record<string, string>
   timeoutMs?: number
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', params = {}, body, timeoutMs = DEFAULT_TIMEOUT_MS } = options
+  const { method = 'GET', params = {}, body, headers, timeoutMs = DEFAULT_TIMEOUT_MS } = options
   const query = new URLSearchParams()
   for (const [key, value] of Object.entries(params) as [string, QueryValue][]) {
     if (value !== undefined && value !== null && value !== '') query.set(key, String(value))
@@ -58,7 +60,10 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   try {
     response = await fetch(`${BASE_URL}${path}${queryString ? `?${queryString}` : ''}`, {
       method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers: {
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...headers,
+      },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(timeoutMs),
     })
@@ -69,6 +74,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     throw new ApiError(i18n.t('api.network'), { kind: 'network' })
   }
   if (!response.ok) throw await toApiError(response)
+  if (response.status === 204) return undefined as T // xoá thành công: không có nội dung
   return (await response.json()) as T
 }
 

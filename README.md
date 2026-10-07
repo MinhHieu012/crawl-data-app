@@ -136,6 +136,8 @@ cạnh nút sáng/tối; lựa chọn được nhớ lại cho những lần sau
 | Job | `/jobs`, `/jobs/:id` | Job của mọi crawler (crawl truyện, đồng bộ hàng không, đồng bộ tỉnh thành); nút **Crawl** xổ danh sách crawler để tạo job mới. Danh sách có lọc theo trạng thái và phân trang. Chi tiết: tiến độ, số chương thành công / lỗi / còn lại, chương vừa tải, nút tạm dừng / huỷ / tiếp tục / thử lại, log của riêng job đó. |
 | Log | `/logs` | Lọc theo mức (INFO / WARNING / ERROR), loại lỗi (request / parser), job, từ khoá; có chế độ tự làm mới. |
 | Cài đặt | `/settings` | Timeout, số lần thử lại, khoảng nghỉ, số request đồng thời, User-Agent, định dạng nội dung, mức log. Database và thư mục log chỉ xem (mật khẩu trong URL database được che). |
+| Góp ý | `/feedback`, `/feedback/bug-report`, `/feedback/crawler-request` | Ai dùng giao diện cũng gửi được: **Báo lỗi** (tiêu đề, trang/chức năng, mức độ, mô tả, liên hệ tuỳ chọn) hoặc **Gợi ý crawler** (tên nguồn, URL, loại dữ liệu, mô tả). Bên dưới là "Góp ý bạn đã gửi" từ chính trình duyệt này, kèm trạng thái và phản hồi của quản trị viên. Chưa hỗ trợ đính kèm tệp. |
+| Quản lý góp ý | `/admin/feedback`, `/admin/feedback/:id` | Chỉ quản trị viên (xem [Góp ý và quyền quản trị](#góp-ý-và-quyền-quản-trị)): tab Tất cả / Báo lỗi / Gợi ý crawler, lọc theo trạng thái, tìm kiếm (không dấu cũng được), phân trang. Chi tiết: nội dung đầy đủ, đổi trạng thái, viết phản hồi cho người gửi, xoá (hỏi lại trước). Mục menu chỉ hiện sau khi đã nhập mã quản trị. |
 
 Các tab của crawler **Truyện chữ** (`/crawlers/novel/stories/…`):
 
@@ -178,6 +180,26 @@ và một nguồn không chạy hai job cùng lúc. Một job tải lại cả b
 ghi khi đã tải và đọc xong cả ba file, nên job thất bại hay bị dừng giữa chừng không làm mất dữ liệu
 đã có. Hai nguồn không ghi đè lên nhau. Phạm vi và giấy phép của từng nguồn: xem "Tuân thủ và giới
 hạn".
+
+### Góp ý và quyền quản trị
+
+App không có tài khoản người dùng, nên module Góp ý dùng hai loại "mã":
+
+- **Người gửi** là một mã ngẫu nhiên trình duyệt tự sinh (lưu ở `localStorage`) và gửi kèm qua header
+  `X-Feedback-Key`. Database chỉ lưu SHA-256 của mã; `GET /api/feedback/mine` chỉ trả góp ý gắn với
+  đúng mã đó, nên không ai xem được góp ý của người khác. Đổi trình duyệt hoặc xoá dữ liệu trình duyệt
+  thì không xem lại được góp ý cũ (quản trị viên vẫn thấy).
+- **Quản trị viên** là người biết mã `ADMIN_TOKEN` trong `.env` của máy chủ (tối thiểu 16 ký tự, tạo
+  bằng `python -c "import secrets; print(secrets.token_urlsafe(32))"`). Mọi endpoint `/api/admin/*`
+  (danh sách, chi tiết, đổi trạng thái, xoá) kiểm tra header `Authorization: Bearer <mã>` ở backend và
+  trả **403** `admin_only` nếu thiếu hoặc sai; chưa đặt `ADMIN_TOKEN` thì trả 403 `admin_disabled`.
+  Giao diện nhập mã một lần ở `/admin/feedback` và nhớ trong trình duyệt tới khi bấm **Đăng xuất quản
+  trị**. Ẩn/hiện menu chỉ để gọn mắt, không phải lớp bảo vệ.
+
+Mã quản trị không hiện và không sửa được ở trang Cài đặt; đổi mã thì sửa `.env` rồi khởi động lại
+(trình duyệt đang giữ mã cũ tự quay về màn hình nhập mã). Trạng thái góp ý: `open` (mới),
+`in_progress` (đang xử lý), `resolved` (đã xử lý), `rejected` (từ chối). Cửa công khai không chặn
+`/api/admin/*`: quản trị viên dùng được từ đó, khách không có mã thì nhận 403.
 
 Trang nào cũng có trạng thái đang tải (skeleton), lỗi (kèm nút thử lại) và trống; thao tác phá huỷ (huỷ
 job, tắt nguồn, tải đè một chương) đều hỏi lại; kết quả thao tác báo bằng thông báo góc màn hình. Có
@@ -237,6 +259,11 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `POST /api/provinces/sync` | Tạo job đồng bộ lại danh mục tỉnh thành kèm phường/xã và trả về job ngay (201); đang đồng bộ thì 409 kèm `job_id`. Lịch sử là `GET /api/crawl/jobs?crawler=provinces`. |
 | `GET /api/logs` | Các dòng log mới nhất: `level`, `kind`, `job_id`, `search`, `limit`. |
 | `GET /api/settings` · `PUT /api/settings` | Đọc / lưu cấu hình. |
+| `POST /api/feedback` | Gửi góp ý (201). Báo lỗi: `{"type": "bug_report", "title", "description", "area", "severity" (low/medium/high/critical), "contact"}`; gợi ý crawler: `{"type": "crawler_request", "title" (tên nguồn), "url", "data_type" (novel/aviation/geography/other), "description", "contact"}`. Header `X-Feedback-Key` (tuỳ chọn) để xem lại được. Trả về góp ý như người gửi thấy: `id`, `type`, `title`, `description`, `details` (các trường riêng của loại), `status`, `response`, `created_at`, `updated_at`. |
+| `GET /api/feedback/mine` | Góp ý gửi bằng mã trong header `X-Feedback-Key` (bắt buộc), mới nhất trước, tối đa 50. |
+| `GET /api/admin/session` | Kiểm tra mã quản trị: `{"role": "admin"}`. Mọi endpoint `/api/admin/*` cần header `Authorization: Bearer <ADMIN_TOKEN>`. |
+| `GET /api/admin/feedback` | Mọi góp ý: `type`, `status`, `search` (tiêu đề, mô tả, liên hệ, URL…; không dấu cũng được), `page`, `page_size`. Mỗi dòng thêm `contact` và `reporter` (8 ký tự đầu của hash mã người gửi). |
+| `GET /api/admin/feedback/{id}` · `PATCH` · `DELETE` | Chi tiết / đổi `status` và/hoặc `response` (trường không gửi thì giữ nguyên) / xoá (204). |
 
 Danh sách có phân trang trả về `{"items": [...], "total": N}`. Thời gian là UTC kèm múi giờ (`...Z`),
 giao diện tự đổi sang giờ máy. Lỗi luôn có dạng `{"code": "...", "detail": "câu thông báo tiếng Việt"}`
@@ -245,8 +272,10 @@ giao diện tự đổi sang giờ máy. Lỗi luôn có dạng `{"code": "...",
 | HTTP | `code` | Khi nào |
 |---|---|---|
 | 400 | `invalid_url`, `unsupported_source` | URL không phải URL truyện / website chưa có crawler. |
+| 400 | `invalid_status` | `PATCH` góp ý với `"status": null`. |
 | 403 | `cross_origin` | Request ghi do một trang web khác gửi tới. |
-| 404 | `not_found` | Không có truyện, chương, job hay nguồn đó. |
+| 403 | `admin_only`, `admin_disabled` | Gọi `/api/admin/*` thiếu hoặc sai mã quản trị / máy chủ chưa đặt `ADMIN_TOKEN`. |
+| 404 | `not_found` | Không có truyện, chương, job, nguồn hay góp ý đó. |
 | 409 | `duplicate_job` (kèm `job_id`), `source_disabled`, `job_not_running`, `job_running` | Truyện đang được crawl / nguồn đang tắt / thao tác không hợp với trạng thái job. |
 | 422 | — | Dữ liệu sai kiểu hoặc ngoài giới hạn; `detail` là danh sách `{loc, msg}` theo từng trường (định dạng của FastAPI). |
 
@@ -466,6 +495,7 @@ Mọi cấu hình đọc từ biến môi trường hoặc file `.env`; xem [.en
 | Crawler | `CRAWLER_DISABLED_SOURCES` | `[]` | Các nguồn tạm ngừng crawl, dạng JSON: `["truyenfull"]`. Web UI ghi biến này khi bật/tắt nguồn. |
 | Logging | `LOG_LEVEL` | `INFO` | `DEBUG` để xem từng request |
 | Logging | `LOG_DIR` | `logs` | chứa `crawler.log` |
+| Quản trị | `ADMIN_TOKEN` | (trống = tắt) | Mã quản trị góp ý, tối thiểu 16 ký tự; không hiện ở trang Cài đặt. Xem [Góp ý và quyền quản trị](#góp-ý-và-quyền-quản-trị). |
 
 Trần 8 kết nối và sàn 0.5 giây là có chủ đích: tốc độ tối đa của crawler là 1 request mỗi
 `HTTP_REQUEST_DELAY` giây bất kể `HTTP_CONCURRENCY` (số kết nối chỉ có tác dụng khi website trả lời
@@ -488,6 +518,7 @@ không có bước thủ công nào khi cài mới hay khi cập nhật code.
 | `aviation_records` | Danh mục hàng không: nguồn, loại (sân bay / hãng bay / thành phố / quốc gia), mã, tên | `(source, kind, code)` |
 | `vn_provinces` | Tỉnh thành Việt Nam: mã, tên tiếng Việt và tiếng Anh (ngắn và đầy đủ), loại đơn vị, đầu mã bưu chính, số phường/xã | `code` duy nhất |
 | `vn_wards` | Phường/xã/đặc khu: mã, mã tỉnh thành, tên tiếng Việt và tiếng Anh (ngắn và đầy đủ), loại đơn vị, mã bưu chính | `code` duy nhất |
+| `feedback` | Góp ý: `type` (`bug_report`/`crawler_request`), tiêu đề, mô tả, `details` (JSON: trường riêng của từng loại, nên thêm loại mới không cần migration), `status`, liên hệ, hash mã người gửi, phản hồi của quản trị viên, thời gian | — |
 
 Thời gian lưu theo **UTC** (không kèm múi giờ); lệnh `status` hiển thị theo giờ máy.
 

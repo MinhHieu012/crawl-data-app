@@ -1,7 +1,15 @@
 import { Badge } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
 
-import type { ChapterStatus, JobStatus, LogLevel, NovelStatus } from '../api/types'
+import type {
+  BugSeverity,
+  ChapterStatus,
+  FeedbackStatus,
+  FeedbackType,
+  JobStatus,
+  LogLevel,
+  NovelStatus,
+} from '../api/types'
 import i18n, { type I18nKey } from '../i18n'
 
 /** `label` là khoá dịch; bỏ trống thì hiện nguyên giá trị (mức log không dịch). */
@@ -30,6 +38,25 @@ export const NOVEL_STATUS: Record<NovelStatus, Look> = {
   unknown: { label: 'status.novel.unknown', color: 'gray' },
 }
 
+export const FEEDBACK_STATUS: Record<FeedbackStatus, Look> = {
+  open: { label: 'status.feedback.open', color: 'blue' },
+  in_progress: { label: 'status.feedback.in_progress', color: 'yellow' },
+  resolved: { label: 'status.feedback.resolved', color: 'teal' },
+  rejected: { label: 'status.feedback.rejected', color: 'gray' },
+}
+
+export const FEEDBACK_TYPE: Record<FeedbackType, Look> = {
+  bug_report: { label: 'feedback.types.bug_report', color: 'red' },
+  crawler_request: { label: 'feedback.types.crawler_request', color: 'grape' },
+}
+
+export const BUG_SEVERITY: Record<BugSeverity, Look> = {
+  low: { label: 'feedback.severity.low', color: 'gray' },
+  medium: { label: 'feedback.severity.medium', color: 'yellow' },
+  high: { label: 'feedback.severity.high', color: 'orange' },
+  critical: { label: 'feedback.severity.critical', color: 'red' },
+}
+
 const LOG_LEVEL: Record<LogLevel, Look> = {
   DEBUG: { color: 'gray' },
   INFO: { color: 'blue' },
@@ -56,6 +83,18 @@ export function ChapterStatusBadge({ status }: { status: ChapterStatus }) {
 
 export function NovelStatusBadge({ status }: { status: NovelStatus }) {
   return <StatusBadge look={NOVEL_STATUS[status]} fallback={status} />
+}
+
+export function FeedbackStatusBadge({ status }: { status: FeedbackStatus }) {
+  return <StatusBadge look={FEEDBACK_STATUS[status]} fallback={status} />
+}
+
+export function FeedbackTypeBadge({ type }: { type: FeedbackType }) {
+  return <StatusBadge look={FEEDBACK_TYPE[type]} fallback={type} />
+}
+
+export function SeverityBadge({ severity }: { severity: string }) {
+  return <StatusBadge look={BUG_SEVERITY[severity as BugSeverity]} fallback={severity} />
 }
 
 export function LogLevelBadge({ level }: { level: LogLevel }) {

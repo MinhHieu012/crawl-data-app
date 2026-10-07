@@ -104,6 +104,12 @@
       "completed": "Completed",
       "paused": "On hiatus",
       "unknown": "Unknown"
+    },
+    "feedback": {
+      "open": "New",
+      "in_progress": "In progress",
+      "resolved": "Resolved",
+      "rejected": "Rejected"
     }
   },
   "chapters": {
@@ -394,7 +400,10 @@
       "job_running": "The job is still running.",
       "job_not_running": "The job is no longer running, so this action is not available.",
       "cross_origin": "The request came from another website and was rejected.",
-      "owner_only": "Only the server owner can change the configuration."
+      "owner_only": "Only the server owner can change the configuration.",
+      "admin_only": "Only administrators can view and manage feedback.",
+      "admin_disabled": "Administration is off: set ADMIN_TOKEN in the server's .env file.",
+      "invalid_status": "Invalid status."
     }
   },
   "sources": {
@@ -579,5 +588,137 @@
     "followJob": "Follow the job",
     "history": "Crawl history",
     "noJobs": "No jobs for this novel yet"
+  },
+  "feedback": {
+    "title": "Feedback",
+    "description": "Report a bug or suggest a new data source for the crawlers. Only administrators can see feedback.",
+    "types": {
+      "bug_report": "Bug report",
+      "crawler_request": "Crawler request"
+    },
+    "bug": {
+      "title": "Report a bug",
+      "cardDescription": "Report a problem with the system.",
+      "button": "Report a bug",
+      "description": "What you were doing, what you expected and what happened: the more specific, the easier to fix.",
+      "submit": "Send bug report",
+      "sent": "Bug report #{{id}} sent. Thank you!"
+    },
+    "crawler": {
+      "title": "Suggest a crawler",
+      "cardDescription": "Suggest a new data source to crawl.",
+      "button": "Suggest a crawler",
+      "description": "Which website or dataset you would like the system to collect, and what for.",
+      "submit": "Send suggestion",
+      "sent": "Suggestion #{{id}} sent. Thank you!"
+    },
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "E.g. Crawling a novel shows a server error",
+      "area": "Page / feature",
+      "areaPlaceholder": "E.g. Crawl novel, Aviation catalog",
+      "severity": "Severity",
+      "description": "Description",
+      "bugPlaceholder": "Steps to reproduce, the error message shown, the URL you were on...",
+      "sourceName": "Source / website name",
+      "sourceNamePlaceholder": "E.g. OpenStreetMap",
+      "url": "Website URL",
+      "dataType": "Data type",
+      "needPlaceholder": "Which data you need, what for, how often it changes...",
+      "contact": "Contact (optional)",
+      "contactHint": "Your name or email if you want an administrator to get back to you. Only administrators see it."
+    },
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "dataTypes": {
+      "novel": "Novels, books",
+      "aviation": "Aviation (airports, airlines, cities, countries)",
+      "geography": "Geography, administrative units",
+      "other": "Other (explain in the description)"
+    },
+    "validation": {
+      "title": "Title must be 3 to 200 characters",
+      "sourceName": "Source name must be 3 to 200 characters",
+      "description": "Description must be 10 to 5,000 characters",
+      "url": "Enter a full URL, e.g. https://example.com"
+    },
+    "sendFailed": "Could not send feedback",
+    "attachmentNote": "Attachments are not supported yet: paste a link to a screenshot in the description if needed.",
+    "back": "Back to Feedback",
+    "mine": {
+      "title": "Your feedback",
+      "description": "Feedback sent from this browser, with its status.",
+      "empty": {
+        "title": "No feedback sent yet",
+        "description": "Feedback you send from this browser shows up here with its status."
+      },
+      "response": "Administrator's reply",
+      "sentAt": "Sent {{time}}"
+    },
+    "adminLink": "Administrator? Open feedback management"
+  },
+  "admin": {
+    "title": "Manage feedback",
+    "description": "All feedback users have sent. Only administrators can see this page.",
+    "login": {
+      "title": "Administrator sign-in",
+      "description": "Enter the admin token (ADMIN_TOKEN in the server's .env file) to view and manage feedback.",
+      "token": "Admin token",
+      "submit": "Sign in",
+      "required": "Enter the admin token",
+      "failed": "Could not sign in"
+    },
+    "logout": "Sign out of admin",
+    "loggedOut": "Signed out of admin",
+    "tabsLabel": "Feedback type",
+    "search": "Search feedback",
+    "searchPlaceholder": "Title, description, contact, URL...",
+    "filterStatus": "Filter by status",
+    "allStatuses": "All statuses",
+    "columns": {
+      "type": "Type",
+      "title": "Title",
+      "reporter": "Sender",
+      "created": "Sent"
+    },
+    "anonymous": "Anonymous",
+    "noMatch": {
+      "title": "No matching feedback",
+      "description": "Try fewer filters or another keyword."
+    },
+    "empty": {
+      "title": "No feedback yet",
+      "description": "Feedback users send from the Feedback page shows up here."
+    },
+    "detail": {
+      "title": "Feedback #{{id}}",
+      "info": "Content",
+      "contact": "Contact",
+      "reporter": "Sender code",
+      "reporterHint": "Feedback with the same code was sent from the same browser.",
+      "created": "Sent",
+      "updated": "Updated",
+      "none": "None",
+      "handle": "Handling",
+      "response": "Reply to the sender",
+      "responseHint": "The sender sees this reply and the status on the Feedback page.",
+      "save": "Save",
+      "saved": "Feedback #{{id}} saved",
+      "saveFailed": "Could not save feedback",
+      "unsaved": "Unsaved changes",
+      "delete": "Delete feedback",
+      "deleteConfirm": {
+        "title": "Delete feedback #{{id}}?",
+        "body": "The feedback is deleted permanently and the sender no longer sees it. This cannot be undone.",
+        "confirm": "Delete",
+        "cancel": "Keep"
+      },
+      "deleted": "Feedback #{{id}} deleted",
+      "deleteFailed": "Could not delete feedback"
+    }
   }
 }
