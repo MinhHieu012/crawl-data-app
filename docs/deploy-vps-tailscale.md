@@ -100,6 +100,21 @@ tailscale funnel status           # xem địa chỉ công khai
 Tắt: `tailscale funnel --https=443 off`, xoá dòng `COMPOSE_PROFILES` khỏi `.env`, rồi
 `docker compose up -d --no-build --remove-orphans`.
 
+#### Dùng tên miền riêng thay cho Funnel
+
+Funnel chỉ phục vụ tên `*.ts.net`. Có tên miền riêng thì để Caddy nhận thẳng (tự xin chứng chỉ Let's Encrypt):
+
+1. Tạo bản ghi DNS `A` của tên miền trỏ về IP công khai của VPS; mở cổng 80 và 443 ở firewall của nhà cung cấp VPS.
+2. Trên VPS (sau khi DNS đã trỏ đúng — `nslookup <tên miền>` ra IP của VPS):
+
+```bash
+echo "PUBLIC_SITE=crawl.example.com" >> ~/crawl-data-app/.env   # cần cả COMPOSE_PROFILES=public
+cd ~/crawl-data-app && docker compose up -d --no-build
+tailscale funnel --https=443 off                                # bỏ lối vào ts.net cũ
+```
+
+Quyền của khách qua tên miền giống hệt qua Funnel. Bỏ tên miền: xoá dòng `PUBLIC_SITE` rồi `docker compose up -d --no-build`.
+
 > **Hiểu rõ trước khi bật.** Khách vẫn **chạy/huỷ được job crawl và đồng bộ** bằng VPS và IP của bạn, và
 > xem được trang Cài đặt, Log. Công khai cũng là phát lại nội dung cho mọi người: truyện có bản quyền,
 > nguồn `vna` chỉ được dùng cá nhân, phi thương mại (xem mục "Tuân thủ và giới hạn" trong README).

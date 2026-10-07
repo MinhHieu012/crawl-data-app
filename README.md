@@ -428,7 +428,7 @@ Cần biết:
 | `https://<tên-vps>.<tailnet>.ts.net` — cửa công khai, mặc định **tắt** | bất kỳ ai, không cần tài khoản | mọi thứ trừ lưu Cài đặt và bật/tắt nguồn |
 
 Cửa công khai là một proxy Caddy (bật bằng `COMPOSE_PROFILES=public`, đưa ra internet bằng
-`tailscale funnel`) chặn `PUT /api/settings` và `PUT /api/sources/{name}` với lỗi 403
+`tailscale funnel`, hoặc bằng tên miền riêng khi đặt `PUBLIC_SITE=<tên miền>` — Caddy tự xin HTTPS) chặn `PUT /api/settings` và `PUT /api/sources/{name}` với lỗi 403
 `{"code": "owner_only", ...}`. Khách vẫn tạo/huỷ được job và xem được Cài đặt, Log — đọc mục
 [Tuân thủ và giới hạn](#tuân-thủ-và-giới-hạn) trước khi bật.
 
