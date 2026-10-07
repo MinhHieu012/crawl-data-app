@@ -190,7 +190,9 @@ App không có tài khoản người dùng, nên module Góp ý dùng hai loại
   đúng mã đó, nên không ai xem được góp ý của người khác. Đổi trình duyệt hoặc xoá dữ liệu trình duyệt
   thì không xem lại được góp ý cũ (quản trị viên vẫn thấy).
 - **Quản trị viên** là người biết mã `ADMIN_TOKEN` trong `.env` của máy chủ (tối thiểu 16 ký tự, tạo
-  bằng `python -c "import secrets; print(secrets.token_urlsafe(32))"`). Mọi endpoint `/api/admin/*`
+  bằng `python -c "import secrets; print(secrets.token_urlsafe(32))"`; chạy bằng Docker trên VPS thì
+  file đó nằm trong volume, xem
+  [Bật quản trị góp ý](docs/deploy-vps-tailscale.md#bật-quản-trị-góp-ý-admin_token)). Mọi endpoint `/api/admin/*`
   (danh sách, chi tiết, đổi trạng thái, xoá) kiểm tra header `Authorization: Bearer <mã>` ở backend và
   trả **403** `admin_only` nếu thiếu hoặc sai; chưa đặt `ADMIN_TOKEN` thì trả 403 `admin_disabled`.
   Giao diện nhập mã một lần ở `/admin/feedback` và nhớ trong trình duyệt tới khi bấm **Đăng xuất quản

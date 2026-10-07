@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from crawl_data_app.config.settings import (
+    AdminSettings,
     CrawlerSettings,
     DatabaseSettings,
     HttpSettings,
@@ -64,6 +65,27 @@ def test_env_example_is_valid_and_documents_the_real_defaults(monkeypatch: pytes
 
     for group in (HttpSettings, CrawlerSettings, DatabaseSettings, LogSettings):
         assert group(_env_file=example) == group(_env_file=None)
+
+
+@pytest.mark.parametrize("line", ["ADMIN_TOKEN=", "ADMIN_TOKEN=''", "# ADMIN_TOKEN="])
+def test_empty_admin_token_means_admin_is_off(
+    line: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.delenv("ADMIN_TOKEN", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(line + "\n", encoding="utf-8")
+
+    assert AdminSettings(_env_file=env_file).token is None  # không được làm app hỏng lúc khởi động
+
+    monkeypatch.setenv("ADMIN_TOKEN", "")
+    assert AdminSettings(_env_file=None).token is None
+
+
+def test_short_admin_token_is_rejected(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("ADMIN_TOKEN", "ngan-qua")
+
+    with pytest.raises(ValidationError):
+        AdminSettings(_env_file=None)
 
 
 def test_unknown_content_format_is_rejected(monkeypatch: pytest.MonkeyPatch):
