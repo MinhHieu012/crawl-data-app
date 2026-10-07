@@ -113,10 +113,18 @@ Funnel chỉ phục vụ tên `*.ts.net`. Có tên miền riêng thì để Cadd
 tailscale funnel --https=443 off                                # bỏ lối vào ts.net, trả cổng 443
 sed -i '/^PUBLIC_BIND=/d' ~/crawl-data-app/.env                 # nếu trước đó đã đặt cho Funnel
 echo "PUBLIC_SITE=crawl.example.com" >> ~/crawl-data-app/.env   # cần cả COMPOSE_PROFILES=public
-cd ~/crawl-data-app && docker compose up -d --no-build
+cd ~/crawl-data-app && docker compose up -d --no-build --force-recreate public
 ```
 
-Quyền của khách qua tên miền giống hệt qua Funnel. Bỏ tên miền: xoá dòng `PUBLIC_SITE` rồi `docker compose up -d --no-build`.
+Mỗi lần đổi `PUBLIC_SITE` phải có `--force-recreate public`: `docker compose up -d` thường không tạo lại container
+Caddy khi chỉ giá trị này đổi, nên Caddy vẫn chạy cấu hình cũ (dịch vụ `app` không bị đụng tới, job đang chạy không
+bị ngắt). Kiểm tra: `docker compose logs public | grep domains` phải liệt kê đủ các tên.
+
+Nhiều tên (ví dụ thêm `www`): mỗi tên cần bản ghi DNS riêng trỏ về VPS, rồi ghi cách nhau bằng dấu phẩy và dấu cách —
+`PUBLIC_SITE=crawl.example.com, www.crawl.example.com`. Caddy xin chứng chỉ riêng cho từng tên.
+
+Quyền của khách qua tên miền giống hệt qua Funnel. Bỏ tên miền: xoá dòng `PUBLIC_SITE` rồi chạy lại lệnh
+`docker compose up` ở trên.
 
 > **Hiểu rõ trước khi bật.** Khách vẫn **chạy/huỷ được job crawl và đồng bộ** bằng VPS và IP của bạn, và
 > xem được trang Cài đặt, Log. Công khai cũng là phát lại nội dung cho mọi người: truyện có bản quyền,
