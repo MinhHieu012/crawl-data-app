@@ -73,6 +73,14 @@
         "description": "Mã, tên, loại đơn vị của từng tỉnh, thành phố và các phường/xã trực thuộc."
       }
     },
+    "banks": {
+      "name": "Ngân hàng Việt Nam",
+      "description": "Danh mục ngân hàng tại Việt Nam theo danh sách của VietQR.",
+      "vietnam": {
+        "name": "Ngân hàng",
+        "description": "Mã BIN, tên, tên viết tắt và mã SWIFT của từng ngân hàng."
+      }
+    },
     "tabs": {
       "crawl": "Crawl",
       "sources": "Nguồn",
@@ -81,7 +89,8 @@
       "city": "Thành phố",
       "country": "Quốc gia",
       "provinces": "Tỉnh thành",
-      "wards": "Phường/xã"
+      "wards": "Phường/xã",
+      "banks": "Ngân hàng"
     }
   },
   "status": {
@@ -153,7 +162,8 @@
     "city": "{{count, number}} thành phố",
     "country": "{{count, number}} quốc gia",
     "province": "{{count, number}} tỉnh thành",
-    "ward": "{{count, number}} phường/xã"
+    "ward": "{{count, number}} phường/xã",
+    "bank": "{{count, number}} ngân hàng"
   },
   "jobScope": {
     "catalog": "Toàn bộ danh mục",
@@ -524,6 +534,16 @@
     "emptyDescription": "Bấm Đồng bộ để tải danh mục tỉnh thành kèm phường/xã (một request).",
     "postalPrefix": "Đầu mã bưu chính",
     "historyDescription": "Mỗi lần đồng bộ là một job tải lại cả danh mục (tỉnh thành và phường/xã). Job thất bại hay bị dừng không làm mất dữ liệu đã có."
+  },
+  "banks": {
+    "sourceNote": "Lấy từ API công khai của VietQR (api.vietqr.io).",
+    "search": "Tìm ngân hàng",
+    "noMatch": "Không có ngân hàng nào khớp",
+    "emptyDescription": "Bấm Đồng bộ để tải danh mục ngân hàng (một request).",
+    "bin": "Mã BIN",
+    "code": "Mã ngân hàng",
+    "swift": "Mã SWIFT",
+    "historyDescription": "Mỗi lần đồng bộ là một job tải lại cả danh mục ngân hàng. Job thất bại hay bị dừng không làm mất dữ liệu đã có."
   },
   "wards": {
     "allProvinces": "Cả nước",

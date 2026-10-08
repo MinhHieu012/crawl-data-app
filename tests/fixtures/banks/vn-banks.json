@@ -1,0 +1,48 @@
+{
+  "code": "00",
+  "desc": "Get Bank list successful! Total 3 banks",
+  "data": [
+    {
+      "id": 17,
+      "name": "Ngân hàng TMCP Công thương Việt Nam",
+      "code": "ICB",
+      "bin": "970415",
+      "shortName": "VietinBank",
+      "logo": "https://cdn.nguon.test/img/ICB.png",
+      "transferSupported": 1,
+      "lookupSupported": 1,
+      "short_name": "VietinBank",
+      "support": 3,
+      "isTransfer": 1,
+      "swift_code": "ICBVVNVX"
+    },
+    {
+      "id": 43,
+      "name": "Ngân hàng TMCP Ngoại Thương Việt Nam",
+      "code": "VCB",
+      "bin": "970436",
+      "shortName": "Vietcombank",
+      "logo": "https://cdn.nguon.test/img/VCB.png",
+      "transferSupported": 1,
+      "lookupSupported": 1,
+      "short_name": "Vietcombank",
+      "support": 3,
+      "isTransfer": 1,
+      "swift_code": "BFTVVNVX"
+    },
+    {
+      "id": 53,
+      "name": "Ngân hàng số Mẫu",
+      "code": "MAU",
+      "bin": "546034",
+      "shortName": "BankMau",
+      "logo": "",
+      "transferSupported": 1,
+      "lookupSupported": 0,
+      "short_name": "BankMau",
+      "support": 1,
+      "isTransfer": 1,
+      "swift_code": null
+    }
+  ]
+}

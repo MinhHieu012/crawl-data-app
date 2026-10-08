@@ -8,7 +8,7 @@ import httpx
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
-from crawl_data_app import aviation, provinces
+from crawl_data_app import aviation, banks, provinces
 from crawl_data_app.config.settings import HttpSettings
 from crawl_data_app.core import http_client
 from crawl_data_app.core.http_client import HttpClient
@@ -150,8 +150,8 @@ def site() -> FakeSite:
 
 @pytest.fixture
 def sources(site: FakeSite, load_fixture: Callable[[str], str]) -> FakeSite:
-    """Website giả trả thêm file dữ liệu của hai nguồn hàng không và của danh mục tỉnh thành
-    (fixture tự viết).
+    """Website giả trả thêm file dữ liệu của hai nguồn hàng không, của danh mục tỉnh thành và của
+    danh mục ngân hàng (fixture tự viết).
     """
     files = {
         aviation.VNA_ROUTES_URL.format(lang="en"): "aviation/vna-routes.en.json",
@@ -161,6 +161,7 @@ def sources(site: FakeSite, load_fixture: Callable[[str], str]) -> FakeSite:
         aviation.WORLD_AIRPORTS_URL: "aviation/world-airports.csv",
         aviation.WORLD_AIRLINES_URL: "aviation/world-airlines.dat",
         provinces.DATA_URL: "provinces/vn-units.json",
+        banks.DATA_URL: "banks/vn-banks.json",
     }
     for url, name in files.items():
         text = load_fixture(name)

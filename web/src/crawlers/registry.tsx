@@ -3,6 +3,7 @@
 
 import {
   IconBook2,
+  IconBuildingBank,
   IconMapPin,
   IconPlane,
   IconPlaneDeparture,
@@ -18,6 +19,7 @@ import {
   AviationHistoryPage,
   AviationSummaryLine,
 } from '../pages/aviation/AviationPages'
+import { BankHistoryPage, BanksPage, BankSummaryLine } from '../pages/banks/BanksPages'
 import { CrawlPage } from '../pages/crawl/CrawlPage'
 import { JobsPage } from '../pages/jobs/JobsPage'
 import { LogsPage } from '../pages/logs/LogsPage'
@@ -157,6 +159,25 @@ export const CRAWLER_MODULES: CrawlerModule[] = [
           { path: 'list', label: 'registry.tabs.provinces', element: <ProvincesPage /> },
           { path: 'wards', label: 'registry.tabs.wards', element: <WardsPage /> },
           { path: 'history', label: 'common.history', element: <ProvinceHistoryPage /> },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'banks',
+    name: 'registry.banks.name',
+    description: 'registry.banks.description',
+    icon: IconBuildingBank,
+    categories: [
+      {
+        id: 'vietnam',
+        name: 'registry.banks.vietnam.name',
+        description: 'registry.banks.vietnam.description',
+        icon: IconBuildingBank,
+        Summary: BankSummaryLine,
+        sections: [
+          { path: 'list', label: 'registry.tabs.banks', element: <BanksPage /> },
+          { path: 'history', label: 'common.history', element: <BankHistoryPage /> },
         ],
       },
     ],

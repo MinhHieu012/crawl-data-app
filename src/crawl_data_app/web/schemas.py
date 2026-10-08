@@ -105,7 +105,7 @@ class JobCreate(CrawlRequest):
 
 class JobOut(BaseModel):
     id: int
-    crawler: str  # "novel", "aviation:<nguồn>" hoặc "provinces"
+    crawler: str  # "novel", "aviation:<nguồn>", "provinces" hoặc "banks"
     url: str
     novel_id: int | None
     novel_title: str | None
@@ -164,6 +164,25 @@ class WardOut(BaseModel):
 class ProvinceSummary(BaseModel):
     count: int  # số tỉnh thành đang có trong database
     ward_count: int  # số phường/xã đang có trong database
+    last_job: JobOut | None  # job đồng bộ gần nhất, kể cả job đang chạy
+
+
+class BankOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)  # dựng thẳng từ dòng `vn_banks`
+
+    bin: str  # mã BIN Napas, ví dụ "970415"
+    code: str  # mã ngắn của nguồn: "ICB"
+    name: str  # "Ngân hàng TMCP Công thương Việt Nam"
+    short_name: str  # "VietinBank"
+    swift_code: str | None
+    logo: str | None  # URL ảnh logo trên CDN của nguồn
+    transfer_supported: bool  # nhận chuyển khoản nhanh qua mã QR
+    lookup_supported: bool  # tra được tên chủ tài khoản
+    crawled_at: UtcDatetime
+
+
+class BankSummary(BaseModel):
+    count: int  # số ngân hàng đang có trong database
     last_job: JobOut | None  # job đồng bộ gần nhất, kể cả job đang chạy
 
 

@@ -5,7 +5,7 @@ thông tin truyện, mục lục và nội dung từng chương đã làm sạch
 "lịch sự": giãn cách request, tuân thủ `robots.txt`, tự chạy tiếp sau khi bị gián đoạn và không tải lại
 những gì đã có. Kèm theo là danh mục hàng không (sân bay, hãng bay, thành phố, quốc gia) đồng bộ từ
 dữ liệu mở và vietnamairlines.com, và danh mục 34 tỉnh, thành phố của Việt Nam sau sáp nhập năm 2025
-(từ bộ dữ liệu mở `vietnamese-provinces-database`). Dùng qua dòng lệnh, hoặc qua [web UI](#web-ui) chạy trên chính máy
+(từ bộ dữ liệu mở `vietnamese-provinces-database`), và danh mục ngân hàng Việt Nam (từ API công khai của VietQR). Dùng qua dòng lệnh, hoặc qua [web UI](#web-ui) chạy trên chính máy
 bạn hay trên một VPS bằng Docker ([Triển khai lên VPS](#triển-khai-lên-vps)).
 
 > **Trách nhiệm sử dụng.** Công cụ chỉ đọc các trang công khai mà `robots.txt` cho phép và không vượt
@@ -51,14 +51,15 @@ Muốn thao tác bằng giao diện thay cho dòng lệnh: `cd web && npm instal
 | `aviation` | Đồng bộ danh mục hàng không (sân bay, hãng bay, thành phố, quốc gia) của mọi nguồn, lần lượt từng nguồn; in bảng số bản ghi theo loại. Mỗi nguồn là một job trong lịch sử, xem lại được ở trang Job của web UI. |
 | `aviation --source world` / `--source vna` | Chỉ một nguồn: `world` là dữ liệu mở toàn thế giới, `vna` là vietnamairlines.com (chỉ dùng cá nhân, phi thương mại). Lặp lại `--source` để chọn nhiều nguồn. |
 | `provinces` | Đồng bộ danh mục 34 tỉnh, thành phố của Việt Nam (sau sáp nhập năm 2025) từ bộ dữ liệu mở `vietnamese-provinces-database`: tỉnh thành kèm phường/xã trực thuộc, một request, một job trong lịch sử; in số tỉnh thành và số phường/xã đã ghi. |
+| `banks` | Đồng bộ danh mục ngân hàng Việt Nam (mã BIN, mã ngân hàng, tên, tên viết tắt, mã SWIFT) từ API công khai của VietQR: một request, một job trong lịch sử; in số ngân hàng đã ghi. |
 | `sources` | Các website truyện được hỗ trợ. |
 | `init-db` | Tạo database / nâng schema lên bản mới nhất. |
 | `serve` | Chạy [web UI](#web-ui) và API tại `http://127.0.0.1:8000`. `--port N` đổi cổng, `--ui-dir DIR` trỏ tới bản build giao diện ở chỗ khác, `--host` đổi địa chỉ lắng nghe (đọc phần bảo mật trước). |
 
-Mã thoát: `0` mọi thứ hoàn tất · `1` có truyện/chương lỗi hoặc có lần đồng bộ (hàng không, tỉnh thành) không xong · `2` sai tham số hoặc cấu hình · `130` bị ngắt (Ctrl+C).
+Mã thoát: `0` mọi thứ hoàn tất · `1` có truyện/chương lỗi hoặc có lần đồng bộ (hàng không, tỉnh thành, ngân hàng) không xong · `2` sai tham số hoặc cấu hình · `130` bị ngắt (Ctrl+C).
 
-`resume` và `status` chỉ nói về truyện: job đồng bộ hàng không và tỉnh thành không nằm trong hai lệnh
-này. Đồng bộ bị lỗi hay bị ngắt thì chỉ cần chạy lại `aviation` / `provinces` — dữ liệu đã có không
+`resume` và `status` chỉ nói về truyện: job đồng bộ hàng không, tỉnh thành và ngân hàng không nằm trong hai lệnh
+này. Đồng bộ bị lỗi hay bị ngắt thì chỉ cần chạy lại `aviation` / `provinces` / `banks` — dữ liệu đã có không
 bị thay đổi cho tới khi một lần đồng bộ tải và đọc xong mọi file của nó.
 
 ### Hành vi cần biết
@@ -133,7 +134,7 @@ cạnh nút sáng/tối; lựa chọn được nhớ lại cho những lần sau
 | Tất cả crawler | `/crawlers` | Mỗi crawler một thẻ: loại dữ liệu, số liệu thật, trạng thái "Sẵn sàng" / "Chưa triển khai"; tìm theo tên (gõ không dấu cũng được). |
 | Một crawler | `/crawlers/:crawler` | Mỗi loại dữ liệu một thẻ. Crawler chỉ có một loại thì chuyển thẳng vào loại đó. |
 | Một loại dữ liệu | `/crawlers/:crawler/:loại/:tab` | Khu vực quản lý, mỗi tab một đường dẫn. Loại chưa có crawler ở backend chỉ hiện thông báo "chưa triển khai". |
-| Job | `/jobs`, `/jobs/:id` | Job của mọi crawler (crawl truyện, đồng bộ hàng không, đồng bộ tỉnh thành); nút **Crawl** xổ danh sách crawler để tạo job mới. Danh sách có lọc theo trạng thái và phân trang. Chi tiết: tiến độ, số chương thành công / lỗi / còn lại, chương vừa tải, nút tạm dừng / huỷ / tiếp tục / thử lại, log của riêng job đó. |
+| Job | `/jobs`, `/jobs/:id` | Job của mọi crawler (crawl truyện, đồng bộ hàng không, đồng bộ tỉnh thành, đồng bộ ngân hàng); nút **Crawl** xổ danh sách crawler để tạo job mới. Danh sách có lọc theo trạng thái và phân trang. Chi tiết: tiến độ, số chương thành công / lỗi / còn lại, chương vừa tải, nút tạm dừng / huỷ / tiếp tục / thử lại, log của riêng job đó. |
 | Log | `/logs` | Lọc theo mức (INFO / WARNING / ERROR), loại lỗi (request / parser), job, từ khoá; có chế độ tự làm mới. |
 | Cài đặt | `/settings` | Timeout, số lần thử lại, khoảng nghỉ, số request đồng thời, User-Agent, định dạng nội dung, mức log. Database và thư mục log chỉ xem (mật khẩu trong URL database được che). |
 | Góp ý | `/feedback`, `/feedback/bug-report`, `/feedback/crawler-request` | Ai dùng giao diện cũng gửi được: **Báo lỗi** (tiêu đề, trang/chức năng, mức độ, mô tả, liên hệ tuỳ chọn) hoặc **Gợi ý crawler** (tên nguồn, URL, loại dữ liệu, mô tả). Bên dưới là "Góp ý bạn đã gửi" từ chính trình duyệt này, kèm trạng thái và phản hồi của quản trị viên. Chưa hỗ trợ đính kèm tệp. |
@@ -173,6 +174,13 @@ Crawler **Tỉnh thành Việt Nam** (`/crawlers/provinces/vietnam/…`) có ba 
 | Tỉnh thành | `list` | Bảng 34 tỉnh, thành phố sau sáp nhập năm 2025 (mã, tên tiếng Việt và tiếng Anh kèm loại đơn vị, số phường/xã, đầu mã bưu chính), tìm theo mã hoặc tên (gõ không dấu cũng được); nút **Đồng bộ**, **Xuất JSON** (tải mọi tỉnh thành, không theo ô tìm kiếm) và **Xuất JSON kèm phường/xã** (một file cho cả hai cấp: mỗi tỉnh thành kèm danh sách phường/xã trực thuộc). |
 | Phường/xã | `wards` | Bảng phường, xã, đặc khu (mã, tên tiếng Việt và tiếng Anh, tỉnh thành, mã bưu chính), tìm theo mã hoặc tên, lọc theo tỉnh thành, phân trang; **Xuất JSON** tải phường/xã của tỉnh thành đang chọn (hoặc cả nước), không theo ô tìm kiếm. Số phường/xã ở tab Tỉnh thành là link sang đây, lọc sẵn theo tỉnh đó. |
 | Lịch sử | `history` | Các job đồng bộ danh mục (tỉnh thành và phường/xã). |
+
+Crawler **Ngân hàng Việt Nam** (`/crawlers/banks/vietnam/…`) có hai tab:
+
+| Tab | Đường dẫn | Nội dung |
+|---|---|---|
+| Ngân hàng | `list` | Bảng ngân hàng xếp theo tên viết tắt (mã BIN, tên viết tắt và tên đầy đủ, mã ngân hàng, mã SWIFT), tìm theo mã BIN, mã, tên hoặc mã SWIFT (gõ không dấu cũng được); nút **Đồng bộ** và **Xuất JSON** (tải mọi ngân hàng, không theo ô tìm kiếm). |
+| Lịch sử | `history` | Các job đồng bộ danh mục ngân hàng. |
 
 **Mỗi lần đồng bộ là một job** như job crawl truyện: chạy nền, hiện ở trang Job và huy hiệu "job đang
 chạy", có tiến độ theo số file đã tải (3 file mỗi nguồn), log riêng, tạm dừng / huỷ / chạy lại được,
@@ -244,7 +252,7 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `GET /api/novels/{id}/chapters/{number}` | Nội dung một chương, dạng danh sách đoạn văn. |
 | `GET /api/novels/{id}/export` | Thông tin truyện kèm các chương đã tải thành file JSON tải về (cùng cấu trúc với `export --format json`). Không tham số = toàn bộ chương (`<slug>.json`); `from_chapter` / `to_chapter` = một khoảng chương, tính cả hai đầu (`<slug>-c<đầu>-<cuối>.json`). Không có chương đã tải nào khớp thì 404 `not_found`. |
 | `POST /api/crawl/jobs` | Tạo job: `url`, `source`, `with_chapters`, `from_chapter`, `to_chapter`, `force`, `retry_failed`. |
-| `GET /api/crawl/jobs` | Danh sách job của mọi crawler: `status`, `novel_id`, `crawler` (`novel`, `aviation:world`, `aviation:vna`, `provinces`), `page`, `page_size`. Mỗi job có `crawler`, và `result` (số bản ghi theo loại) với job đồng bộ đã xong; các trường `chapters_*` đếm chương với job truyện và file với job đồng bộ (hàng không, tỉnh thành). |
+| `GET /api/crawl/jobs` | Danh sách job của mọi crawler: `status`, `novel_id`, `crawler` (`novel`, `aviation:world`, `aviation:vna`, `provinces`, `banks`), `page`, `page_size`. Mỗi job có `crawler`, và `result` (số bản ghi theo loại) với job đồng bộ đã xong; các trường `chapters_*` đếm chương với job truyện và file với job đồng bộ (hàng không, tỉnh thành, ngân hàng). |
 | `GET /api/crawl/jobs/{id}` | Một job kèm tiến độ và chương vừa tải. |
 | `POST /api/crawl/jobs/{id}/pause` | Tạm dừng job đang chạy. |
 | `POST /api/crawl/jobs/{id}/cancel` | Huỷ job đang chạy hoặc đang tạm dừng. |
@@ -259,6 +267,10 @@ tối đều đạt tương phản 4.5:1 (WCAG AA).
 | `GET /api/provinces/wards` | Danh sách phường/xã xếp theo mã: `province_code` (chỉ một tỉnh thành), `search`, `page`, `page_size`. Mỗi dòng có `code`, `name`, `name_en`, `full_name`, `full_name_en`, `code_name`, `unit`, `postal_code`, `province_code`, `province_name`, `crawled_at`. |
 | `GET /api/provinces/wards/export` | Phường/xã của một tỉnh thành (`province_code`, file `vn-wards-<mã>.json`) hoặc của cả nước (`vn-wards.json`) thành file JSON tải về, cùng các trường với `GET /api/provinces/wards`. |
 | `POST /api/provinces/sync` | Tạo job đồng bộ lại danh mục tỉnh thành kèm phường/xã và trả về job ngay (201); đang đồng bộ thì 409 kèm `job_id`. Lịch sử là `GET /api/crawl/jobs?crawler=provinces`. |
+| `GET /api/banks/summary` | Danh mục ngân hàng Việt Nam: số ngân hàng đang có (`count`) và lần đồng bộ gần nhất (`last_job`). |
+| `GET /api/banks` | Danh sách ngân hàng xếp theo tên viết tắt: `search` (mã BIN, mã, tên hoặc mã SWIFT, không dấu cũng được), `page`, `page_size`. Mỗi dòng có `bin`, `code`, `name`, `short_name`, `swift_code`, `logo`, `transfer_supported`, `lookup_supported`, `crawled_at`. |
+| `GET /api/banks/export` | Toàn bộ ngân hàng thành file JSON tải về (`vn-banks.json`), cùng các trường với `GET /api/banks`. |
+| `POST /api/banks/sync` | Tạo job đồng bộ lại danh mục ngân hàng và trả về job ngay (201); đang đồng bộ thì 409 kèm `job_id`. Lịch sử là `GET /api/crawl/jobs?crawler=banks`. |
 | `GET /api/logs` | Các dòng log mới nhất: `level`, `kind`, `job_id`, `search`, `limit`. |
 | `GET /api/settings` · `PUT /api/settings` | Đọc / lưu cấu hình. |
 | `POST /api/feedback` | Gửi góp ý (201). Báo lỗi: `{"type": "bug_report", "title", "description", "area", "severity" (low/medium/high/critical), "contact"}`; gợi ý crawler: `{"type": "crawler_request", "title" (tên nguồn), "url", "data_type" (novel/aviation/geography/other), "description", "contact"}`. Header `X-Feedback-Key` (tuỳ chọn) để xem lại được. Trả về góp ý như người gửi thấy: `id`, `type`, `title`, `description`, `details` (các trường riêng của loại), `status`, `response`, `created_at`, `updated_at`. |
@@ -330,7 +342,7 @@ web/src/
 │   └── paths.ts       đường dẫn của khu vực Crawler, dùng chung cho registry và các trang
 ├── layouts/           AppLayout: thanh trên, menu trái, nút ngôn ngữ, nút sáng/tối, số job đang chạy ·
 │                      CategoryLayout: tiêu đề, breadcrumb và các tab của một loại dữ liệu
-├── pages/<màn hình>/  dashboard · crawlers · crawl · jobs · novels · sources · aviation · provinces · logs · settings
+├── pages/<màn hình>/  dashboard · crawlers · crawl · jobs · novels · sources · aviation · provinces · banks · logs · settings
 ├── components/        QueryState (đang tải / lỗi / trống) · PageHeader (breadcrumb) · JobsTable ·
 │                      JobProgress · NovelProgress · LogList · StatusBadge · ListControls · Cover ·
 │                      StatCard · RecentJobs
@@ -520,6 +532,7 @@ không có bước thủ công nào khi cài mới hay khi cập nhật code.
 | `aviation_records` | Danh mục hàng không: nguồn, loại (sân bay / hãng bay / thành phố / quốc gia), mã, tên | `(source, kind, code)` |
 | `vn_provinces` | Tỉnh thành Việt Nam: mã, tên tiếng Việt và tiếng Anh (ngắn và đầy đủ), loại đơn vị, đầu mã bưu chính, số phường/xã | `code` duy nhất |
 | `vn_wards` | Phường/xã/đặc khu: mã, mã tỉnh thành, tên tiếng Việt và tiếng Anh (ngắn và đầy đủ), loại đơn vị, mã bưu chính | `code` duy nhất |
+| `vn_banks` | Ngân hàng Việt Nam: mã BIN, mã ngân hàng, tên, tên viết tắt, mã SWIFT, URL logo, có nhận chuyển khoản nhanh / tra tên chủ tài khoản hay không | `bin` duy nhất |
 | `feedback` | Góp ý: `type` (`bug_report`/`crawler_request`), tiêu đề, mô tả, `details` (JSON: trường riêng của từng loại, nên thêm loại mới không cần migration), `status`, liên hệ, hash mã người gửi, phản hồi của quản trị viên, thời gian | — |
 
 Thời gian lưu theo **UTC** (không kèm múi giờ); lệnh `status` hiển thị theo giờ máy.
@@ -563,6 +576,8 @@ aviation.py                 danh mục hàng không theo nguồn (world, vna): p
 provinces.py                danh mục tỉnh thành Việt Nam: parser JSON (hàm thuần) · ProvinceRepository
                             (ghi đè theo mã) · sync (1 request). Dùng chung phần chạy job đồng bộ với
                             aviation.py (run_sync); chạy thành job qua JobManager.start_provinces
+banks.py                    danh mục ngân hàng Việt Nam: parser JSON (hàm thuần) · BankRepository (ghi đè
+                            theo mã BIN) · sync (1 request, cũng qua run_sync); job qua JobManager.start_banks
 config/                     settings (pydantic-settings, đọc/ghi .env) · logging (JSON Lines, đọc lại log)
 
 web/ (thư mục gốc)          frontend React — xem "Kiến trúc frontend"; chỉ nói chuyện với backend qua /api
@@ -767,6 +782,18 @@ liệt kê chương lỗi kèm URL.
   Toạ độ và ranh giới (GeoJSON) của nguồn không được tải.
 - Tìm kiếm và phân trang phường/xã đang lọc trong bộ nhớ (khoảng 0,06 giây một lần tìm).
 - Nguồn đổi cấu trúc file thì lần đồng bộ báo lỗi parser và dữ liệu cũ được giữ nguyên.
+
+**Nguồn ngân hàng Việt Nam (khảo sát ngày 08/10/2026)**
+
+- **VietQR** (`api.vietqr.io/v2/banks`): API công khai, không cần khoá, được mô tả trong tài liệu của
+  họ ở `vietqr.io/danh-sach-api/api-danh-sach-ma-ngan-hang`. Host `api.vietqr.io` không có
+  `robots.txt` (404) nên không có đường dẫn nào bị cấm. Không tìm thấy trang điều khoản sử dụng hay
+  giấy phép dữ liệu — coi như dữ liệu của VietQR, chỉ dùng để tra cứu cá nhân và ghi rõ nguồn khi dùng lại.
+- Một lần đồng bộ là 2 request (`robots.txt` + một file khoảng 17 KB); lần khảo sát cho 65 ngân hàng,
+  trong đó 21 ngân hàng không có mã SWIFT. Mã BIN, mã ngân hàng đều không trùng nhau.
+- Lưu mã BIN, mã ngân hàng, tên, tên viết tắt, mã SWIFT, URL logo và hai cờ của nguồn
+  (`transferSupported`, `lookupSupported`). Ảnh logo không được tải về, chỉ giữ URL.
+- Danh sách chỉ đổi khi có ngân hàng mới, đổi tên hoặc sáp nhập — không cần đồng bộ thường xuyên.
 
 **Giới hạn hiện tại**
 

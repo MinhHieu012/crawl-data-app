@@ -74,6 +74,14 @@
         "description": "Code, name and unit type of every province or city and the wards under it."
       }
     },
+    "banks": {
+      "name": "Vietnam banks",
+      "description": "The banks operating in Vietnam, as listed by VietQR.",
+      "vietnam": {
+        "name": "Banks",
+        "description": "BIN, name, short name and SWIFT code of every bank."
+      }
+    },
     "tabs": {
       "crawl": "Crawl",
       "sources": "Sources",
@@ -82,7 +90,8 @@
       "city": "Cities",
       "country": "Countries",
       "provinces": "Provinces",
-      "wards": "Wards"
+      "wards": "Wards",
+      "banks": "Banks"
     }
   },
   "status": {
@@ -160,7 +169,9 @@
     "province_one": "{{count, number}} province",
     "province_other": "{{count, number}} provinces",
     "ward_one": "{{count, number}} ward",
-    "ward_other": "{{count, number}} wards"
+    "ward_other": "{{count, number}} wards",
+    "bank_one": "{{count, number}} bank",
+    "bank_other": "{{count, number}} banks"
   },
   "jobScope": {
     "catalog": "Whole catalogue",
@@ -532,6 +543,16 @@
     "emptyDescription": "Press Sync to download the provinces together with their wards (one request).",
     "postalPrefix": "Postal code prefix",
     "historyDescription": "Each sync is a job that downloads the whole catalogue (provinces and wards) again. A failed or stopped job does not lose the existing data."
+  },
+  "banks": {
+    "sourceNote": "Taken from the public VietQR API (api.vietqr.io).",
+    "search": "Search banks",
+    "noMatch": "No matching banks",
+    "emptyDescription": "Press Sync to download the bank catalogue (one request).",
+    "bin": "BIN",
+    "code": "Bank code",
+    "swift": "SWIFT code",
+    "historyDescription": "Each sync is a job that downloads the whole bank catalogue again. A failed or stopped job does not lose the existing data."
   },
   "wards": {
     "allProvinces": "Whole country",

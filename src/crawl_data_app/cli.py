@@ -1,4 +1,4 @@
-"""Giao diện dòng lệnh: crawl, resume, status, export, aviation, provinces, sources, init-db, serve (web UI)."""
+"""Giao diện dòng lệnh: crawl, resume, status, export, aviation, provinces, banks, sources, init-db, serve (web UI)."""
 
 import argparse
 import asyncio
@@ -22,7 +22,7 @@ from rich.progress import (
 from rich.table import Table
 from sqlalchemy import make_url
 
-from crawl_data_app import aviation, provinces
+from crawl_data_app import aviation, banks, provinces
 from crawl_data_app.aviation import AviationRepository
 from crawl_data_app.config.logging import setup_logging
 from crawl_data_app.config.settings import DatabaseSettings, Settings, get_settings
@@ -160,6 +160,11 @@ def build_parser() -> argparse.ArgumentParser:
         "kèm phường/xã",
     )
 
+    commands.add_parser(
+        "banks",
+        help="đồng bộ danh mục ngân hàng Việt Nam (mã BIN, tên, mã SWIFT) từ VietQR",
+    )
+
     commands.add_parser("sources", help="liệt kê các website được hỗ trợ")
     commands.add_parser("init-db", help="tạo database / nâng schema lên phiên bản mới nhất")
 
@@ -219,6 +224,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _sync_aviation(sources, settings, repo)
         if args.command == "provinces":
             return _sync_provinces(settings, repo)
+        if args.command == "banks":
+            return _sync_banks(settings, repo)
         if args.command == "crawl":
             requests, force = _crawl_requests(args, parser), args.force
         else:
@@ -420,6 +427,34 @@ def _sync_provinces(settings: Settings, repo: NovelRepository) -> int:
         f"Đã đồng bộ {result.counts['province']} tỉnh thành, {result.counts['ward']} phường/xã "
         f"(job #{result.run_id})."
     )
+    return 0
+
+
+def _sync_banks(settings: Settings, repo: NovelRepository) -> int:
+    """Đồng bộ danh mục ngân hàng Việt Nam — một dòng trong lịch sử crawl, như khi bấm Đồng bộ trên
+    web UI. Trả về 0 nếu xong.
+    """
+    store = banks.BankRepository(repo.session_factory)
+
+    async def run() -> aviation.SyncResult:
+        client = HttpClient(settings.http)
+        try:
+            with err.status("Đang đồng bộ ngân hàng Việt Nam…"):
+                return await banks.sync(client.get, repo, store)
+        finally:
+            await client.aclose()
+
+    try:
+        result = asyncio.run(run())
+    except KeyboardInterrupt:
+        err.print(
+            "Đã dừng theo yêu cầu. Dữ liệu đã có không bị thay đổi; chạy lại lệnh để đồng bộ."
+        )
+        return 130
+    if result.status != RunStatus.COMPLETED:
+        out.print(f"Đồng bộ ngân hàng không xong (job #{result.run_id}): {result.error}")
+        return 1
+    out.print(f"Đã đồng bộ {result.counts['bank']} ngân hàng (job #{result.run_id}).")
     return 0
 
 
