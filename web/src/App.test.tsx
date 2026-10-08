@@ -76,6 +76,17 @@ const BA_DINH = {
   province_name: 'Thành phố Hà Nội',
   crawled_at: '2026-10-05T03:00:05Z',
 }
+const VIETINBANK = {
+  bin: '970415',
+  code: 'ICB',
+  name: 'Ngân hàng TMCP Công thương Việt Nam',
+  short_name: 'VietinBank',
+  swift_code: 'ICBVVNVX',
+  logo: null,
+  transfer_supported: true,
+  lookup_supported: true,
+  crawled_at: '2026-10-05T03:00:05Z',
+}
 
 /**
  * Backend giả. Nguồn Vietnam Airlines đã đồng bộ sẵn; nguồn thế giới thì tuỳ `worldSynced` và
@@ -91,6 +102,11 @@ function backend(worldSynced = true) {
       const [, source] = request.query.crawler?.match(/^aviation:(\w+)$/) ?? []
       const job = source ? syncJob(source) : makeJob({ status: 'completed', active: false })
       return { items: [job], total: 1 }
+    }
+    if (request.path === '/banks/summary') return { count: 1, last_job: null }
+    if (request.path === '/banks') return { items: [VIETINBANK], total: 1 }
+    if (request.path === '/banks/sync') {
+      return syncJob('', { id: 23, crawler: 'banks', status: 'running', active: true })
     }
     if (request.path === '/provinces/summary') return { count: 1, ward_count: 1, last_job: null }
     if (request.path === '/provinces/wards') return { items: [BA_DINH], total: 1 }
@@ -272,6 +288,36 @@ describe('App — khu vực Crawler', () => {
       expect(
         requests.some(
           (request) => request.path === '/crawl/jobs' && request.query.crawler === 'provinces',
+        ),
+      ).toBe(true),
+    )
+  })
+
+  it('Ngân hàng Việt Nam: bảng ngân hàng, xuất JSON, đồng bộ thành job và lịch sử riêng', async () => {
+    const user = userEvent.setup()
+    const requests = backend()
+    open('/crawlers/banks')
+
+    expect(
+      await screen.findByRole('tab', { name: 'Ngân hàng', selected: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ngân hàng Việt Nam')
+    expect(await screen.findByText('VietinBank')).toBeInTheDocument()
+    expect(screen.getByText(/ICBVVNVX/)).toBeInTheDocument() // màn hẹp: dồn dưới tên
+    expect(screen.getByRole('link', { name: 'Xuất JSON' })).toHaveAttribute(
+      'href',
+      '/api/banks/export',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Đồng bộ' }))
+    expect(await screen.findByText('Đang đồng bộ ở job #23')).toBeInTheDocument()
+    expect(requests.find((request) => request.method === 'POST')?.path).toBe('/banks/sync')
+
+    await user.click(screen.getByRole('tab', { name: 'Lịch sử' }))
+    await waitFor(() =>
+      expect(
+        requests.some(
+          (request) => request.path === '/crawl/jobs' && request.query.crawler === 'banks',
         ),
       ).toBe(true),
     )

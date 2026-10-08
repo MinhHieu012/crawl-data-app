@@ -111,7 +111,7 @@ class CrawlRun(Base):
     __tablename__ = "crawl_runs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # Crawler tạo ra lần chạy này: "novel", "aviation:<nguồn>" (world, vna), hoặc "provinces".
+    # Crawler tạo ra lần chạy này: "novel", "aviation:<nguồn>" (world, vna), "provinces" hoặc "banks".
     crawler: Mapped[str] = mapped_column(String(50), default="novel")
     url: Mapped[str] = mapped_column(
         String(1000)
@@ -192,6 +192,23 @@ class Ward(Base):
     code_name: Mapped[str] = mapped_column(String(100))  # "ba_dinh"
     unit: Mapped[str] = mapped_column(String(50))  # "Phường" | "Xã" | "Đặc khu"
     postal_code: Mapped[str | None] = mapped_column(String(20))
+    crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn
+
+
+class Bank(Base):
+    """Một ngân hàng tại Việt Nam, theo danh sách của VietQR."""
+
+    __tablename__ = "vn_banks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bin: Mapped[str] = mapped_column(String(10), unique=True)  # mã BIN Napas: "970415"
+    code: Mapped[str] = mapped_column(String(20))  # mã ngắn của nguồn: "ICB"
+    name: Mapped[str] = mapped_column(String(255))  # "Ngân hàng TMCP Công thương Việt Nam"
+    short_name: Mapped[str] = mapped_column(String(100))  # "VietinBank"
+    swift_code: Mapped[str | None] = mapped_column(String(20))
+    logo: Mapped[str | None] = mapped_column(String(255))  # URL ảnh logo trên CDN của nguồn
+    transfer_supported: Mapped[bool]  # nhận chuyển khoản nhanh qua mã QR
+    lookup_supported: Mapped[bool]  # tra được tên chủ tài khoản
     crawled_at: Mapped[datetime] = mapped_column(default=utcnow)  # lần cuối còn thấy ở nguồn
 
 

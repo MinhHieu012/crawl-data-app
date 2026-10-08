@@ -12,6 +12,7 @@ hoặc trên một VPS bằng Docker (đang chạy thật; deploy qua GitHub Act
 - **Truyện chữ**: thông tin truyện, mục lục, nội dung chương đã làm sạch (hiện có nguồn **TruyenFull**).
 - **Danh mục hàng không**: sân bay, hãng bay, thành phố, quốc gia từ 2 nguồn — `world` (OurAirports + OpenFlights) và `vna` (vietnamairlines.com).
 - **Tỉnh thành Việt Nam**: 34 tỉnh, thành phố sau sáp nhập 2025 kèm phường/xã trực thuộc, từ bộ dữ liệu mở `thanglequoc/vietnamese-provinces-database` (MIT).
+- **Ngân hàng Việt Nam**: mã BIN, mã ngân hàng, tên, mã SWIFT từ API công khai của VietQR (`api.vietqr.io/v2/banks`).
 
 Thiết kế để chạy lâu dài và "lịch sự": giãn cách request, tuân thủ `robots.txt`, chạy tiếp sau khi bị ngắt, không tải lại thứ đã có.
 
@@ -30,6 +31,7 @@ User ─ CLI (cli.py, argparse + Rich) ─────────┐
                                  └─ database/    ORM SQLAlchemy 2 · session · migrations (Alembic)
 aviation.py: parser JSON/CSV (hàm thuần) + SOURCES + AviationRepository; chạy thành job qua JobManager.start_aviation
 provinces.py: parser JSON (hàm thuần) + ProvinceRepository; dùng lại `aviation.run_sync`; job qua JobManager.start_provinces
+banks.py: cùng mẫu với provinces.py — parser JSON + BankRepository; job qua JobManager.start_banks
 ```
 
 Phụ thuộc đi một chiều: `(cli, web) → service → (crawlers, repository) → (core, database)`. Parser không biết mạng/DB;
@@ -47,11 +49,12 @@ repository không biết HTML; frontend không có logic crawl (nhận diện we
 
 ```text
 src/crawl_data_app/
-├── cli.py            lệnh: crawl · resume · status · export · aviation · sources · init-db · serve
+├── cli.py            lệnh: crawl · resume · status · export · aviation · provinces · banks · sources · init-db · serve
 ├── service.py        CrawlService
 ├── repository.py     NovelRepository (mọi truy vấn truyện/chương/crawl_runs)
 ├── aviation.py       đồng bộ danh mục hàng không (+ `run_sync`: phần chạy job dùng chung cho mọi crawler kiểu danh mục)
 ├── provinces.py      đồng bộ danh mục 34 tỉnh thành Việt Nam kèm phường/xã (1 request)
+├── banks.py          đồng bộ danh mục ngân hàng Việt Nam từ VietQR: mã BIN, tên, mã SWIFT (1 request)
 ├── feedback.py       FeedbackRepository: góp ý (báo lỗi, gợi ý crawler); mã người gửi chỉ lưu SHA-256
 ├── export.py         xuất txt / epub / json
 ├── core/             http_client (giãn cách, retry, robots) · base_crawler (BaseParser/BaseCrawler) · models · content · exceptions
@@ -73,7 +76,7 @@ docs/                 deploy-vps-tailscale.md (cài VPS, secret, vận hành, c�
 
 - **Source / Crawler**: một website = một `BaseCrawler` (`name`, `domains`, `parser`) đăng ký trong `CRAWLERS`. Bật/tắt qua `CRAWLER_DISABLED_SOURCES`.
 - **Novel / Chapter**: truyện định danh theo `(source, slug)`, chương theo `(novel, slug)` — **không theo URL** (website đổi tên miền liên tục). Chương có `status` `pending|done|failed`, kèm hash SHA-256 để phát hiện thay đổi.
-- **Job = một dòng `crawl_runs`**: dùng chung cho cả crawl truyện và các job đồng bộ (cột `crawler`: `novel`, `aviation:world`, `aviation:vna`, `provinces`). Trạng thái `running|completed|partial|failed|interrupted|cancelled`; tiến độ ghi vào DB sau mỗi chương, API chỉ đọc DB. Các cột `chapters_*` đếm file với job đồng bộ (hàng không, tỉnh thành).
+- **Job = một dòng `crawl_runs`**: dùng chung cho cả crawl truyện và các job đồng bộ (cột `crawler`: `novel`, `aviation:world`, `aviation:vna`, `provinces`, `banks`). Trạng thái `running|completed|partial|failed|interrupted|cancelled`; tiến độ ghi vào DB sau mỗi chương, API chỉ đọc DB. Các cột `chapters_*` đếm file với job đồng bộ (hàng không, tỉnh thành, ngân hàng).
 - **resume / retry**: tạo job *mới* chạy lại đúng phạm vi cũ, chỉ tải chương chưa xong; job `cancelled` thì `resume` không tự chạy lại.
 - **Aviation sync**: tải đủ 3 file rồi mới ghi (job lỗi giữa chừng không làm mất dữ liệu cũ); ghi đè theo `(nguồn, mã)`; mỗi nguồn một job tại một thời điểm.
 
@@ -92,7 +95,7 @@ Thêm website truyện mới (không phải sửa service/repository/CLI):
 
 Nguồn hàng không mới: thêm parser (hàm thuần trả `list[Record]`) + hàm `fetch_<nguồn>` (gọi `fetch` đúng `FILES_PER_SYNC` = 3 lần) vào `SOURCES`/`HOMES` trong `aviation.py`, rồi cập nhật `registry.tsx`.
 
-Danh mục kiểu "tải vài file rồi ghi đè" khác (mẫu: `provinces.py`): parser hàm thuần + repository riêng + `sync` gọi `aviation.run_sync`; thêm `JobManager.start_<tên>`, nhánh chạy lại trong `rerun_job` (`web/app.py`), tên job trong `JOB_TITLE` (`web/src/utils/format.ts`, ghép từ khoá dịch của registry) và đường dẫn trong `jobDataPath` (`web/src/crawlers/paths.ts`).
+Danh mục kiểu "tải vài file rồi ghi đè" khác (mẫu: `provinces.py`, bản gọn nhất là `banks.py`): parser hàm thuần + repository riêng + `sync` gọi `aviation.run_sync`; thêm `JobManager.start_<tên>`, nhánh chạy lại trong `rerun_job` (`web/app.py`), tên job trong `JOB_TITLE` (`web/src/utils/format.ts`, ghép từ khoá dịch của registry) và đường dẫn trong `jobDataPath` (`web/src/crawlers/paths.ts`).
 
 ## Backend Architecture
 
@@ -142,9 +145,9 @@ crawl-data-app serve             # API + UI đã build tại http://127.0.0.1:80
 cd web && npm run dev            # dev UI http://localhost:5173 (chạy kèm `serve`)
 cd web && npm run build          # tsc --noEmit rồi build ra web/dist (cần để serve phục vụ UI)
 
-pytest                           # backend (231 test, ~25s, không có request mạng thật)
+pytest                           # backend (244 test, ~40s, không có request mạng thật)
 ruff check . && ruff format --check .
-cd web && npm test               # Vitest (55 test, giao diện chạy ở tiếng Việt)
+cd web && npm test               # Vitest (56 test, giao diện chạy ở tiếng Việt)
 cd web && npm run lint && npm run typecheck && npm run format:check
 
 alembic revision --autogenerate -m "mo ta"   # sau khi sửa database/models.py

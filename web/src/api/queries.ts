@@ -42,6 +42,8 @@ import type {
   AviationRecord,
   AviationSource,
   AviationSummary,
+  Bank,
+  BankSummary,
   Province,
   ProvinceSummary,
   Ward,
@@ -238,6 +240,25 @@ export function useWards(params: WardParams) {
   })
 }
 
+/** Số ngân hàng và job đồng bộ gần nhất; hỏi lại định kỳ khi job đó còn đang chạy. */
+export function useBankSummary() {
+  return useQuery({
+    queryKey: ['banks', 'summary'],
+    queryFn: () => api<BankSummary>('/banks/summary'),
+    refetchInterval: (query) =>
+      isRunning(query.state.data?.last_job ?? undefined) ? POLL_MS : false,
+  })
+}
+
+/** Cả danh mục trong một trang: chỉ có vài chục ngân hàng nên không phân trang ở giao diện. */
+export function useBanks(search: string) {
+  return useQuery({
+    queryKey: ['banks', 'list', search],
+    queryFn: () => api<Page<Bank>>('/banks', { params: { search, page_size: 200 } }),
+    placeholderData: keepPreviousData,
+  })
+}
+
 export function useSettings() {
   return useQuery({ queryKey: ['settings'], queryFn: () => api<Settings>('/settings') })
 }
@@ -255,7 +276,7 @@ export function useJobActivity(): number {
 
   useEffect(() => {
     if (previous.current !== undefined && finished !== undefined && finished > previous.current) {
-      for (const key of ['jobs', 'novels', 'sources', 'aviation', 'provinces', 'logs']) {
+      for (const key of ['jobs', 'novels', 'sources', 'aviation', 'provinces', 'banks', 'logs']) {
         void queryClient.invalidateQueries({ queryKey: [key] })
       }
     }
@@ -332,6 +353,8 @@ export const useSyncAviation = (source: AviationSource) =>
   useSyncJob(`/aviation/${source}/sync`, ['aviation', source])
 
 export const useSyncProvinces = () => useSyncJob('/provinces/sync', ['provinces'])
+
+export const useSyncBanks = () => useSyncJob('/banks/sync', ['banks'])
 
 export function useUpdateSettings() {
   const queryClient = useQueryClient()

@@ -49,7 +49,7 @@ export interface AviationRecord {
 }
 
 /** Số bản ghi theo loại — `result` của một job đồng bộ (hàng không, tỉnh thành). */
-export type RecordCounts = Partial<Record<AviationKind | 'province' | 'ward', number>>
+export type RecordCounts = Partial<Record<AviationKind | 'province' | 'ward' | 'bank', number>>
 
 export interface AviationSummary {
   counts: Record<AviationKind, number>
@@ -93,6 +93,32 @@ export interface Ward {
   province_name: string | null
   /** Lần cuối còn thấy bản ghi này ở nguồn. */
   crawled_at: string
+}
+
+/** Một ngân hàng tại Việt Nam, theo danh sách của VietQR. */
+export interface Bank {
+  /** Mã BIN Napas, ví dụ "970415". */
+  bin: string
+  /** Mã ngắn của nguồn: "ICB". */
+  code: string
+  name: string
+  short_name: string
+  swift_code: string | null
+  /** URL ảnh logo trên CDN của nguồn. */
+  logo: string | null
+  /** Nhận chuyển khoản nhanh qua mã QR. */
+  transfer_supported: boolean
+  /** Tra được tên chủ tài khoản. */
+  lookup_supported: boolean
+  /** Lần cuối còn thấy bản ghi này ở nguồn. */
+  crawled_at: string
+}
+
+export interface BankSummary {
+  /** Số ngân hàng đang có trong database. */
+  count: number
+  /** Job đồng bộ gần nhất, kể cả job đang chạy. */
+  last_job: Job | null
 }
 
 export interface ProvinceSummary {
@@ -147,7 +173,7 @@ export interface ChapterContent extends Chapter {
 
 export interface Job {
   id: number
-  /** Crawler tạo ra job: "novel", "aviation:<nguồn>" (danh mục hàng không) hoặc "provinces". */
+  /** Crawler tạo ra job: "novel", "aviation:<nguồn>" (danh mục hàng không), "provinces" hoặc "banks". */
   crawler: string
   url: string
   novel_id: number | null

@@ -43,7 +43,7 @@ export function formatDuration(start: string, end: string | null): string {
     : i18n.t('duration.hours', { hours: Math.floor(minutes / 60), minutes: minutes % 60 })
 }
 
-const RECORD_KINDS = ['airport', 'city', 'country', 'airline', 'province', 'ward'] as const
+const RECORD_KINDS = ['airport', 'city', 'country', 'airline', 'province', 'ward', 'bank'] as const
 
 /** "469 sân bay · 464 thành phố · …" hay "34 tỉnh thành" — chỉ kể những loại có trong `counts`. */
 export function recordCounts(counts: RecordCounts): string {
@@ -58,6 +58,7 @@ const JOB_TITLE: Record<string, I18nKey[]> = {
   'aviation:world': ['registry.aviation.name', 'registry.aviation.world.name'],
   'aviation:vna': ['registry.aviation.name', 'registry.aviation.vna.name'],
   provinces: ['registry.provinces.name'],
+  banks: ['registry.banks.name'],
 }
 const syncJobTitle = (crawler: string) => JOB_TITLE[crawler]?.map((key) => i18n.t(key)).join(' · ')
 

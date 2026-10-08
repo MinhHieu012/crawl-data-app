@@ -10,10 +10,10 @@ export const modulePath = (moduleId: string) => `${CRAWLERS_PATH}/${moduleId}`
 export const categoryPath = (moduleId: string, categoryId: string) =>
   `${modulePath(moduleId)}/${categoryId}`
 
-/** Khu vực dữ liệu của một job đồng bộ, theo `job.crawler` ("aviation:world", "aviation:vna", "provinces"). */
+/** Khu vực dữ liệu của một job đồng bộ, theo `job.crawler` ("aviation:world", "aviation:vna", "provinces", "banks"). */
 export const jobDataPath = (crawler: string) =>
-  crawler === 'provinces'
-    ? categoryPath('provinces', 'vietnam')
+  crawler === 'provinces' || crawler === 'banks'
+    ? categoryPath(crawler, 'vietnam')
     : categoryPath('aviation', crawler === 'aviation:vna' ? 'vietnam-airlines' : 'world')
 
 /** Module truyện chữ: định danh dùng chung cho registry lẫn đường dẫn của các trang con. */

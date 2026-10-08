@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import Row, make_url
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from crawl_data_app import __version__, provinces
+from crawl_data_app import __version__, banks, provinces
 from crawl_data_app.aviation import SOURCES as AVIATION_SOURCES
 from crawl_data_app.aviation import AviationRepository, RecordOut, crawler_name
 from crawl_data_app.config.logging import read_logs
@@ -45,6 +45,8 @@ from crawl_data_app.web.schemas import (
     AdminSession,
     AviationRecordOut,
     AviationSummary,
+    BankOut,
+    BankSummary,
     ChapterContent,
     ChapterOut,
     ConnectionTest,
@@ -416,6 +418,13 @@ def create_app(
             raise ApiError(409, "duplicate_job", str(exc), job_id=exc.run_id) from exc
         return find_job(run_id, detail=True)
 
+    async def launch_banks() -> JobOut:
+        try:
+            run_id = await jobs.start_banks()
+        except DuplicateJobError as exc:
+            raise ApiError(409, "duplicate_job", str(exc), job_id=exc.run_id) from exc
+        return find_job(run_id, detail=True)
+
     @api.post("/crawl/jobs", status_code=201)
     async def create_job(body: JobCreate) -> JobOut:
         url = body.url.strip()
@@ -486,6 +495,8 @@ def create_app(
             return await launch_aviation(job.crawler.removeprefix(AVIATION_PREFIX))
         if job.crawler == provinces.CRAWLER:
             return await launch_provinces()
+        if job.crawler == banks.CRAWLER:
+            return await launch_banks()
         request = repo.run_request(job_id)
         assert request is not None  # find_job vừa xác nhận job tồn tại
         return await launch(request)
@@ -642,6 +653,40 @@ def create_app(
         chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
         """
         return await launch_provinces()
+
+    # --- Ngân hàng Việt Nam -------------------------------------------------------------------
+
+    bank_store = banks.BankRepository(repo.session_factory)
+
+    @api.get("/banks/summary")
+    async def banks_summary() -> BankSummary:
+        rows, _ = repo.runs_page(crawler=banks.CRAWLER, limit=1)
+        return BankSummary(count=bank_store.count(), last_job=job_out(*rows[0]) if rows else None)
+
+    @api.get("/banks")
+    async def list_banks(
+        search: str = "", page: PageNumber = 1, page_size: PageSize = 50
+    ) -> Page[BankOut]:
+        rows, total = bank_store.page(search=search.strip(), **_window(page, page_size))
+        return Page(items=[BankOut.model_validate(row) for row in rows], total=total)
+
+    @api.get("/banks/export")
+    async def export_banks() -> Response:
+        """Toàn bộ ngân hàng thành file JSON tải về (cùng các trường với `GET /banks`)."""
+        rows, _ = bank_store.page(limit=sys.maxsize)
+        items = [BankOut.model_validate(row).model_dump(mode="json") for row in rows]
+        return Response(
+            json.dumps(items, ensure_ascii=False, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": 'attachment; filename="vn-banks.json"'},
+        )
+
+    @api.post("/banks/sync", status_code=201)
+    async def sync_banks() -> JobOut:
+        """Tạo job đồng bộ lại danh mục ngân hàng (một request, theo robots.txt và nhịp giãn cách
+        chung) và trả về ngay. Theo dõi, tạm dừng, huỷ, chạy lại như mọi job khác.
+        """
+        return await launch_banks()
 
     # --- Góp ý --------------------------------------------------------------------------------
 

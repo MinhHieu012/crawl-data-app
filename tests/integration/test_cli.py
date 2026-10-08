@@ -13,7 +13,7 @@ from xml.etree import ElementTree
 import httpx
 import pytest
 
-from crawl_data_app import aviation, cli, provinces
+from crawl_data_app import aviation, banks, cli, provinces
 from crawl_data_app.config.settings import get_settings
 from crawl_data_app.core.http_client import HttpClient
 
@@ -550,3 +550,21 @@ def test_an_empty_file_with_the_new_name_does_not_hide_the_old_database(run, tmp
     with closing(sqlite3.connect(new)) as connection:
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master")}
     assert "du_lieu_cu" in tables
+
+
+def test_banks_syncs_the_catalogue_as_one_job(run, sources, tmp_path):
+    code, out = run("banks")
+
+    assert (code, out.strip()) == (0, "Đã đồng bộ 3 ngân hàng (job #1).")
+    runs = aviation_runs(tmp_path)
+    assert [row[:3] for row in runs] == [("banks", "completed", 1)]
+    assert json.loads(runs[0][3]) == {"bank": 3}
+
+    sources.pages[banks.DATA_URL] = lambda _request: httpx.Response(200, text="{}")
+    code, out = run("banks")
+
+    assert code == 1
+    assert "Đồng bộ ngân hàng không xong (job #2)" in out
+    with closing(sqlite3.connect(tmp_path / "data" / "crawl-data-app.db")) as connection:
+        stored = connection.execute("SELECT count(*) FROM vn_banks").fetchone()
+    assert stored == (3,)  # dữ liệu cũ còn nguyên
